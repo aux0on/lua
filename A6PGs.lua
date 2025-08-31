@@ -560,6 +560,8 @@ if my_own_section then
         spray(target)
     end)
     -- Auto re-get Spray Tool toggle
+        local args = {"SprayPaint"}  ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Extras"):WaitForChild("ReplicateToy"):InvokeServer(unpack(args))
+
     local autoGetTool = false
     my_own_section:AddToggle("Auto-Get Spray Tool", function(state)
         autoGetTool = state
