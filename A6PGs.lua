@@ -586,6 +586,156 @@ else
     warn("Failed to create Spray Paint section! Plugin not loaded.")
 end
 
+local shared = odh_shared_plugins
+
+local my_own_section = shared.AddSection("Fake Dead Emote")
+
+-- Label
+my_own_section:AddLabel("Troll Murd by Faking Dead")
+
+-- Variables
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local EMOTE_ID = 84112287597268
+local playingEmote = false
+local currentTrack
+local animateScript
+local guiButton
+local guiSize = 40 -- default size
+local guiEnabled = false
+
+-- Functions
+local function stopDefaultAnimations(humanoid, character)
+    animateScript = character:FindFirstChild("Animate")
+    if animateScript then animateScript.Disabled = true end
+    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+        track:Stop()
+    end
+end
+
+local function restoreDefaultAnimations()
+    if animateScript then animateScript.Disabled = false end
+end
+
+local function stopEmote()
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack = nil
+    end
+    playingEmote = false
+    restoreDefaultAnimations()
+end
+
+local function playEmote()
+    if playingEmote then return end
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+
+    stopDefaultAnimations(humanoid, character)
+
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://"..EMOTE_ID
+
+    local ok, track = pcall(function()
+        return humanoid:LoadAnimation(anim)
+    end)
+    if not ok or not track then return end
+
+    currentTrack = track
+    currentTrack.Priority = Enum.AnimationPriority.Action
+    currentTrack:Play()
+    playingEmote = true
+
+    local conn1, conn2
+    conn1 = humanoid.Running:Connect(function(speed)
+        if speed > 0 then stopEmote() if conn1 then conn1:Disconnect() end if conn2 then conn2:Disconnect() end end
+    end)
+    conn2 = humanoid.Jumping:Connect(function()
+        stopEmote() if conn1 then conn1:Disconnect() end if conn2 then conn2:Disconnect() end
+    end)
+
+    currentTrack.Stopped:Connect(stopEmote)
+end
+
+local function createGuiButton()
+    -- Destroy old button if exists
+    if guiButton then guiButton:Destroy() end
+
+    -- Create ScreenGui if it doesn't exist
+    local screenGui = game:GetService("CoreGui"):FindFirstChild("EmoteGUI")
+    if not screenGui then
+        screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "EmoteGUI"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = game:GetService("CoreGui")
+    end
+
+    guiButton = Instance.new("TextButton")
+    guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
+    guiButton.Position = UDim2.new(0.4, 0, 0.8, 0)
+    guiButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    guiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    guiButton.Font = Enum.Font.SourceSansBold
+    guiButton.TextSize = guiSize/2
+    guiButton.Text = "FD"
+    guiButton.Parent = screenGui
+
+    local uicorner = Instance.new("UICorner")
+    uicorner.CornerRadius = UDim.new(1, 0)
+    uicorner.Parent = guiButton
+
+    -- Draggable (mobile-friendly)
+    local dragging, dragStart, startPos
+    guiButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiButton.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    guiButton.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            guiButton.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    guiButton.MouseButton1Click:Connect(playEmote)
+end
+
+-- Toggle to show/hide GUI button
+my_own_section:AddToggle("Enable FD GUI Button", function(enabled)
+    guiEnabled = enabled
+    if guiEnabled then
+        createGuiButton()
+    else
+        if guiButton then guiButton:Destroy() end
+    end
+end)
+
+-- Slider to resize GUI button (updates live)
+my_own_section:AddSlider("GUI Button Size", 30, 150, guiSize, function(size)
+    guiSize = size
+    if guiButton then
+        guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
+        guiButton.TextSize = guiSize/2
+    end
+end)
+
+-- Manual play button
+my_own_section:AddButton("Play Fake Dead Emote", function()
+    playEmote()
+end)
+
     else
     end
 end)
