@@ -391,7 +391,7 @@ do
         active = true
     end)
 
-    my_own_section:AddToggle("Enable TS GUI Button", function(enabled)
+    my_own_section:AddToggle("Enable TS Bindable Button", function(enabled)
         guiEnabled = enabled
         if guiEnabled then
             createGuiButton()
@@ -400,7 +400,7 @@ do
         end
     end)
 
-    my_own_section:AddSlider("TS GUI Button Size", 30, 150, tsButtonSize, function(size)
+    my_own_section:AddSlider("TS Bindable Button Size", 30, 150, tsButtonSize, function(size)
         tsButtonSize = size
         if tsButton then
             tsButton.Size = UDim2.new(0, tsButtonSize, 0, tsButtonSize)
@@ -838,7 +838,7 @@ do
         guiButton.MouseButton1Click:Connect(playEmote)
     end
 
-    my_own_section:AddToggle("Enable FD GUI Button", function(enabled)
+    my_own_section:AddToggle("Enable FD Bindable Button", function(enabled)
         guiEnabled = enabled
         if guiEnabled then
             createGuiButton()
@@ -847,7 +847,7 @@ do
         end
     end)
 
-    my_own_section:AddSlider("GUI Button Size", 30, 150, guiSize, function(size)
+    my_own_section:AddSlider("FD Bindable Button Size", 30, 150, guiSize, function(size)
         guiSize = size
         if guiButton then
             guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
@@ -859,3 +859,64 @@ do
         playEmote()
     end)
 end
+
+-- =========================
+-- Mute ODH Buttons
+-- =========================
+
+local shared = odh_shared_plugins
+
+local mute_section = shared.AddSection("Mute Buttons")
+mute_section:AddLabel("Turn Off and Rejoin to Enable Sounds Again")
+
+-- Variables
+local targetId = "rbxassetid://3868133279"
+local mutingEnabled = false
+local muteConnections = {}
+
+-- Helper: mutes a sound and prevents it from being unmuted
+local function muteSound(sound)
+    if sound.SoundId == targetId then
+        sound.Volume = 0
+        table.insert(muteConnections, sound:GetPropertyChangedSignal("Volume"):Connect(function()
+            if mutingEnabled and sound.Volume > 0 then
+                sound.Volume = 0
+            end
+        end))
+    end
+end
+
+-- Enable muting
+local function enableMuting()
+    -- Mute existing sounds
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Sound") then
+            muteSound(obj)
+        end
+    end
+
+    -- Watch for new sounds
+    table.insert(muteConnections, workspace.DescendantAdded:Connect(function(obj)
+        if obj:IsA("Sound") then
+            muteSound(obj)
+        end
+    end))
+end
+
+-- Disable muting
+local function disableMuting()
+    for _, conn in ipairs(muteConnections) do
+        conn:Disconnect()
+    end
+    table.clear(muteConnections)
+end
+
+-- Toggle
+mute_section:AddToggle("Disable ODH Button Sounds", function(state)
+    mutingEnabled = state
+    if mutingEnabled then
+        enableMuting()
+    else
+        disableMuting()
+    end
+end)
