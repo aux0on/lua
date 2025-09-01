@@ -231,18 +231,32 @@ whitelist_section:AddButton("Kill All", function()
 end)
 
 local shared = odh_shared_plugins
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-local my_own_section = shared.AddSection("Trickshot")
+local player = Players.LocalPlayer
+local spinSpeed = 15
+local hasJumped = false
+local spinStopped = false
+local active = false
+local connections = {}
 
-my_own_section:AddLabel("Spin On Next Jump")
+-- UI refs
+local guiEnabled = false
+local tsGui
+local tsButton
+local tsButtonSize = 40 -- default size
 
-my_own_section:AddSlider("Spin Speed (1-30)", 1, 30, 15, function(spinSpeed)
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
+local function clearConnections()
+    for _, c in ipairs(connections) do
+        c:Disconnect()
+    end
+    table.clear(connections)
+end
+
+local function setupSpin(character)
     local hrp = character:WaitForChild("HumanoidRootPart")
-
-    local hasJumped = false
-    local spinStopped = false
 
     local function startSpin()
         for _, obj in ipairs(hrp:GetChildren()) do
@@ -250,7 +264,7 @@ my_own_section:AddSlider("Spin Speed (1-30)", 1, 30, 15, function(spinSpeed)
                 obj:Destroy()
             end
         end
-        
+
         local attachment = Instance.new("Attachment", hrp)
         local torque = Instance.new("Torque")
         torque.Attachment0 = attachment
@@ -258,34 +272,27 @@ my_own_section:AddSlider("Spin Speed (1-30)", 1, 30, 15, function(spinSpeed)
         torque.Torque = Vector3.new(0, spinSpeed * 10000, 0)
         torque.Parent = hrp
 
-        game:GetService("RunService").Heartbeat:Connect(function()
-            if not character:FindFirstChild("HumanoidRootPart") then return end
+        table.insert(connections, RunService.Heartbeat:Connect(function()
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if not humanoid then return end
-
             if hasJumped and humanoid:GetState() == Enum.HumanoidStateType.Freefall then
                 if spinStopped then
                     spinStopped = false
                     torque:Destroy()
                 end
             end
-        end)
+        end))
     end
-    
-    local function resetAndPrepareForSpin()
-        hasJumped = false
-        spinStopped = false
-    end
-    
-    game:GetService("UserInputService").JumpRequest:Connect(function()
-        if not hasJumped then
+
+    table.insert(connections, UserInputService.JumpRequest:Connect(function()
+        if active and not hasJumped then
             hasJumped = true
             startSpin()
         end
-    end)
-    
-    hrp.Touched:Connect(function(hit)
-        if hit and hit:IsA("BasePart") and not spinStopped then
+    end))
+
+    table.insert(connections, hrp.Touched:Connect(function(hit)
+        if active and hit:IsA("BasePart") and not spinStopped then
             spinStopped = true
             for _, obj in ipairs(hrp:GetChildren()) do
                 if obj:IsA("Torque") then
@@ -293,12 +300,115 @@ my_own_section:AddSlider("Spin Speed (1-30)", 1, 30, 15, function(spinSpeed)
                 end
             end
         end
+    end))
+end
+
+-- Create TS GUI button (draggable + mobile friendly)
+local function createGuiButton()
+    if tsGui then tsGui:Destroy() end
+
+    tsGui = Instance.new("ScreenGui")
+    tsGui.Name = "TSGui"
+    tsGui.ResetOnSpawn = false
+    tsGui.Parent = player:WaitForChild("PlayerGui")
+
+    tsButton = Instance.new("TextButton")
+    tsButton.Name = "TSButton"
+    tsButton.Text = "TS"
+    tsButton.Font = Enum.Font.SourceSansBold
+    tsButton.TextSize = tsButtonSize / 2
+    tsButton.TextColor3 = Color3.new(1, 1, 1)
+tsButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    tsButton.Size = UDim2.new(0, tsButtonSize, 0, tsButtonSize)
+    tsButton.Position = UDim2.new(0.5, -tsButtonSize/2, 0.8, 0)
+    tsButton.AnchorPoint = Vector2.new(0.5, 0.5)
+    tsButton.Parent = tsGui
+
+    local uicorner = Instance.new("UICorner", tsButton)
+    uicorner.CornerRadius = UDim.new(1, 0)
+
+    -- Button click = activate spin
+    tsButton.MouseButton1Click:Connect(function()
+        hasJumped = false
+        spinStopped = false
+        active = true
     end)
 
-    my_own_section:AddButton("Activate", function()
-        resetAndPrepareForSpin()
-    end)
+    -- Make draggable (PC + Mobile)
+    local dragging = false
+    local dragStart, startPos
+
+    local function inputBegan(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = tsButton.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end
+
+    local function inputChanged(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement 
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            tsButton.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end
+
+    tsButton.InputBegan:Connect(inputBegan)
+    tsButton.InputChanged:Connect(inputChanged)
+end
+
+-- Plugin UI
+local my_own_section = shared.AddSection("Trickshot")
+my_own_section:AddLabel("Spin On Next Jump")
+
+my_own_section:AddSlider("Spin Speed (1-30)", 1, 30, 15, function(value)
+    spinSpeed = value
 end)
+
+my_own_section:AddButton("Activate", function()
+    hasJumped = false
+    spinStopped = false
+    active = true
+end)
+
+-- Toggle to show/hide GUI button
+my_own_section:AddToggle("Enable TS GUI Button", function(enabled)
+    guiEnabled = enabled
+    if guiEnabled then
+        createGuiButton()
+    else
+        if tsGui then tsGui:Destroy() end
+    end
+end)
+
+-- Slider to resize GUI button (updates live)
+my_own_section:AddSlider("TS GUI Button Size", 30, 150, tsButtonSize, function(size)
+    tsButtonSize = size
+    if tsButton then
+        tsButton.Size = UDim2.new(0, tsButtonSize, 0, tsButtonSize)
+        tsButton.TextSize = tsButtonSize / 2
+    end
+end)
+
+-- Re-setup every respawn
+player.CharacterAdded:Connect(function(char)
+    clearConnections()
+    setupSpin(char)
+end)
+
+if player.Character then
+    setupSpin(player.Character)
+end
 
 local shared = odh_shared_plugins
 
