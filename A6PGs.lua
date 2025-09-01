@@ -481,6 +481,233 @@ do
 end
 
 -- =========================
+-- Spray Paint (moved OUTSIDE the toggle and fixed)
+-- =========================
+do
+    local shared = odh_shared_plugins
+    local my_own_section = shared.AddSection("Spray Paint")
+
+    -- services / locals
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local HttpService = game:GetService("HttpService")
+    local LocalPlayer = Players.LocalPlayer
+
+    local decalSaveFile = "saved_decals.json"
+    local defaultDecals = {
+        ["Nerd"] = 9433300824,
+        ["AV Furry"] = 107932217202466,
+        ["Femboy Furry"] = 79763371295949,
+        ["True Female"] = 14731393433,
+        ["TT Dad Jizz"] = 10318831749,
+        ["Racist Ice Cream"] = 14868523054,
+        ["Nigga"] = 109017596954035,
+        ["Roblox Ban"] = 16272310274,
+        ["dsgcj"] = 13896748164,
+        ["Ra ist"] = 17059177886,
+        ["Edp Ironic"] = 84041995770527,
+        ["Ragebait"] = 118997417727905,
+        ["Clown"] = 3277992656,
+        ["Job App"] = 131353391074818,
+    }
+
+    -- load decals
+    local decals = {}
+    if isfile and isfile(decalSaveFile) then
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(decalSaveFile)) end)
+        if ok and type(data) == "table" then
+            decals = data
+        else
+            decals = defaultDecals
+        end
+    else
+        decals = defaultDecals
+    end
+
+    local function saveDecals()
+        if writefile then
+            local ok, encoded = pcall(function() return HttpService:JSONEncode(decals) end)
+            if ok then
+                writefile(decalSaveFile, encoded)
+            else
+                warn("Failed to encode decals")
+            end
+        end
+    end
+
+    -- vars
+    local decalId = 0
+    local sprayOffset = 0.6
+    local selectedTargetType = "Nearest Player"
+    local selectedPlayer = nil
+    local selectedDecalName = nil
+    local loopJOB = false
+    local loopThread
+    local decalDropdown
+
+    -- helpers
+    local function getSprayTool()
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        local char = LocalPlayer.Character
+        return (char and char:FindFirstChild("SprayPaint")) or (backpack and backpack:FindFirstChild("SprayPaint"))
+    end
+    local function equipTool(tool)
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and tool then
+            tool.Parent = char
+            hum:EquipTool(tool)
+        end
+    end
+    local function unequipTool()
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:UnequipTools() end
+    end
+    local function getTarget()
+        if selectedTargetType == "Nearest Player" then
+            local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not root then return nil end
+            local nearest, shortest = nil, math.huge
+            for _,p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local torso = p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("LowerTorso") or p.Character:FindFirstChild("HumanoidRootPart")
+                    if torso then
+                        local d = (root.Position - torso.Position).Magnitude
+                        if d < shortest then
+                            shortest = d
+                            nearest = p
+                        end
+                    end
+                end
+            end
+            return nearest
+        elseif selectedTargetType == "Random" then
+            local t = {}
+            for _,p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    table.insert(t,p)
+                end
+            end
+            return #t > 0 and t[math.random(1,#t)] or nil
+        elseif selectedTargetType == "Select Player" then
+            return selectedPlayer
+        end
+        return nil
+    end
+
+    local function spray(target)
+        local tool = getSprayTool()
+        if not tool or not target or not target.Character then return end
+        equipTool(tool)
+        local torso = target.Character:FindFirstChild("Torso") or target.Character:FindFirstChild("UpperTorso") or target.Character:FindFirstChild("LowerTorso") or target.Character:FindFirstChild("HumanoidRootPart")
+        if not torso then return end
+        local cframe = torso.CFrame + torso.CFrame.LookVector * sprayOffset
+        local remote = tool:FindFirstChildWhichIsA("RemoteEvent")
+        if remote then
+            remote:FireServer(decalId, Enum.NormalId.Front, 2048, torso, cframe)
+        else
+            warn("No remote found in spray tool!")
+        end
+        unequipTool()
+    end
+
+    local function loopSpray()
+        while loopJOB do
+            local target = getTarget()
+            if target then spray(target) end
+            task.wait(14) -- matches spray cooldown
+        end
+        loopThread = nil
+    end
+
+    -- UI
+    if my_own_section then
+        my_own_section:AddToggle("Loop Spray Paint", function(state)
+            loopJOB = state
+            if loopJOB and not loopThread then
+                loopThread = task.spawn(loopSpray)
+            end
+        end)
+
+        my_own_section:AddDropdown("Target Type", {"Nearest Player","Random","Select Player"}, function(opt)
+            selectedTargetType = tostring(opt)
+        end)
+
+        my_own_section:AddPlayerDropdown("Select Player", function(player)
+            if player then
+                selectedPlayer = player
+                selectedTargetType = "Select Player"
+            end
+        end)
+
+        local keys = {}
+        for k,_ in pairs(decals) do table.insert(keys,k) end
+        decalDropdown = my_own_section:AddDropdown("Select Decal", keys, function(selected)
+            selectedDecalName = selected
+            decalId = decals[selected] or 0
+            saveDecals()
+        end)
+
+        my_own_section:AddTextBox("Add Decal (Name:ID)", function(text)
+            local name, id = text:match("(.+):(%d+)")
+            if name and id then
+                decals[name] = tonumber(id)
+                -- refresh dropdown
+                local keys2 = {}
+                for k,_ in pairs(decals) do table.insert(keys2,k) end
+                decalDropdown.Change(keys2)
+                saveDecals()
+            else
+                print("Format must be Name:ID")
+            end
+        end)
+
+        my_own_section:AddButton("Delete Selected Decal", function()
+            if selectedDecalName and decals[selectedDecalName] then
+                decals[selectedDecalName] = nil
+                local keys3 = {}
+                for k,_ in pairs(decals) do table.insert(keys3,k) end
+                decalDropdown.Change(keys3)
+                selectedDecalName = nil
+                decalId = 0
+                saveDecals()
+            else
+                print("No decal selected to delete.")
+            end
+        end)
+
+        my_own_section:AddButton("Spray Paint Player", function()
+            local target = getTarget()
+            if not target then return end
+            spray(target)
+        end)
+
+        -- Auto-Get Spray Tool (fixed the broken line)
+        local autoGetTool = false
+        my_own_section:AddToggle("Auto-Get Spray Tool", function(state)
+            autoGetTool = state
+        end)
+
+        LocalPlayer.CharacterAdded:Connect(function()
+            if autoGetTool then
+                task.wait(1)
+                local args = {"SprayPaint"}
+                ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Extras"):WaitForChild("ReplicateToy"):InvokeServer(unpack(args))
+            end
+        end)
+
+        my_own_section:AddButton("Get Spray Tool", function()
+            local args = {"SprayPaint"}
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Extras"):WaitForChild("ReplicateToy"):InvokeServer(unpack(args))
+        end)
+
+        my_own_section:AddLabel("Spray Paint made by @not_.gato")
+    else
+        warn("Failed to create Spray Paint section! Plugin not loaded.")
+    end
+end
+
+-- =========================
 -- Fake Dead Emote (Animator API)
 -- =========================
 do
