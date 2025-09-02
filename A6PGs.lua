@@ -920,3 +920,185 @@ mute_section:AddToggle("Disable ODH Button Sounds", function(state)
         disableMuting()
     end
 end)
+
+-- =========================
+-- Mute ODH Buttons
+-- =========================
+
+local shared = odh_shared_plugins
+local my_own_section = shared.AddSection("Server Options")
+
+--// Services
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+--// Place + Job info
+local PlaceId = game.PlaceId
+local JobId = game.JobId
+
+----------------------------------------------------------------
+-- Rejoin
+----------------------------------------------------------------
+local function rejoin()
+    TeleportService:TeleportToPlaceInstance(PlaceId, JobId, Players.LocalPlayer)
+end
+
+----------------------------------------------------------------
+-- Server Hop (Random Server)
+----------------------------------------------------------------
+local function serverHop()
+    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PlaceId)
+    local success, servers = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    if success and servers and servers.data and #servers.data > 0 then
+        local available = {}
+        for _, server in ipairs(servers.data) do
+            if server.id ~= JobId and server.playing < server.maxPlayers then
+                table.insert(available, server)
+            end
+        end
+
+        if #available > 0 then
+            local randomServer = available[math.random(1, #available)]
+            shared.Notify("Server hopping...", 2)
+            TeleportService:TeleportToPlaceInstance(PlaceId, randomServer.id, Players.LocalPlayer)
+            return
+        end
+    end
+
+    shared.Notify("No server found to hop to", 3)
+end
+
+----------------------------------------------------------------
+-- Full Server
+----------------------------------------------------------------
+local serversApi = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Desc&limit=100"
+
+local function getServers(cursor)
+    local url = serversApi
+    if cursor then
+        url = url.."&cursor="..cursor
+    end
+
+    local success, response = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    if success and response and response.data then
+        return response
+    else
+        return nil
+    end
+end
+
+local function findFullerServer()
+    local cursor = nil
+    local bestServer = nil
+
+    repeat
+        local servers = getServers(cursor)
+        if not servers then break end
+
+        for _, server in ipairs(servers.data) do
+            if server.id ~= JobId and server.playing < server.maxPlayers then
+                if not bestServer or server.playing > bestServer.playing then
+                    bestServer = server
+                end
+            end
+        end
+
+        cursor = servers.nextPageCursor
+    until not cursor or bestServer
+
+    return bestServer
+end
+
+local function joinFullServer()
+    local target = findFullerServer()
+    if target then
+        shared.Notify("Joining full server...", 2)
+        TeleportService:TeleportToPlaceInstance(PlaceId, target.id, Players.LocalPlayer)
+    else
+        shared.Notify("No suitable fuller server found", 3)
+    end
+end
+
+----------------------------------------------------------------
+-- Dead Server
+----------------------------------------------------------------
+local function fetchServers(cursor)
+    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s"):format(
+        PlaceId,
+        cursor and "&cursor=" .. cursor or ""
+    )
+
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    if success and result and result.data then
+        return result
+    else
+        warn("Failed to fetch servers")
+        return nil
+    end
+end
+
+local function findDeadServer()
+    local lowestServer, lowestCount
+    local cursor = nil
+
+    repeat
+        local page = fetchServers(cursor)
+        if not page then break end
+
+        for _, server in ipairs(page.data) do
+            if server.id ~= JobId and server.playing > 0 then
+                if not lowestCount or server.playing < lowestCount then
+                    lowestCount = server.playing
+                    lowestServer = server
+                end
+            end
+        end
+
+        cursor = page.nextPageCursor
+        task.wait(1.5) -- avoid rate limit
+    until not cursor
+
+    return lowestServer
+end
+
+local function joinDeadServer()
+    local server = findDeadServer()
+    if server then
+        shared.Notify("Joining dead server with " .. server.playing .. " players", 3)
+        TeleportService:TeleportToPlaceInstance(PlaceId, server.id, Players.LocalPlayer)
+    else
+        shared.Notify("No dead server found", 3)
+    end
+end
+
+----------------------------------------------------------------
+-- UI Elements
+----------------------------------------------------------------
+my_own_section:AddLabel("Might Take a Few Tries")
+
+-- Buttons in the order you want
+my_own_section:AddButton("Rejoin", function()
+    rejoin()
+end)
+
+my_own_section:AddButton("Server Hop", function()
+    serverHop()
+end)
+
+my_own_section:AddButton("Join Full Server", function()
+    joinFullServer()
+end)
+
+my_own_section:AddButton("Join Dead Server", function()
+    joinDeadServer()
+end)
