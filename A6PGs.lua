@@ -1,4 +1,71 @@
 -- =========================
+-- Plugin: Lua File Manager
+-- =========================
+local shared = odh_shared_plugins
+local my_own_section = shared.AddSection("Plugin Manager")
+
+my_own_section:AddLabel("Manage .lua Files in Plugins Folder")
+
+-- Setup folder
+local baseFolder = "Ixry Shizuka"
+local pluginsFolder = baseFolder .. "/plugins"
+
+if not isfolder(baseFolder) then
+    makefolder(baseFolder)
+end
+if not isfolder(pluginsFolder) then
+    makefolder(pluginsFolder)
+end
+
+-- current dropdown reference & selected file
+local fileDropdown
+local selectedFile = nil
+
+-- function to refresh list
+local function refreshFileList()
+    local files = {}
+    for _, filePath in ipairs(listfiles(pluginsFolder)) do
+        if filePath:match("%.lua$") then
+            local fileName = filePath:match("[^/\\]+$") -- strip path
+            table.insert(files, fileName)
+        end
+    end
+    return files
+end
+
+-- create dropdown
+fileDropdown = my_own_section:AddDropdown("Select Plugin File", refreshFileList(), function(selected)
+    selectedFile = selected -- store it globally
+end)
+
+-- refresh button
+my_own_section:AddButton("Refresh File List", function()
+    local files = refreshFileList()
+    fileDropdown.Change(files)
+    selectedFile = nil -- reset selection after refresh
+    shared.Notify("File list refreshed ("..#files.." files)", 2)
+end)
+
+-- delete button
+my_own_section:AddButton("Delete Selected File", function()
+    if selectedFile then
+        local fullPath = pluginsFolder.."/"..selectedFile
+        if isfile(fullPath) then
+            delfile(fullPath)
+            shared.Notify("Deleted: " .. selectedFile, 3)
+            -- refresh dropdown after deletion
+            local files = refreshFileList()
+            fileDropdown.Change(files)
+            selectedFile = nil -- clear selection after delete
+        else
+            shared.Notify("File not found: " .. selectedFile, 3)
+        end
+    else
+        shared.Notify("No file selected", 3)
+    end
+end)
+
+-- =========================
 -- Auto Speed Glitch
 -- =========================
 local shared = odh_shared_plugins
