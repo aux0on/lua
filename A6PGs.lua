@@ -65,6 +65,86 @@ my_own_section:AddButton("Delete Selected File", function()
     end
 end)
 
+-- rename textbox
+my_own_section:AddTextBox("Rename Plugin", function(newFileName)
+    if not selectedFile then
+        shared.Notify("No file selected to rename", 3)
+        return
+    end
+    if not newFileName:match("%.lua$") then
+        shared.Notify("Enter a valid new name ending with .lua", 3)
+        return
+    end
+    local oldPath = pluginsFolder.."/"..selectedFile
+    local newPath = pluginsFolder.."/"..newFileName
+    if not isfile(oldPath) then
+        shared.Notify("File not found: " .. selectedFile, 3)
+        return
+    end
+    if isfile(newPath) then
+        shared.Notify("A file with that name already exists", 3)
+        return
+    end
+    writefile(newPath, readfile(oldPath))
+    delfile(oldPath)
+    shared.Notify("Renamed "..selectedFile.." → "..newFileName, 4)
+
+    -- refresh dropdown
+    local files = refreshFileList()
+    fileDropdown.Change(files)
+    selectedFile = nil
+end)
+
+-- =====================
+-- Watcher (Rejoin logic)
+-- =====================
+local watcherActive = false
+local lastFiles = {}
+
+local function getFiles()
+    local files = {}
+    for _, f in ipairs(listfiles(pluginsFolder)) do
+        if f:match("%.lua$") then
+            files[f:match("[^/\\]+$")] = true
+        end
+    end
+    return files
+end
+
+local function startWatcher()
+    task.spawn(function()
+        local startTime = os.clock()
+        while watcherActive and (os.clock() - startTime < 30) do
+            task.wait(5)
+
+            local currentFiles = getFiles()
+            for f in pairs(currentFiles) do
+                if not lastFiles[f] then
+                    shared.Notify("New plugin detected: " .. f, 5)
+                    game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+                    return
+                end
+            end
+            lastFiles = currentFiles
+        end
+        if watcherActive then
+            shared.Notify("Checking Disabled (No New Plugins Found)", 3)
+            watcherActive = false
+        end
+    end)
+end
+
+my_own_section:AddToggle("Rejoin When New Plugin Added", function(enabled)
+    watcherActive = enabled
+    if enabled then
+        lastFiles = getFiles() -- reset baseline
+        shared.Notify("Checking Enabled", 3)
+        startWatcher()
+    else
+        shared.Notify("Checker Disabled", 3)
+    end
+end)
+
 -- =========================
 -- Auto Speed Glitch
 -- =========================
