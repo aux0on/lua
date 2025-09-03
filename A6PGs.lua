@@ -115,7 +115,7 @@ local function startWatcher()
     task.spawn(function()
         local startTime = os.clock()
         while watcherActive and (os.clock() - startTime < 30) do
-            task.wait(5)
+            task.wait(1)
 
             local currentFiles = getFiles()
             for f in pairs(currentFiles) do
@@ -143,6 +143,188 @@ my_own_section:AddToggle("Rejoin When New Plugin Added", function(enabled)
     else
         shared.Notify("Checker Disabled", 3)
     end
+end)
+
+-- =========================
+-- Server Options
+-- =========================
+
+local shared = odh_shared_plugins
+local my_own_section = shared.AddSection("Server Options")
+
+--// Services
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+--// Place + Job info
+local PlaceId = game.PlaceId
+local JobId = game.JobId
+
+----------------------------------------------------------------
+-- Rejoin
+----------------------------------------------------------------
+local function rejoin()
+    TeleportService:TeleportToPlaceInstance(PlaceId, JobId, Players.LocalPlayer)
+end
+
+----------------------------------------------------------------
+-- Server Hop (Random Server)
+----------------------------------------------------------------
+local function serverHop()
+    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PlaceId)
+    local success, servers = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    if success and servers and servers.data and #servers.data > 0 then
+        local available = {}
+        for _, server in ipairs(servers.data) do
+            if server.id ~= JobId and server.playing < server.maxPlayers then
+                table.insert(available, server)
+            end
+        end
+
+        if #available > 0 then
+            local randomServer = available[math.random(1, #available)]
+            shared.Notify("Server hopping...", 2)
+            TeleportService:TeleportToPlaceInstance(PlaceId, randomServer.id, Players.LocalPlayer)
+            return
+        end
+    end
+
+    shared.Notify("No server found to hop to", 3)
+end
+
+----------------------------------------------------------------
+-- Full Server
+----------------------------------------------------------------
+local serversApi = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Desc&limit=100"
+
+local function getServers(cursor)
+    local url = serversApi
+    if cursor then
+        url = url.."&cursor="..cursor
+    end
+
+    local success, response = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    if success and response and response.data then
+        return response
+    else
+        return nil
+    end
+end
+
+local function findFullerServer()
+    local cursor = nil
+    local bestServer = nil
+
+    repeat
+        local servers = getServers(cursor)
+        if not servers then break end
+
+        for _, server in ipairs(servers.data) do
+            if server.id ~= JobId and server.playing < server.maxPlayers then
+                if not bestServer or server.playing > bestServer.playing then
+                    bestServer = server
+                end
+            end
+        end
+
+        cursor = servers.nextPageCursor
+    until not cursor or bestServer
+
+    return bestServer
+end
+
+local function joinFullServer()
+    local target = findFullerServer()
+    if target then
+        shared.Notify("Joining full server...", 2)
+        TeleportService:TeleportToPlaceInstance(PlaceId, target.id, Players.LocalPlayer)
+    else
+        shared.Notify("No suitable fuller server found", 3)
+    end
+end
+
+----------------------------------------------------------------
+-- Dead Server
+----------------------------------------------------------------
+local function fetchServers(cursor)
+    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s"):format(
+        PlaceId,
+        cursor and "&cursor=" .. cursor or ""
+    )
+
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    if success and result and result.data then
+        return result
+    else
+        warn("Failed to fetch servers")
+        return nil
+    end
+end
+
+local function findDeadServer()
+    local lowestServer, lowestCount
+    local cursor = nil
+
+    repeat
+        local page = fetchServers(cursor)
+        if not page then break end
+
+        for _, server in ipairs(page.data) do
+            if server.id ~= JobId and server.playing > 0 then
+                if not lowestCount or server.playing < lowestCount then
+                    lowestCount = server.playing
+                    lowestServer = server
+                end
+            end
+        end
+
+        cursor = page.nextPageCursor
+        task.wait(1.5) -- avoid rate limit
+    until not cursor
+
+    return lowestServer
+end
+
+local function joinDeadServer()
+    local server = findDeadServer()
+    if server then
+        shared.Notify("Joining dead server with " .. server.playing .. " players", 3)
+        TeleportService:TeleportToPlaceInstance(PlaceId, server.id, Players.LocalPlayer)
+    else
+        shared.Notify("No dead server found", 3)
+    end
+end
+
+----------------------------------------------------------------
+-- UI Elements
+----------------------------------------------------------------
+my_own_section:AddLabel("Might Take a Few Tries")
+
+-- Buttons in the order you want
+my_own_section:AddButton("Rejoin", function()
+    rejoin()
+end)
+
+my_own_section:AddButton("Server Hop", function()
+    serverHop()
+end)
+
+my_own_section:AddButton("Join Full Server", function()
+    joinFullServer()
+end)
+
+my_own_section:AddButton("Join Dead Server", function()
+    joinDeadServer()
 end)
 
 -- =========================
@@ -1078,183 +1260,137 @@ mute_section:AddToggle("Disable ODH Button Sounds", function(state)
 end)
 
 -- =========================
--- Mute ODH Buttons
+-- RFX Visual Enhancer w/ Presets
 -- =========================
+do
+    local shared = odh_shared_plugins
+    local Lighting = game:GetService("Lighting")
 
-local shared = odh_shared_plugins
-local my_own_section = shared.AddSection("Server Options")
+    local rfx_section = shared.AddSection("RFX")
 
---// Services
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
+    local rfx = {
+        Blur = nil,
+        ColorCorrection = nil,
+        Bloom = nil,
+        SunRays = nil,
+        DepthOfField = nil,
+    }
 
---// Place + Job info
-local PlaceId = game.PlaceId
-local JobId = game.JobId
+    local enabled = false
 
-----------------------------------------------------------------
--- Rejoin
-----------------------------------------------------------------
-local function rejoin()
-    TeleportService:TeleportToPlaceInstance(PlaceId, JobId, Players.LocalPlayer)
-end
+    local function createEffects()
+        if not rfx.Blur then
+            local blur = Instance.new("BlurEffect")
+            blur.Size = 2
+            blur.Parent = Lighting
+            rfx.Blur = blur
+        end
 
-----------------------------------------------------------------
--- Server Hop (Random Server)
-----------------------------------------------------------------
-local function serverHop()
-    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PlaceId)
-    local success, servers = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(url))
-    end)
+        if not rfx.ColorCorrection then
+            local cc = Instance.new("ColorCorrectionEffect")
+            cc.Brightness = 0.05
+            cc.Contrast = 0.1
+            cc.Saturation = 0.15
+            cc.TintColor = Color3.fromRGB(255, 245, 230)
+            cc.Parent = Lighting
+            rfx.ColorCorrection = cc
+        end
 
-    if success and servers and servers.data and #servers.data > 0 then
-        local available = {}
-        for _, server in ipairs(servers.data) do
-            if server.id ~= JobId and server.playing < server.maxPlayers then
-                table.insert(available, server)
+        if not rfx.Bloom then
+            local bloom = Instance.new("BloomEffect")
+            bloom.Intensity = 0.5
+            bloom.Threshold = 0.9
+            bloom.Size = 40
+            bloom.Parent = Lighting
+            rfx.Bloom = bloom
+        end
+
+        if not rfx.SunRays then
+            local sr = Instance.new("SunRaysEffect")
+            sr.Intensity = 0.2
+            sr.Spread = 0.8
+            sr.Parent = Lighting
+            rfx.SunRays = sr
+        end
+
+        if not rfx.DepthOfField then
+            local dof = Instance.new("DepthOfFieldEffect")
+            dof.InFocusRadius = 30
+            dof.NearIntensity = 0.1
+            dof.FarIntensity = 0.15
+            dof.FocusDistance = 25
+            dof.Parent = Lighting
+            rfx.DepthOfField = dof
+        end
+    end
+
+    local function setEnabled(state)
+        enabled = state
+        if state then
+            createEffects()
+            for _, v in pairs(rfx) do
+                if v then v.Enabled = true end
+            end
+        else
+            for _, v in pairs(rfx) do
+                if v then v.Enabled = false end
             end
         end
+    end
 
-        if #available > 0 then
-            local randomServer = available[math.random(1, #available)]
-            shared.Notify("Server hopping...", 2)
-            TeleportService:TeleportToPlaceInstance(PlaceId, randomServer.id, Players.LocalPlayer)
-            return
+    -- Apply preset styles
+    local function applyPreset(preset)
+        if not enabled then return end
+        if not rfx.ColorCorrection or not rfx.Bloom or not rfx.SunRays then return end
+
+        if preset == "Cinematic" then
+            rfx.ColorCorrection.Brightness = 0.05
+            rfx.ColorCorrection.Contrast = 0.25
+            rfx.ColorCorrection.Saturation = -0.05
+            rfx.ColorCorrection.TintColor = Color3.fromRGB(255, 240, 220)
+            rfx.Bloom.Intensity = 0.3
+            rfx.SunRays.Intensity = 0.15
+
+        elseif preset == "Warm" then
+            rfx.ColorCorrection.Brightness = 0.1
+            rfx.ColorCorrection.Contrast = 0.15
+            rfx.ColorCorrection.Saturation = 0.2
+            rfx.ColorCorrection.TintColor = Color3.fromRGB(255, 220, 180)
+            rfx.Bloom.Intensity = 0.4
+            rfx.SunRays.Intensity = 0.2
+
+        elseif preset == "Cold" then
+            rfx.ColorCorrection.Brightness = -0.05
+            rfx.ColorCorrection.Contrast = 0.2
+            rfx.ColorCorrection.Saturation = -0.1
+            rfx.ColorCorrection.TintColor = Color3.fromRGB(200, 220, 255)
+            rfx.Bloom.Intensity = 0.35
+            rfx.SunRays.Intensity = 0.25
+
+        elseif preset == "HDR" then
+            rfx.ColorCorrection.Brightness = 0.15
+            rfx.ColorCorrection.Contrast = 0.3
+            rfx.ColorCorrection.Saturation = 0.25
+            rfx.ColorCorrection.TintColor = Color3.fromRGB(255, 255, 255)
+            rfx.Bloom.Intensity = 0.6
+            rfx.SunRays.Intensity = 0.35
         end
     end
 
-    shared.Notify("No server found to hop to", 3)
-end
-
-----------------------------------------------------------------
--- Full Server
-----------------------------------------------------------------
-local serversApi = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Desc&limit=100"
-
-local function getServers(cursor)
-    local url = serversApi
-    if cursor then
-        url = url.."&cursor="..cursor
-    end
-
-    local success, response = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(url))
+    -- Plugin UI
+    rfx_section:AddToggle("Enable RFX", function(state)
+        setEnabled(state)
     end)
 
-    if success and response and response.data then
-        return response
-    else
-        return nil
-    end
-end
-
-local function findFullerServer()
-    local cursor = nil
-    local bestServer = nil
-
-    repeat
-        local servers = getServers(cursor)
-        if not servers then break end
-
-        for _, server in ipairs(servers.data) do
-            if server.id ~= JobId and server.playing < server.maxPlayers then
-                if not bestServer or server.playing > bestServer.playing then
-                    bestServer = server
-                end
-            end
+    rfx_section:AddSlider("RFX Intensity", 1, 100, 50, function(value)
+        if enabled then
+            if rfx.Bloom then rfx.Bloom.Intensity = value / 100 * 1 end
+            if rfx.SunRays then rfx.SunRays.Intensity = value / 100 * 0.4 end
+            if rfx.ColorCorrection then rfx.ColorCorrection.Contrast = value / 100 * 0.3 end
         end
-
-        cursor = servers.nextPageCursor
-    until not cursor or bestServer
-
-    return bestServer
-end
-
-local function joinFullServer()
-    local target = findFullerServer()
-    if target then
-        shared.Notify("Joining full server...", 2)
-        TeleportService:TeleportToPlaceInstance(PlaceId, target.id, Players.LocalPlayer)
-    else
-        shared.Notify("No suitable fuller server found", 3)
-    end
-end
-
-----------------------------------------------------------------
--- Dead Server
-----------------------------------------------------------------
-local function fetchServers(cursor)
-    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s"):format(
-        PlaceId,
-        cursor and "&cursor=" .. cursor or ""
-    )
-
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(url))
     end)
 
-    if success and result and result.data then
-        return result
-    else
-        warn("Failed to fetch servers")
-        return nil
-    end
+    rfx_section:AddDropdown("RFX Presets", {"Cinematic", "Warm", "Cold", "HDR"}, function(preset)
+        applyPreset(preset)
+    end)
 end
-
-local function findDeadServer()
-    local lowestServer, lowestCount
-    local cursor = nil
-
-    repeat
-        local page = fetchServers(cursor)
-        if not page then break end
-
-        for _, server in ipairs(page.data) do
-            if server.id ~= JobId and server.playing > 0 then
-                if not lowestCount or server.playing < lowestCount then
-                    lowestCount = server.playing
-                    lowestServer = server
-                end
-            end
-        end
-
-        cursor = page.nextPageCursor
-        task.wait(1.5) -- avoid rate limit
-    until not cursor
-
-    return lowestServer
-end
-
-local function joinDeadServer()
-    local server = findDeadServer()
-    if server then
-        shared.Notify("Joining dead server with " .. server.playing .. " players", 3)
-        TeleportService:TeleportToPlaceInstance(PlaceId, server.id, Players.LocalPlayer)
-    else
-        shared.Notify("No dead server found", 3)
-    end
-end
-
-----------------------------------------------------------------
--- UI Elements
-----------------------------------------------------------------
-my_own_section:AddLabel("Might Take a Few Tries")
-
--- Buttons in the order you want
-my_own_section:AddButton("Rejoin", function()
-    rejoin()
-end)
-
-my_own_section:AddButton("Server Hop", function()
-    serverHop()
-end)
-
-my_own_section:AddButton("Join Full Server", function()
-    joinFullServer()
-end)
-
-my_own_section:AddButton("Join Dead Server", function()
-    joinDeadServer()
-end)
