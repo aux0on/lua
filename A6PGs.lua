@@ -1350,6 +1350,156 @@ makeEmoteHandler("103788740211648", "DS", "EmoteGUI_DualSwing")  -- Dual Swing
 
 end
 
+-- Accurate Silent Aim with Ping-based Prediction
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Stats = game:GetService("Stats")
+
+local shared = odh_shared_plugins
+if not shared then return end
+
+local notify = shared.Notify
+local hook = hookfunction or hookfunc
+if not hook then return end
+
+-- Settings
+local silentAimEnabled = false
+local useCrosshairMode = false
+local predictionMultiplier = 1 -- scale prediction relative to ping
+local hitbox = "HumanoidRootPart"
+
+-- UI
+local section = shared.AddSection("Accurate Silent Aim")
+
+section:AddToggle("Enable Silent Aim", function(state)
+    silentAimEnabled = state
+end)
+
+section:AddToggle("Crosshair Targeting", function(state)
+    useCrosshairMode = state
+end)
+
+section:AddSlider("Prediction Multiplier", 0, 200, 100, function(val)
+    predictionMultiplier = val / 100 -- 1.0 = 100% of ping
+end)
+
+section:AddDropdown("Hitbox", { "Head", "HumanoidRootPart", "ClosestPart" }, function(choice)
+    hitbox = choice
+end)
+
+-- Helpers
+local function getCurrentPing()
+    local pingMs = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+    return (pingMs / 1000) * predictionMultiplier -- convert ms to sec, apply multiplier
+end
+
+local function getHitboxPart(character)
+    if not character then return nil end
+
+    if hitbox == "Head" and character:FindFirstChild("Head") then
+        return character.Head
+    elseif hitbox == "HumanoidRootPart" and character:FindFirstChild("HumanoidRootPart") then
+        return character.HumanoidRootPart
+    elseif hitbox == "ClosestPart" then
+        local closest, dist = nil, math.huge
+        for _, part in ipairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local mouse = LocalPlayer:GetMouse()
+                    local d = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
+                    if d < dist then
+                        closest, dist = part, d
+                    end
+                end
+            end
+        end
+        return closest
+    end
+end
+
+local function getMurderer()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            if plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife") then
+                return plr
+            end
+        end
+    end
+end
+
+local function getCrosshairTarget()
+    local mouse = LocalPlayer:GetMouse()
+    local closest, closestDist = nil, math.huge
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = plr.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            if onScreen then
+                local dist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
+                if dist < closestDist then
+                    closest = plr
+                    closestDist = dist
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- Hooking
+local old
+local function hookFunc(self, ...)
+    if not silentAimEnabled then
+        return old(self, ...)
+    end
+
+    if self.Name ~= "RemoteFunction" or self.Parent.Name ~= "CreateBeam" then
+        return old(self, ...)
+    end
+
+    local args = { ... }
+    if not tonumber(args[1]) or args[3] ~= "AH2" then
+        return old(self, ...)
+    end
+
+    -- Pick target
+    local targetPlayer
+    if useCrosshairMode then
+        targetPlayer = getCrosshairTarget()
+    else
+        targetPlayer = getMurderer()
+    end
+
+    if not targetPlayer then
+        return old(self, ...)
+    end
+
+    -- Pick hitbox
+    local part = getHitboxPart(targetPlayer.Character)
+    if not part then
+        return old(self, ...)
+    end
+
+    -- Auto prediction from ping
+    local pingPrediction = getCurrentPing()
+    local velocity = part.AssemblyLinearVelocity
+    local predicted = part.Position + (velocity * pingPrediction)
+
+    return old(self, args[1], predicted, args[3])
+end
+
+-- Hook InvokeServer
+local fakeRemote = Instance.new("RemoteFunction")
+local invokeServer = fakeRemote.InvokeServer
+fakeRemote:Destroy()
+old = hook(invokeServer, hookFunc)
+
+notify("Accurate Silent Aim (Ping-based) loaded.", 1)
+
 -- =========================
 -- Mute ODH Buttons
 -- =========================
