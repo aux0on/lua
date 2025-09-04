@@ -327,6 +327,158 @@ my_own_section:AddButton("Join Dead Server", function()
     joinDeadServer()
 end)
 
+-- Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local PlaySong = ReplicatedStorage.Remotes.Inventory.PlaySong -- RemoteEvent 
+local RoleSelect = ReplicatedStorage.Remotes.Gameplay.RoleSelect -- RemoteEvent 
+
+-- Shared
+local shared = odh_shared_plugins
+local my_own_section = shared.AddSection("Radio Abuse")
+
+my_own_section:AddLabel("Credits To <font color='rgb(170,0,255)'>@lzzzx</font>")
+
+-- File to store saved songs
+local saveFile = "saved_songs.json"
+
+-- Load saved songs
+local savedSongs = {}
+if isfile and readfile and isfile(saveFile) then
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(readfile(saveFile))
+    end)
+    if ok and type(data) == "table" then
+        savedSongs = data
+    end
+end
+
+-- Function to save songs
+local function saveSongs()
+    if writefile then
+        writefile(saveFile, HttpService:JSONEncode(savedSongs))
+    end
+end
+
+-- Convert savedSongs into a list of names for the dropdown
+local function getSongNames()
+    local names = {}
+    for _, song in ipairs(savedSongs) do
+        table.insert(names, song.name or song.id)
+    end
+    return names
+end
+
+-- Dropdown (shows names, plays IDs)
+local dropdown
+local lastSelected = nil
+dropdown = my_own_section:AddDropdown("Saved Songs", getSongNames(), function(selectedName)
+    for _, song in ipairs(savedSongs) do
+        if song.name == selectedName then
+            lastSelected = song
+            local url = "https://www.roblox.com/asset/?id=" .. song.id
+            PlaySong:FireServer(url)
+            break
+        end
+    end
+end)
+
+-- Textbox to add songs (just ID or full URL)
+my_own_section:AddTextBox("Add Audio ID", function(text)
+    local id = text:match("%d+")
+    if id then
+        local success, info = pcall(function()
+            return MarketplaceService:GetProductInfo(tonumber(id))
+        end)
+        if success and info and info.Name then
+            table.insert(savedSongs, {name = info.Name, id = id})
+            saveSongs()
+            dropdown.Change(getSongNames())
+            shared.Notify("Added new song: " .. info.Name, 2)
+        else
+            shared.Notify("Failed to fetch song name, saved as ID only", 3)
+            table.insert(savedSongs, {name = id, id = id})
+            saveSongs()
+            dropdown.Change(getSongNames())
+        end
+    else
+        shared.Notify("Invalid audio ID!", 2)
+    end
+end)
+
+-- Button to remove selected song
+my_own_section:AddButton("Delete Selected Audio", function()
+    if lastSelected then
+        for i, song in ipairs(savedSongs) do
+            if song.name == lastSelected.name then
+                table.remove(savedSongs, i)
+                saveSongs()
+                dropdown.Change(getSongNames())
+                shared.Notify("Removed song: " .. lastSelected.name, 2)
+                lastSelected = nil
+                return
+            end
+        end
+        shared.Notify("Selected song not found in list", 2)
+    else
+        shared.Notify("No song selected to remove", 2)
+    end
+end)
+
+----------------------------------------------------------------
+-- 🔥 Auto Play Toggle
+----------------------------------------------------------------
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local autoPlayEnabled = false
+local connection
+local charConnection
+
+-- Function to play selected audio
+local function playSelectedSong()
+    if lastSelected then
+        local url = "https://www.roblox.com/asset/?id=" .. lastSelected.id
+        PlaySong:FireServer(url)
+    else
+        shared.Notify("No song selected for auto-play!", 3)
+    end
+end
+
+my_own_section:AddToggle("Auto Play Selected Audio", function(state)
+    autoPlayEnabled = state
+
+    -- Disconnect old connections
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    if charConnection then
+        charConnection:Disconnect()
+        charConnection = nil
+    end
+
+    if autoPlayEnabled then
+        -- Trigger when RoleSelect remote fires
+        connection = RoleSelect.OnClientEvent:Connect(function(...)
+            playSelectedSong()
+        end)
+
+        -- Trigger after each respawn
+        charConnection = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1) -- short delay to ensure character fully loads
+            playSelectedSong()
+        end)
+
+        -- Also play immediately if you’re already spawned
+        if LocalPlayer.Character then
+            task.wait(1)
+            playSelectedSong()
+        end
+    end
+end)
+
 -- =========================
 -- Auto Speed Glitch
 -- =========================
