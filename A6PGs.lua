@@ -721,18 +721,16 @@ whitelist_section:AddButton("Kill All", function()
 end)
 
 -- =========================
--- Trickshot + TS Button
+-- Trickshot + TS Button (Fixed)
 -- =========================
 do
     local shared = odh_shared_plugins
     local Players = game:GetService("Players")
     local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-
     local player = Players.LocalPlayer
+
     local spinSpeed = 15
     local hasJumped = false
-    local spinStopped = false
     local active = false
     local connections = {}
 
@@ -751,8 +749,10 @@ do
 
     local function setupSpin(character)
         local hrp = character:WaitForChild("HumanoidRootPart")
+        local humanoid = character:WaitForChild("Humanoid")
 
         local function startSpin()
+            -- clear old forces
             for _, obj in ipairs(hrp:GetChildren()) do
                 if obj:IsA("Torque") or obj:IsA("Attachment") then
                     obj:Destroy()
@@ -766,14 +766,12 @@ do
             torque.Torque = Vector3.new(0, spinSpeed * 10000, 0)
             torque.Parent = hrp
 
-            table.insert(connections, RunService.Heartbeat:Connect(function()
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                if not humanoid then return end
-                if hasJumped and humanoid:GetState() == Enum.HumanoidStateType.Freefall then
-                    if spinStopped then
-                        spinStopped = false
-                        torque:Destroy()
-                    end
+            -- Stop spin when landed
+            table.insert(connections, humanoid.StateChanged:Connect(function(_, newState)
+                if newState == Enum.HumanoidStateType.Landed then
+                    torque:Destroy()
+                    hasJumped = false -- reset so spin can work on next jump
+                    active = false
                 end
             end))
         end
@@ -781,18 +779,7 @@ do
         table.insert(connections, UserInputService.JumpRequest:Connect(function()
             if active and not hasJumped then
                 hasJumped = true
-                startSpin()
-            end
-        end))
-
-        table.insert(connections, hrp.Touched:Connect(function(hit)
-            if active and hit:IsA("BasePart") and not spinStopped then
-                spinStopped = true
-                for _, obj in ipairs(hrp:GetChildren()) do
-                    if obj:IsA("Torque") then
-                        obj:Destroy()
-                    end
-                end
+                task.defer(startSpin) -- ensure jump actually registered before spin
             end
         end))
     end
@@ -822,7 +809,6 @@ do
 
         tsButton.MouseButton1Click:Connect(function()
             hasJumped = false
-            spinStopped = false
             active = true
         end)
 
@@ -868,7 +854,6 @@ do
 
     my_own_section:AddButton("Activate", function()
         hasJumped = false
-        spinStopped = false
         active = true
     end)
 
