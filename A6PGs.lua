@@ -1335,7 +1335,7 @@ makeEmoteHandler("103788740211648", "DS", "EmoteGUI_DualSwing")  -- Dual Swing
 
 end
 
--- Accurate Silent Aim with Ping-based Prediction
+-- Advanced Accurate Silent Aim with Full Specs
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -1349,14 +1349,28 @@ local notify = shared.Notify
 local hook = hookfunction or hookfunc
 if not hook then return end
 
--- Settings
+-- ===============================
+-- SETTINGS
+-- ===============================
 local silentAimEnabled = false
 local useCrosshairMode = false
-local predictionMultiplier = 1 -- scale prediction relative to ping
 local hitbox = "HumanoidRootPart"
 
+-- Prediction tuning
+local verticalPrediction = 1.0
+local horizontalPrediction = 1.0
+local simulationDivider = 1.0
+local predictionInterval = 50 -- ms
+local prioritizePing = true
+local jumpPrediction = true
+
+local lastPredictionUpdate = 0
+local cachedPrediction = 0.1
+
+-- ===============================
 -- UI
-local section = shared.AddSection("Accurate Silent Aim")
+-- ===============================
+local section = shared.AddSection("Silent Aim (Specs)")
 
 section:AddToggle("Enable Silent Aim", function(state)
     silentAimEnabled = state
@@ -1366,23 +1380,56 @@ section:AddToggle("Crosshair Targeting", function(state)
     useCrosshairMode = state
 end)
 
-section:AddSlider("Prediction Multiplier", 0, 200, 100, function(val)
-    predictionMultiplier = val / 100 -- 1.0 = 100% of ping
-end)
-
 section:AddDropdown("Hitbox", { "Head", "HumanoidRootPart", "ClosestPart" }, function(choice)
     hitbox = choice
 end)
 
--- Helpers
+section:AddSlider("Vertical Prediction", 0, 200, 100, function(val)
+    verticalPrediction = val / 100
+end)
+
+section:AddSlider("Horizontal Prediction", 0, 200, 100, function(val)
+    horizontalPrediction = val / 100
+end)
+
+section:AddSlider("Simulation Divider", 1, 10, 1, function(val)
+    simulationDivider = val
+end)
+
+section:AddSlider("Prediction Interval (ms)", 10, 500, predictionInterval, function(val)
+    predictionInterval = val
+end)
+
+section:AddToggle("Prioritize Your Ping", function(state)
+    prioritizePing = state
+end)
+
+section:AddToggle("Jump Prediction", function(state)
+    jumpPrediction = state
+end)
+
+-- ===============================
+-- HELPERS
+-- ===============================
 local function getCurrentPing()
     local pingMs = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-    return (pingMs / 1000) * predictionMultiplier -- convert ms to sec, apply multiplier
+    return pingMs / 1000
+end
+
+local function getPredictionTime()
+    local now = tick() * 1000
+    if now - lastPredictionUpdate >= predictionInterval then
+        lastPredictionUpdate = now
+
+        if prioritizePing then
+            cachedPrediction = getCurrentPing()
+        end
+    end
+    return cachedPrediction
 end
 
 local function getHitboxPart(character)
     if not character then return nil end
-
     if hitbox == "Head" and character:FindFirstChild("Head") then
         return character.Head
     elseif hitbox == "HumanoidRootPart" and character:FindFirstChild("HumanoidRootPart") then
@@ -1435,7 +1482,9 @@ local function getCrosshairTarget()
     return closest
 end
 
--- Hooking
+-- ===============================
+-- HOOK
+-- ===============================
 local old
 local function hookFunc(self, ...)
     if not silentAimEnabled then
@@ -1451,28 +1500,30 @@ local function hookFunc(self, ...)
         return old(self, ...)
     end
 
-    -- Pick target
+    -- Select target
     local targetPlayer
     if useCrosshairMode then
         targetPlayer = getCrosshairTarget()
     else
         targetPlayer = getMurderer()
     end
-
     if not targetPlayer then
         return old(self, ...)
     end
 
-    -- Pick hitbox
+    -- Select hitbox
     local part = getHitboxPart(targetPlayer.Character)
     if not part then
         return old(self, ...)
     end
 
-    -- Auto prediction from ping
-    local pingPrediction = getCurrentPing()
+    -- Calculate prediction
+    local t = getPredictionTime()
     local velocity = part.AssemblyLinearVelocity
-    local predicted = part.Position + (velocity * pingPrediction)
+    local velX = (velocity.X / simulationDivider) * horizontalPrediction
+    local velY = (velocity.Y / simulationDivider) * (jumpPrediction and verticalPrediction or 0)
+    local velZ = (velocity.Z / simulationDivider) * horizontalPrediction
+    local predicted = part.Position + Vector3.new(velX, velY, velZ) * t
 
     return old(self, args[1], predicted, args[3])
 end
@@ -1483,7 +1534,7 @@ local invokeServer = fakeRemote.InvokeServer
 fakeRemote:Destroy()
 old = hook(invokeServer, hookFunc)
 
-notify("Accurate Silent Aim (Ping-based) loaded.", 1)
+notify("Silent Aim (Full Specs) loaded.", 1)
 
 -- =========================
 -- Mute ODH Buttons
