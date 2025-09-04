@@ -338,7 +338,7 @@ local RoleSelect = ReplicatedStorage.Remotes.Gameplay.RoleSelect -- RemoteEvent
 local shared = odh_shared_plugins
 local my_own_section = shared.AddSection("Radio Abuse")
 
-my_own_section:AddLabel("Credits To <font color='rgb(170,0,255)'>@lzzzx</font>")
+my_own_section:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")
 
 -- File to store saved songs
 local saveFile = "saved_songs.json"
