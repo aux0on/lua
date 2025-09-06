@@ -1732,3 +1732,192 @@ do
         applyPreset(preset)
     end)
 end
+
+-- GUI CUSTOMIZER IMPROVED
+
+local shared = odh_shared_plugins
+local section = shared.AddSection("COLOR CUSTOMIZER")
+
+-- Colors
+local vibrantColors = {
+    Red = Color3.fromRGB(255,0,0),
+    Green = Color3.fromRGB(0,255,0),
+    Blue = Color3.fromRGB(0,0,255),
+    Yellow = Color3.fromRGB(255,255,0),
+    Magenta = Color3.fromRGB(255,0,255),
+    Cyan = Color3.fromRGB(0,255,255),
+    Orange = Color3.fromRGB(255,165,0),
+    Pink = Color3.fromRGB(255,105,180),
+    Lime = Color3.fromRGB(50,205,50),
+    Purple = Color3.fromRGB(128,0,128),
+    Brown = Color3.fromRGB(165,42,42),
+    Teal = Color3.fromRGB(0,128,128),
+    Navy = Color3.fromRGB(0,0,128),
+    Olive = Color3.fromRGB(128,128,0),
+    Maroon = Color3.fromRGB(128,0,0),
+    Silver = Color3.fromRGB(192,192,192),
+    Gray = Color3.fromRGB(128,128,128),
+    White = Color3.fromRGB(255,255,255),
+    Black = Color3.fromRGB(0,0,0),
+    Coral = Color3.fromRGB(255,127,80),
+    Indigo = Color3.fromRGB(75,0,130),
+    Gold = Color3.fromRGB(255,215,0),
+    Crimson = Color3.fromRGB(220,20,60),
+    Emerald = Color3.fromRGB(80,200,120),
+    Turquoise = Color3.fromRGB(64,224,208),
+    RoyalBlue = Color3.fromRGB(65,105,225),
+    RoseGold = Color3.fromRGB(183,110,121),
+    Midnight = Color3.fromRGB(25,25,112),
+    Platinum = Color3.fromRGB(229,228,226),
+}
+
+-- Gradient presets
+local gradientPresets = {
+    ["Black & Gold"] = {vibrantColors.Black, vibrantColors.Gold},
+    ["Purple & Pink"] = {vibrantColors.Purple, vibrantColors.Pink},
+    ["Blue & Cyan"] = {vibrantColors.Blue, vibrantColors.Cyan},
+    ["Emerald & Gold"] = {vibrantColors.Emerald, vibrantColors.Gold},
+    ["Crimson & Silver"] = {vibrantColors.Crimson, vibrantColors.Silver},
+    ["Rose Gold"] = {vibrantColors.RoseGold, vibrantColors.Gold},
+    ["Midnight & Platinum"] = {vibrantColors.Midnight, vibrantColors.Platinum},
+    ["Rainbow"] = "Rainbow",
+}
+
+-- State
+local primaryColor, secondaryColor
+local primaryTone, secondaryTone = 1,1
+local autoUpdate, animateGradient, animateBackground, pulseMode = false,false,false,false
+local animationSpeed = 2
+
+-- Dropdown data
+local colorNames, presetNames = {}, {}
+for name,_ in pairs(vibrantColors) do table.insert(colorNames, name) end
+for name,_ in pairs(gradientPresets) do table.insert(presetNames, name) end
+
+-- UI
+section:AddDropdown("Primary Color", colorNames, function(selected)
+    primaryColor = vibrantColors[selected]
+end)
+
+section:AddDropdown("Secondary Color", colorNames, function(selected)
+    secondaryColor = vibrantColors[selected]
+end)
+
+section:AddDropdown("Gradient Preset", presetNames, function(selected)
+    local colors = gradientPresets[selected]
+    if colors == "Rainbow" then
+        primaryColor, secondaryColor = nil, nil
+    elseif colors then
+        primaryColor, secondaryColor = colors[1], colors[2]
+    end
+end)
+
+section:AddSlider("Primary Tone",0,150,100,function(value)
+    primaryTone = value/100
+end)
+
+section:AddSlider("Secondary Tone",0,150,100,function(value)
+    secondaryTone = value/100
+end)
+
+section:AddSlider("Animation Speed",1,10,animationSpeed,function(value)
+    animationSpeed = value
+end)
+
+-- Helpers
+local function adjustTone(color,factor)
+    return Color3.new(
+        math.clamp(color.R*factor,0,1),
+        math.clamp(color.G*factor,0,1),
+        math.clamp(color.B*factor,0,1)
+    )
+end
+
+local function rainbowColor(offset)
+    local hue = (tick() / animationSpeed + offset) % 1
+    return Color3.fromHSV(hue, 1, 1)
+end
+
+local function pulseColor(c1, c2)
+    local t = math.sin(tick() * animationSpeed) * 0.5 + 0.5 -- oscillates 0→1
+    return Color3.new(
+        c1.R + (c2.R - c1.R) * t,
+        c1.G + (c2.G - c1.G) * t,
+        c1.B + (c2.B - c1.B) * t
+    )
+end
+
+local function applyColors(gui)
+    for _,element in ipairs(gui:GetDescendants()) do
+        pcall(function()
+            if element:IsA("UIGradient") then
+                if animateGradient then
+                    if pulseMode and primaryColor and secondaryColor then
+                        local c = pulseColor(primaryColor, secondaryColor)
+                        element.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, c),
+                            ColorSequenceKeypoint.new(1, c),
+                        })
+                    elseif not primaryColor or not secondaryColor then
+                        element.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, rainbowColor(0)),
+                            ColorSequenceKeypoint.new(1, rainbowColor(0.5)),
+                        })
+                    else
+                        local colorA = adjustTone(primaryColor,primaryTone)
+                        local colorB = adjustTone(secondaryColor,secondaryTone)
+                        element.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0,colorA),
+                            ColorSequenceKeypoint.new(1,colorB)
+                        })
+                    end
+                end
+            elseif animateBackground and element:IsA("GuiObject") and not element:IsA("UIGradient") then
+                if pulseMode and primaryColor and secondaryColor then
+                    element.BackgroundColor3 = pulseColor(primaryColor, secondaryColor)
+                elseif animateGradient then
+                    element.BackgroundColor3 = rainbowColor(0)
+                else
+                    local colorA = adjustTone(primaryColor,primaryTone)
+                    element.BackgroundColor3 = colorA
+                end
+            end
+        end)
+    end
+end
+
+-- Toggles
+section:AddToggle("Auto Apply Colors", function(state)
+    autoUpdate = state
+    if autoUpdate then
+        local hui = gethui and gethui()
+        if hui and hui[""] and hui[""]["\009\001"] then
+            local targetGui = hui[""]["\009\001"]
+            applyColors(targetGui)
+            targetGui.ChildAdded:Connect(function() applyColors(targetGui) end)
+
+            task.spawn(function()
+                while autoUpdate do
+                    if animateGradient or pulseMode then
+                        applyColors(targetGui)
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+end)
+
+section:AddToggle("Animate Gradient", function(state)
+    animateGradient = state
+end)
+
+section:AddToggle("Animate Backgrounds", function(state)
+    animateBackground = state
+end)
+
+section:AddToggle("Pulse Mode", function(state)
+    pulseMode = state
+end)
+
+shared.Notify("Color Customizer with Gradient, Background & Pulse Loaded",2)
