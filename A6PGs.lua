@@ -1,3 +1,8 @@
+-- IDC IF U BORROW SUM
+-- JUST CREDIT ME
+
+-- OPEN SOURCE SAFE FILE
+
 -- =========================
 -- Plugin: Lua File Manager
 -- =========================
