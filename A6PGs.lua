@@ -1738,7 +1738,7 @@ end
 local shared = odh_shared_plugins
 local section = shared.AddSection("COLOR CUSTOMIZER")
 
--- Colors
+-- Full Color Library
 local vibrantColors = {
     Red = Color3.fromRGB(255,0,0),
     Green = Color3.fromRGB(0,255,0),
@@ -1771,7 +1771,7 @@ local vibrantColors = {
     Platinum = Color3.fromRGB(229,228,226),
 }
 
--- Gradient presets
+-- Gradient Presets
 local gradientPresets = {
     ["Black & Gold"] = {vibrantColors.Black, vibrantColors.Gold},
     ["Purple & Pink"] = {vibrantColors.Purple, vibrantColors.Pink},
@@ -1781,6 +1781,55 @@ local gradientPresets = {
     ["Rose Gold"] = {vibrantColors.RoseGold, vibrantColors.Gold},
     ["Midnight & Platinum"] = {vibrantColors.Midnight, vibrantColors.Platinum},
     ["Rainbow"] = "Rainbow",
+
+    -- Cotton Candy (pink â blue)
+    ["Cotton Candy"] = {
+        Color3.fromRGB(255, 182, 193), -- Light Pink
+        Color3.fromRGB(173, 216, 230), -- Light Blue
+    },
+
+    -- Blue Candy (blue shades)
+    ["Blue Candy"] = {
+        Color3.fromRGB(135, 206, 250), -- Sky Blue
+        Color3.fromRGB(176, 224, 230), -- Powder Blue
+    },
+
+    -- Extra gradients
+    ["Galaxy"] = {
+        Color3.fromRGB(75,0,130),   -- Indigo
+        Color3.fromRGB(148,0,211),  -- Violet
+        Color3.fromRGB(0,0,139),    -- Dark Blue
+    },
+
+    ["Sunset"] = {
+        Color3.fromRGB(255,99,71),   -- Tomato
+        Color3.fromRGB(255,165,0),   -- Orange
+        Color3.fromRGB(255,215,0),   -- Gold
+    },
+
+    ["Ocean"] = {
+        Color3.fromRGB(0,191,255),   -- Deep Sky Blue
+        Color3.fromRGB(70,130,180),  -- Steel Blue
+        Color3.fromRGB(25,25,112),   -- Midnight Blue
+    },
+
+    ["Fire"] = {
+        Color3.fromRGB(255,69,0),    -- Red-Orange
+        Color3.fromRGB(255,140,0),   -- Dark Orange
+        Color3.fromRGB(255,215,0),   -- Gold
+    },
+
+    ["Forest"] = {
+        Color3.fromRGB(34,139,34),   -- Forest Green
+        Color3.fromRGB(0,100,0),     -- Dark Green
+        Color3.fromRGB(173,255,47),  -- Green Yellow
+    },
+
+    ["Ice"] = {
+        Color3.fromRGB(173,216,230), -- Light Blue
+        Color3.fromRGB(224,255,255), -- Light Cyan
+        Color3.fromRGB(240,255,255), -- Azure
+    },
 }
 
 -- State
@@ -1839,7 +1888,7 @@ local function rainbowColor(offset)
 end
 
 local function pulseColor(c1, c2)
-    local t = math.sin(tick() * animationSpeed) * 0.5 + 0.5 -- oscillates 0→1
+    local t = math.sin(tick() * animationSpeed) * 0.5 + 0.5 -- oscillates 0â1
     return Color3.new(
         c1.R + (c2.R - c1.R) * t,
         c1.G + (c2.G - c1.G) * t,
@@ -1920,4 +1969,4 @@ section:AddToggle("Pulse Mode", function(state)
     pulseMode = state
 end)
 
-shared.Notify("Color Customizer with Gradient, Background & Pulse Loaded",2)
+shared.Notify("đ Ultimate Color Customizer Loaded with Gradients & Animations",2)
