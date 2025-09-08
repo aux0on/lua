@@ -1,7 +1,7 @@
 -- IDC IF U BORROW SUM
 -- JUST CREDIT ME
 
--- OPEN SOURCE SAFE FILE
+-- SAFE OPEN SOURCE FILE
 
 -- =========================
 -- Plugin: Lua File Manager
@@ -1975,3 +1975,211 @@ section:AddToggle("Pulse Mode", function(state)
 end)
 
 shared.Notify("đ Ultimate Color Customizer Loaded with Gradients & Animations",2)
+local shared = odh_shared_plugins
+
+-- LSG Section
+local speedSection = shared.AddSection("Legit Speedglitch")
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+-- Variables
+local sideSpeed = 150
+local buttonSize = 50
+local emoteEnabled = false
+local selectedEmoteId = nil
+local customEmoteEnabled = false
+local sgGui
+local sgButton
+local moveInput = 0
+local isJumping = false
+
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local HRP = Character:WaitForChild("HumanoidRootPart")
+local Camera = Workspace.CurrentCamera
+
+-- Predefined emotes
+local emotes = {
+    ["Moonwalk"] = "79127989560307",
+    ["Yungblud"] = "15610015346",
+    ["Bouncy Twirl"] = "14353423348",
+    ["Flex Walk"] = "15506506103"
+}
+
+-- ======= Character & Jump Handling =======
+local function setupCharacter(char)
+    Character = char
+    Humanoid = Character:WaitForChild("Humanoid")
+    HRP = Character:WaitForChild("HumanoidRootPart")
+    isJumping = false
+
+    Humanoid.Jumping:Connect(function() isJumping = true end)
+    Humanoid.StateChanged:Connect(function(_, state)
+        if state == Enum.HumanoidStateType.Landed then
+            isJumping = false
+        end
+    end)
+end
+setupCharacter(Character)
+LocalPlayer.CharacterAdded:Connect(setupCharacter)
+
+-- ======= Keyboard input =======
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.A then moveInput = -1
+    elseif input.KeyCode == Enum.KeyCode.D then moveInput = 1
+    end
+end)
+UserInputService.InputEnded:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveInput = 0
+    end
+end)
+
+-- ======= Play Emote =======
+local function playEmote(assetId)
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    local success = pcall(function()
+        humanoid:PlayEmoteAndGetAnimTrackById(assetId)
+    end)
+    if not success then
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://"..assetId
+        humanoid:LoadAnimation(anim):Play()
+    end
+end
+
+-- ======= Create SG Button =======
+local function createSGButton()
+    if sgGui then sgGui:Destroy() end
+
+    sgGui = Instance.new("ScreenGui")
+    sgGui.Name = "SGGui"
+    sgGui.ResetOnSpawn = false
+    sgGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    sgButton = Instance.new("TextButton")
+    sgButton.Name = "SGButton"
+    sgButton.Text = "SG"
+    sgButton.Font = Enum.Font.SourceSansBold
+    sgButton.TextSize = buttonSize / 2
+    sgButton.TextColor3 = Color3.new(1, 0, 0) -- red when inactive
+    sgButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    sgButton.Size = UDim2.new(0, buttonSize, 0, buttonSize)
+    sgButton.Position = UDim2.new(0.5, -buttonSize/2, 0.7, 0)
+    sgButton.AnchorPoint = Vector2.new(0.5, 0.5)
+    sgButton.Parent = sgGui
+
+    local uicorner = Instance.new("UICorner", sgButton)
+    uicorner.CornerRadius = UDim.new(1, 0)
+
+    -- Toggle emoteEnabled
+    sgButton.MouseButton1Click:Connect(function()
+        emoteEnabled = not emoteEnabled
+        if emoteEnabled then
+            sgButton.TextColor3 = Color3.new(0, 1, 0) -- green
+            if selectedEmoteId then
+                playEmote(selectedEmoteId)
+            end
+        else
+            sgButton.TextColor3 = Color3.new(1, 0, 0) -- red
+        end
+    end)
+
+    -- draggable
+    local dragging, dragStart, startPos
+    local function inputBegan(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = sgButton.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end
+    local function inputChanged(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement 
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            sgButton.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end
+    sgButton.InputBegan:Connect(inputBegan)
+    sgButton.InputChanged:Connect(inputChanged)
+end
+
+-- ======= Apply Speed =======
+RunService.Heartbeat:Connect(function()
+    if not emoteEnabled or not isJumping then return end
+
+    local inputDir = moveInput
+    if inputDir == 0 and Humanoid.MoveDirection.Magnitude > 0 then
+        local camCF = CFrame.new(Vector3.new(), Camera.CFrame.LookVector)
+        inputDir = (camCF.RightVector:Dot(Humanoid.MoveDirection) > 0) and 1 or -1
+    end
+    if inputDir ~= 0 then
+        local camRight = Vector3.new(Camera.CFrame.RightVector.X, 0, Camera.CFrame.RightVector.Z).Unit
+        HRP.Velocity = camRight * (inputDir * sideSpeed) + Vector3.new(0, HRP.Velocity.Y, 0)
+    end
+end)
+
+-- =====================
+-- SpeedGlitch GUI
+-- =====================
+
+speedSection:AddToggle("Enable SG Bindable Button", function(bool)
+    if bool then
+        createSGButton()
+    else
+        if sgGui then sgGui:Destroy() end
+        sgGui, sgButton = nil, nil
+        emoteEnabled = false
+    end
+end)
+
+-- Slider: Side speed
+speedSection:AddSlider("SG Speed", 10, 1000, sideSpeed, function(val)
+    sideSpeed = val
+end)
+
+-- Slider: Button size
+speedSection:AddSlider("Button Size", 30, 150, buttonSize, function(val)
+    buttonSize = val
+    if sgButton then
+        sgButton.Size = UDim2.new(0, buttonSize, 0, buttonSize)
+        sgButton.TextSize = buttonSize / 2
+    end
+end)
+
+-- Dropdown: Emotes
+speedSection:AddDropdown("Select Emote", {"Moonwalk","Yungblud","Bouncy Twirl","Flex Walk","Custom"}, function(selected)
+    if selected == "Custom" then
+        customEmoteEnabled = true
+        selectedEmoteId = nil
+    else
+        customEmoteEnabled = false
+        selectedEmoteId = emotes[selected]
+    end
+end)
+
+-- Textbox: Custom emote ID
+speedSection:AddTextBox("Custom Emote ID", function(text)
+    if text ~= "" then
+        selectedEmoteId = text
+        customEmoteEnabled = true
+end
+end)
+
+speedSection:AddLabel('Credits: <font color="rgb(255,0,0)">b6o6s</font>', nil, true)
