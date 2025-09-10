@@ -1539,8 +1539,6 @@ local invokeServer = fakeRemote.InvokeServer
 fakeRemote:Destroy()
 old = hook(invokeServer, hookFunc)
 
-notify("Silent Aim (Full Specs) loaded.", 1)
-
 -- =========================
 -- Mute ODH Buttons
 -- =========================
