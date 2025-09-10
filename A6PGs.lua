@@ -493,7 +493,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
-local speed_glitch_section = shared.AddSection("Auto Speed Glitch")
+local speed_glitch_section = shared.AddSection("Auto Speedglitch")
 
 local speed_glitch_enabled = false
 local horizontal_only = false
@@ -1974,7 +1974,6 @@ section:AddToggle("Pulse Mode", function(state)
     pulseMode = state
 end)
 
-shared.Notify("đ Ultimate Color Customizer Loaded with Gradients & Animations",2)
 local shared = odh_shared_plugins
 
 -- LSG Section
