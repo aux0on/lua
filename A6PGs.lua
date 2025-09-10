@@ -2805,8 +2805,6 @@ return function()
     if tracer then tracer:Destroy() end
     if wasShiftLockEnabled then
         restoreShiftLock()
-    end
-end
 
 -- =========================
 -- Old ODH Section
@@ -2841,4 +2839,4 @@ old_odh_section:AddButton("Copy Script", function()
     else
         shared.Notify("Clipboard not supported in this executor.", 3)
     end
-end)
+end
