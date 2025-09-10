@@ -2194,7 +2194,7 @@ old_odh_section:AddLabel("Rejoin After Copying then Execute")
 
 -- Copy Script Button
 old_odh_section:AddButton("Copy Script", function()
-    local scriptText = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/luizcrackz/overdrive-h/refs/heads/main/crack.lua", true))()'
+    local scriptText = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/aux0on/OldOdh/refs/heads/main/Execute", true))()'
 
     -- Clipboard support
     local success = false
