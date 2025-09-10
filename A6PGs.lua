@@ -2180,38 +2180,3 @@ end
 end)
 
 speedSection:AddLabel('Credits: <font color="rgb(255,0,0)">@b6o6s</font>', nil, true)
-
--- =========================
--- Old ODH Section
--- =========================
-
-local shared = odh_shared_plugins
-
-local old_odh_section = shared.AddSection("Old ODH")
-
--- Warning Label
-old_odh_section:AddLabel("Rejoin After Copying then Execute")
-
--- Copy Script Button
-old_odh_section:AddButton("Copy Script", function()
-    local scriptText = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/aux0on/OldOdh/refs/heads/main/Execute", true))()'
-
-    -- Clipboard support
-    local success = false
-    if type(setclipboard) == "function" then
-        setclipboard(scriptText)
-        success = true
-    elseif syn and syn.set_clipboard then
-        syn.set_clipboard(scriptText)
-        success = true
-    elseif write_clipboard then
-        write_clipboard(scriptText)
-        success = true
-    end
-
-    if success then
-        shared.Notify("Script copied to clipboard!", 2)
-    else
-        shared.Notify("Clipboard not supported in this executor.", 3)
-    end
-end)
