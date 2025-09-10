@@ -2188,7 +2188,7 @@ local shared = odh_shared_plugins
 
 local flick_section = shared.AddSection("Flick to Murderer")
 
-flick_section:AddLabel("yea he beat me to it idgaf lmao")
+flick_section:AddLabel("WARNING: This Flick is TRASH")
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
