@@ -1172,7 +1172,7 @@ do
             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Extras"):WaitForChild("ReplicateToy"):InvokeServer(unpack(args))
         end)
 
-        my_own_section:AddLabel("Spray Paint made by @not_.gato")
+        my_own_section:AddLabel('Credits: <font color="rgb(0,255,0)">@not_.gato</font>', nil, true)
     else
         warn("Failed to create Spray Paint section! Plugin not loaded.")
     end
@@ -2182,7 +2182,7 @@ speedSection:AddTextBox("Custom Emote ID", function(text)
 end
 end)
 
-speedSection:AddLabel('Credits: <font color="rgb(255,0,0)">b6o6s</font>', nil, true)
+speedSection:AddLabel('Credits: <font color="rgb(255,0,0)">@b6o6s</font>', nil, true)
 
 local shared = odh_shared_plugins
 
