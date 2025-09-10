@@ -1172,7 +1172,7 @@ do
             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Extras"):WaitForChild("ReplicateToy"):InvokeServer(unpack(args))
         end)
 
-        my_own_section:AddLabel("Credits: @not_.gato")
+        my_own_section:AddLabel('Credits: <font color="rgb(0,255,0)">@not_.</font>', nil, true)
     else
         warn("Failed to create Spray Paint section! Plugin not loaded.")
     end
