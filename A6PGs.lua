@@ -1354,7 +1354,7 @@ makeEmoteHandler("103788740211648", "DS", "EmoteGUI_DualSwing")  -- Dual Swing
 
 end
 
--- Advanced Accurate Silent Aim with Full Specs
+-- Advanced Accurate Silent Aim with Aggressive Options
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -1382,6 +1382,10 @@ local simulationDivider = 1.0
 local predictionInterval = 50 -- ms
 local prioritizePing = true
 local jumpPrediction = true
+
+-- Aggression tuning
+local aggressiveMode = false
+local aggressionMultiplier = 1.5 -- default 150%
 
 local lastPredictionUpdate = 0
 local cachedPrediction = 0.1
@@ -1411,7 +1415,8 @@ section:AddSlider("Horizontal Prediction", 0, 200, 100, function(val)
     horizontalPrediction = val / 100
 end)
 
-section:AddSlider("Simulation Divider", 1, 10, 1, function(val)
+-- ✅ Simulation divider max raised to 100
+section:AddSlider("Simulation Divider", 1, 100, 1, function(val)
     simulationDivider = val
 end)
 
@@ -1425,6 +1430,20 @@ end)
 
 section:AddToggle("Jump Prediction", function(state)
     jumpPrediction = state
+end)
+
+-- ✅ Aggressive Mode Controls
+section:AddToggle("Aggressive Mode", function(state)
+    aggressiveMode = state
+    if state then
+        notify("Aggressive Mode Enabled", 3)
+    else
+        notify("Aggressive Mode Disabled", 3)
+    end
+end)
+
+section:AddSlider("Aggression %", 100, 200, 150, function(val)
+    aggressionMultiplier = val / 100
 end)
 
 -- ===============================
@@ -1539,9 +1558,19 @@ local function hookFunc(self, ...)
     -- Calculate prediction
     local t = getPredictionTime()
     local velocity = part.AssemblyLinearVelocity
-    local velX = (velocity.X / simulationDivider) * horizontalPrediction
-    local velY = (velocity.Y / simulationDivider) * (jumpPrediction and verticalPrediction or 0)
-    local velZ = (velocity.Z / simulationDivider) * horizontalPrediction
+
+    -- Apply aggressive tuning if enabled
+    local hPred = horizontalPrediction
+    local simDiv = simulationDivider
+    if aggressiveMode then
+        hPred = hPred * aggressionMultiplier
+        simDiv = math.max(0.5, simDiv / aggressionMultiplier)
+    end
+
+    local velX = (velocity.X / simDiv) * hPred
+    local velY = (velocity.Y / simDiv) * (jumpPrediction and verticalPrediction or 0)
+    local velZ = (velocity.Z / simDiv) * hPred
+
     local predicted = part.Position + Vector3.new(velX, velY, velZ) * t
 
     return old(self, args[1], predicted, args[3])
