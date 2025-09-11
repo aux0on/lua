@@ -3,6 +3,20 @@
 
 -- SAFE OPEN SOURCE FILE
 
+-- ✅ HiddenGui Error Patch (put this first)
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local hiddenGui = PlayerGui:FindFirstChild("HiddenGui")
+if not hiddenGui then
+    hiddenGui = Instance.new("ScreenGui")
+    hiddenGui.Name = "HiddenGui"
+    hiddenGui.ResetOnSpawn = false
+    hiddenGui.IgnoreGuiInset = true
+    hiddenGui.Parent = PlayerGui
+end
+
 -- =========================
 -- Plugin: Lua File Manager
 -- =========================
