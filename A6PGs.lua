@@ -2016,18 +2016,53 @@ section:AddToggle("Pulse Mode", function(state)
 end)
 
 local shared = odh_shared_plugins
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- 🔹 Shared emotes
+local emotes = {
+    ["Moonwalk"] = "79127989560307",
+    ["Yungblud"] = "15610015346",
+    ["Bouncy Twirl"] = "14353423348",
+    ["Flex Walk"] = "15506506103"
+}
+
+-- 🔹 Shared drag utility
+local function makeDraggable(button)
+    local dragging, dragStart, startPos
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = button.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    button.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement 
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            button.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
 
 -- =====================================================
 -- LSG V2
 -- =====================================================
-local speedSectionV2 = shared.AddSection("LSG V2")
+local speedSectionV2 = shared:AddSection("LSG V2")
 
-local LocalPlayer = game:GetService("Players").LocalPlayer
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
-
--- Variables V2
 local sideSpeedV2 = 150
 local buttonSizeV2 = 50
 local emoteEnabledV2 = false
@@ -2042,19 +2077,11 @@ local HumanoidV2 = CharacterV2:WaitForChild("Humanoid")
 local HRPV2 = CharacterV2:WaitForChild("HumanoidRootPart")
 local CameraV2 = Workspace.CurrentCamera
 
--- Predefined emotes
-local emotes = {
-    ["Moonwalk"] = "79127989560307",
-    ["Yungblud"] = "15610015346",
-    ["Bouncy Twirl"] = "14353423348",
-    ["Flex Walk"] = "15506506103"
-}
-
--- ======= Character & Jump Handling =======
+-- Character handling
 local function setupCharacterV2(char)
     CharacterV2 = char
-    HumanoidV2 = CharacterV2:WaitForChild("Humanoid")
-    HRPV2 = CharacterV2:WaitForChild("HumanoidRootPart")
+    HumanoidV2 = char:WaitForChild("Humanoid")
+    HRPV2 = char:WaitForChild("HumanoidRootPart")
     isJumpingV2 = false
 
     HumanoidV2.Jumping:Connect(function() isJumpingV2 = true end)
@@ -2067,20 +2094,18 @@ end
 setupCharacterV2(CharacterV2)
 LocalPlayer.CharacterAdded:Connect(setupCharacterV2)
 
--- ======= Keyboard input =======
+-- Input
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.A then moveInputV2 = -1
-    elseif input.KeyCode == Enum.KeyCode.D then moveInputV2 = 1
-    end
+    elseif input.KeyCode == Enum.KeyCode.D then moveInputV2 = 1 end
 end)
 UserInputService.InputEnded:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveInputV2 = 0
-    end
+    if input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveInputV2 = 0 end
 end)
 
--- ======= Play Emote =======
+-- Play emote
 local function playEmoteV2(assetId)
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -2095,7 +2120,7 @@ local function playEmoteV2(assetId)
     end
 end
 
--- ======= Create SG Button =======
+-- SG button
 local function createSGButtonV2()
     if sgGuiV2 then sgGuiV2:Destroy() end
 
@@ -2109,30 +2134,25 @@ local function createSGButtonV2()
     sgButtonV2.Text = "SG"
     sgButtonV2.Font = Enum.Font.SourceSansBold
     sgButtonV2.TextSize = buttonSizeV2 / 2
-    sgButtonV2.TextColor3 = Color3.new(1, 0, 0) -- red when inactive
+    sgButtonV2.TextColor3 = Color3.new(1, 0, 0)
     sgButtonV2.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     sgButtonV2.Size = UDim2.new(0, buttonSizeV2, 0, buttonSizeV2)
     sgButtonV2.Position = UDim2.new(0.5, -buttonSizeV2/2, 0.7, 0)
     sgButtonV2.AnchorPoint = Vector2.new(0.5, 0.5)
     sgButtonV2.Parent = sgGuiV2
 
-    local uicorner = Instance.new("UICorner", sgButtonV2)
-    uicorner.CornerRadius = UDim.new(1, 0)
+    Instance.new("UICorner", sgButtonV2).CornerRadius = UDim.new(1, 0)
 
     sgButtonV2.MouseButton1Click:Connect(function()
         emoteEnabledV2 = not emoteEnabledV2
-        if emoteEnabledV2 then
-            sgButtonV2.TextColor3 = Color3.new(0, 1, 0) -- green
-            if selectedEmoteIdV2 then
-                playEmoteV2(selectedEmoteIdV2)
-            end
-        else
-            sgButtonV2.TextColor3 = Color3.new(1, 0, 0) -- red
-        end
+        sgButtonV2.TextColor3 = emoteEnabledV2 and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        if emoteEnabledV2 and selectedEmoteIdV2 then playEmoteV2(selectedEmoteIdV2) end
     end)
+
+    makeDraggable(sgButtonV2)
 end
 
--- ======= Apply Speed =======
+-- Movement
 RunService.Heartbeat:Connect(function()
     if not emoteEnabledV2 or not isJumpingV2 then return end
 
@@ -2147,52 +2167,34 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- GUI for V2
+-- GUI
 speedSectionV2:AddToggle("Enable SG Bindable Button", function(bool)
-    if bool then
-        createSGButtonV2()
-    else
+    if bool then createSGButtonV2() else
         if sgGuiV2 then sgGuiV2:Destroy() end
-        sgGuiV2, sgButtonV2 = nil, nil
-        emoteEnabledV2 = false
+        sgGuiV2, sgButtonV2, emoteEnabledV2 = nil, nil, false
     end
 end)
-
-speedSectionV2:AddSlider("SG Speed", 10, 1000, sideSpeedV2, function(val)
-    sideSpeedV2 = val
-end)
-
-speedSectionV2:AddSlider("Button Size", 30, 150, buttonSizeV2, function(val)
-    buttonSizeV2 = val
+speedSectionV2:AddSlider("SG Speed", 10, 1000, sideSpeedV2, function(v) sideSpeedV2 = v end)
+speedSectionV2:AddSlider("Button Size", 30, 150, buttonSizeV2, function(v)
+    buttonSizeV2 = v
     if sgButtonV2 then
         sgButtonV2.Size = UDim2.new(0, buttonSizeV2, 0, buttonSizeV2)
         sgButtonV2.TextSize = buttonSizeV2 / 2
     end
 end)
-
-speedSectionV2:AddDropdown("Select Emote", {"Moonwalk","Yungblud","Bouncy Twirl","Flex Walk","Custom"}, function(selected)
-    if selected == "Custom" then
-        customEmoteEnabledV2 = true
-        selectedEmoteIdV2 = nil
-    else
-        customEmoteEnabledV2 = false
-        selectedEmoteIdV2 = emotes[selected]
-    end
+speedSectionV2:AddDropdown("Select Emote", {"Moonwalk","Yungblud","Bouncy Twirl","Flex Walk","Custom"}, function(sel)
+    if sel == "Custom" then customEmoteEnabledV2, selectedEmoteIdV2 = true, nil
+    else customEmoteEnabledV2, selectedEmoteIdV2 = false, emotes[sel] end
 end)
-
-speedSectionV2:AddTextBox("Custom Emote ID", function(text)
-    if text ~= "" then
-        selectedEmoteIdV2 = text
-        customEmoteEnabledV2 = true
-    end
+speedSectionV2:AddTextBox("Custom Emote ID", function(txt)
+    if txt ~= "" then selectedEmoteIdV2, customEmoteEnabledV2 = txt, true end
 end)
 
 -- =====================================================
 -- LSG V1
 -- =====================================================
-local speedSectionV1 = shared.AddSection("LSG V1")
+local speedSectionV1 = shared:AddSection("LSG V1")
 
--- Variables V1
 local sideSpeedV1 = 0
 local buttonSizeV1 = 50
 local emoteEnabledV1 = false
@@ -2209,24 +2211,17 @@ local function setupCharacterV1(char)
     characterV1 = char
     humanoidV1 = char:WaitForChild("Humanoid")
     rootPartV1 = char:WaitForChild("HumanoidRootPart")
-
-    humanoidV1.StateChanged:Connect(function(_, newState)
-        if newState == Enum.HumanoidStateType.Jumping or newState == Enum.HumanoidStateType.Freefall then
-            isInAirV1 = true
-        else
-            isInAirV1 = false
-        end
+    humanoidV1.StateChanged:Connect(function(_, st)
+        isInAirV1 = (st == Enum.HumanoidStateType.Jumping or st == Enum.HumanoidStateType.Freefall)
     end)
 end
 if LocalPlayer.Character then setupCharacterV1(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(setupCharacterV1)
 
--- Play Emote
+-- Play emote
 local function playEmoteV1(assetId)
     if not characterV1 or not humanoidV1 then return end
-    local success = pcall(function()
-        humanoidV1:PlayEmoteAndGetAnimTrackById(assetId)
-    end)
+    local success = pcall(function() humanoidV1:PlayEmoteAndGetAnimTrackById(assetId) end)
     if not success then
         local anim = Instance.new("Animation")
         anim.AnimationId = "rbxassetid://"..assetId
@@ -2234,7 +2229,7 @@ local function playEmoteV1(assetId)
     end
 end
 
--- Create SG Button
+-- SG button
 local function createSGButtonV1()
     if sgGuiV1 then sgGuiV1:Destroy() end
 
@@ -2248,42 +2243,35 @@ local function createSGButtonV1()
     sgButtonV1.Text = "SG"
     sgButtonV1.Font = Enum.Font.SourceSansBold
     sgButtonV1.TextSize = buttonSizeV1 / 2
-    sgButtonV1.TextColor3 = Color3.new(1, 0, 0) -- red
+    sgButtonV1.TextColor3 = Color3.new(1, 0, 0)
     sgButtonV1.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     sgButtonV1.Size = UDim2.new(0, buttonSizeV1, 0, buttonSizeV1)
     sgButtonV1.Position = UDim2.new(0.5, -buttonSizeV1/2, 0.7, 0)
     sgButtonV1.AnchorPoint = Vector2.new(0.5, 0.5)
     sgButtonV1.Parent = sgGuiV1
 
+    Instance.new("UICorner", sgButtonV1).CornerRadius = UDim.new(1, 0)
+
     sgButtonV1.MouseButton1Click:Connect(function()
         emoteEnabledV1 = not emoteEnabledV1
-        if emoteEnabledV1 then
-            sgButtonV1.TextColor3 = Color3.new(0, 1, 0) -- green
-            if selectedEmoteIdV1 then playEmoteV1(selectedEmoteIdV1) end
-        else
-            sgButtonV1.TextColor3 = Color3.new(1, 0, 0) -- red
-            if humanoidV1 then humanoidV1.WalkSpeed = defaultSpeedV1 end
-        end
+        sgButtonV1.TextColor3 = emoteEnabledV1 and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        if emoteEnabledV1 and selectedEmoteIdV1 then playEmoteV1(selectedEmoteIdV1) end
+        if not emoteEnabledV1 and humanoidV1 then humanoidV1.WalkSpeed = defaultSpeedV1 end
     end)
+
+    makeDraggable(sgButtonV1)
 end
 
--- Movement Logic
+-- Movement
 RunService.Stepped:Connect(function()
     if not emoteEnabledV1 or not characterV1 or not humanoidV1 or not rootPartV1 then return end
-
     local finalSpeed = defaultSpeedV1 + sideSpeedV1
-
     if isInAirV1 then
         if horizontalOnlyV1 then
             local moveDir = humanoidV1.MoveDirection
             local rightDir = rootPartV1.CFrame.RightVector
             local horizontalAmount = moveDir:Dot(rightDir)
-
-            if math.abs(horizontalAmount) > 0.5 then
-                humanoidV1.WalkSpeed = finalSpeed
-            else
-                humanoidV1.WalkSpeed = defaultSpeedV1
-            end
+            humanoidV1.WalkSpeed = (math.abs(horizontalAmount) > 0.5) and finalSpeed or defaultSpeedV1
         else
             humanoidV1.WalkSpeed = finalSpeed
         end
@@ -2292,47 +2280,27 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- GUI for V1
+-- GUI
 speedSectionV1:AddToggle("Enable SG Bindable Button", function(bool)
-    if bool then
-        createSGButtonV1()
-    else
+    if bool then createSGButtonV1() else
         if sgGuiV1 then sgGuiV1:Destroy() end
-        sgGuiV1, sgButtonV1 = nil, nil
-        emoteEnabledV1 = false
+        sgGuiV1, sgButtonV1, emoteEnabledV1 = nil, nil, false
         if humanoidV1 then humanoidV1.WalkSpeed = defaultSpeedV1 end
     end
 end)
-
-speedSectionV1:AddSlider("Speed (0–255)", 0, 255, sideSpeedV1, function(val)
-    sideSpeedV1 = val
-end)
-
-speedSectionV1:AddSlider("Button Size", 30, 150, buttonSizeV1, function(val)
-    buttonSizeV1 = val
+speedSectionV1:AddSlider("Speed (0–255)", 0, 255, sideSpeedV1, function(v) sideSpeedV1 = v end)
+speedSectionV1:AddSlider("Button Size", 30, 150, buttonSizeV1, function(v)
+    buttonSizeV1 = v
     if sgButtonV1 then
         sgButtonV1.Size = UDim2.new(0, buttonSizeV1, 0, buttonSizeV1)
         sgButtonV1.TextSize = buttonSizeV1 / 2
     end
 end)
-
-speedSectionV1:AddToggle("Sideways Only", function(enabled)
-    horizontalOnlyV1 = enabled
+speedSectionV1:AddToggle("Sideways Only", function(en) horizontalOnlyV1 = en end)
+speedSectionV1:AddDropdown("Select Emote", {"Moonwalk","Yungblud","Bouncy Twirl","Flex Walk","Custom"}, function(sel)
+    if sel == "Custom" then customEmoteEnabledV1, selectedEmoteIdV1 = true, nil
+    else customEmoteEnabledV1, selectedEmoteIdV1 = false, emotes[sel] end
 end)
-
-speedSectionV1:AddDropdown("Select Emote", {"Moonwalk","Yungblud","Bouncy Twirl","Flex Walk","Custom"}, function(selected)
-    if selected == "Custom" then
-        customEmoteEnabledV1 = true
-        selectedEmoteIdV1 = nil
-    else
-        customEmoteEnabledV1 = false
-        selectedEmoteIdV1 = emotes[selected]
-    end
-end)
-
-speedSectionV1:AddTextBox("Custom Emote ID", function(text)
-    if text ~= "" then
-        selectedEmoteIdV1 = text
-        customEmoteEnabledV1 = true
-    end
+speedSectionV1:AddTextBox("Custom Emote ID", function(txt)
+    if txt ~= "" then selectedEmoteIdV1, customEmoteEnabledV1 = txt, true end
 end)
