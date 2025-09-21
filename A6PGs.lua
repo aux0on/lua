@@ -1,7 +1,6 @@
--- IDC IF U BORROW SUM
--- JUST CREDIT ME
+-- Made by Lzzzx
 
--- SAFE OPEN SOURCE FILE
+-- Official Safe File
 
 -- ✅ HiddenGui Error Patch (put this first)
 local Players = game:GetService("Players")
