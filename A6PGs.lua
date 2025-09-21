@@ -1435,11 +1435,6 @@ end)
 -- ✅ Aggressive Mode Controls
 section:AddToggle("Aggressive Mode", function(state)
     aggressiveMode = state
-    if state then
-        notify("Aggressive Mode Enabled", 3)
-    else
-        notify("Aggressive Mode Disabled", 3)
-    end
 end)
 
 section:AddSlider("Aggression %", 100, 200, 150, function(val)
