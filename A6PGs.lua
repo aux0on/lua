@@ -1965,3 +1965,26 @@ speedSection:AddTextBox("Custom Emote ID", function(text)
         customEmoteEnabled = true
     end
 end)
+
+-- ALL EMOTES
+local shared = odh_shared_plugins
+
+-- Section
+local emotes_section = shared.AddSection("All Emotes")
+
+-- Toggle
+emotes_section:AddToggle("Enable Emotes", function(state)
+    if state then
+        -- Run the Emotes script
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))()
+    else
+        -- Destroy the Emotes GUI inside CoreGui
+        local robloxGui = game:GetService("CoreGui"):FindFirstChild("RobloxGui")
+        if robloxGui and robloxGui:FindFirstChild("EmotesMenu") then
+            robloxGui.EmotesMenu:Destroy()
+        end
+
+        -- Reset global flag
+        _G.EmotesGUIRunning = false
+    end
+end)
