@@ -1964,3 +1964,99 @@ speedSection:AddTextBox("Custom Emote ID", function(text)
         customEmoteEnabled = true
     end
 end)
+
+local shared = odh_shared_plugins
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Section
+local headless_section = shared.AddSection("FE Headless")
+
+-- Default Headless Emote ID
+local headlessEmoteId = 78837807518622
+
+-- Vars
+local headlessEnabled = false
+local currentTrack
+local frozen = true -- freeze always ON
+
+-- === Play Emote (from Emotes.lua) ===
+local function playEmote(humanoid, emoteId)
+    if not humanoid or not humanoid:IsDescendantOf(workspace) then return end
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then return end
+
+    -- stop any running track
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack:Destroy()
+        currentTrack = nil
+    end
+
+    -- load new track
+    local emote = Instance.new("Animation")
+    emote.AnimationId = "rbxassetid://" .. tostring(emoteId)
+    currentTrack = animator:LoadAnimation(emote)
+    currentTrack.Priority = Enum.AnimationPriority.Action
+    currentTrack.Looped = true
+    currentTrack:Play()
+
+    -- loop fixer: if Roblox cancels the track, restart it
+    currentTrack.Stopped:Connect(function()
+        if headlessEnabled and humanoid and humanoid.Parent then
+            task.wait(0.1)
+            playEmote(humanoid, emoteId)
+        end
+    end)
+end
+
+-- === Stop Emote ===
+local function stopEmote()
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack:Destroy()
+        currentTrack = nil
+    end
+end
+
+-- === Apply Freeze Mode (fixed: allow movement) ===
+local function applyFreeze(humanoid)
+    if humanoid and frozen then
+        humanoid.StateChanged:Connect(function(_, new)
+            if headlessEnabled and humanoid.Parent then
+                if not currentTrack or not currentTrack.IsPlaying then
+                    task.wait(0.05)
+                    playEmote(humanoid, headlessEmoteId)
+                end
+            end
+        end)
+    end
+end
+
+-- === Enable Headless ===
+local function enableHeadless()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = char:WaitForChild("Humanoid")
+
+    applyFreeze(humanoid)
+    playEmote(humanoid, headlessEmoteId)
+end
+
+-- Toggle
+headless_section:AddToggle("Enable Headless", function(state)
+    headlessEnabled = state
+    if state then
+        enableHeadless()
+    else
+        stopEmote()
+    end
+end)
+
+-- Respawn support (auto re-enable if toggle is on)
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if headlessEnabled then
+        local humanoid = char:WaitForChild("Humanoid")
+        task.wait(0.5)
+        enableHeadless()
+    end
+end)
