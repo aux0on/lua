@@ -2060,3 +2060,73 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         enableHeadless()
     end
 end)
+
+local shared = odh_shared_plugins
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Section
+local section = shared.AddSection("Firefly Jar Spam")
+section:AddLabel("MMV ONLY")
+
+-- Vars
+local spamEnabled = false
+local spamAmount = 1
+local spamThreads = {}
+
+-- Get Remote Function
+local function getRemote()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Fireflies") then
+        local remote = char.Fireflies:FindFirstChild("Remote")
+        if remote and remote:IsA("RemoteFunction") then
+            return remote
+        end
+    end
+    return nil
+end
+
+-- Start a single spam loop (safe max speed)
+local function startLoop(index)
+    spamThreads[index] = task.spawn(function()
+        while spamEnabled do
+            local remote = getRemote()
+            if remote then
+                remote:InvokeServer("Button1Down")
+            end
+            task.wait(0.001) -- insanely fast, avoids Roblox freezing
+        end
+    end)
+end
+
+-- Stop all loops
+local function stopAll()
+    spamEnabled = false
+    for i, t in pairs(spamThreads) do
+        spamThreads[i] = nil
+    end
+end
+
+-- Toggle
+section:AddToggle("Spam Firefly Jar", function(state)
+    spamEnabled = state
+    if state then
+        for i = 1, spamAmount do
+            startLoop(i)
+        end
+    else
+        stopAll()
+    end
+end)
+
+-- Slider (max = 25 for safe limit)
+section:AddSlider("Spam Intensity", 1, 25, 1, function(val)
+    spamAmount = val
+    if spamEnabled then
+        stopAll()
+        spamEnabled = true
+        for i = 1, spamAmount do
+            startLoop(i)
+        end
+    end
+end)
