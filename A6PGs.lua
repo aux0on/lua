@@ -2073,12 +2073,17 @@ section:AddLabel("MMV ONLY")
 local spamEnabled = false
 local spamAmount = 1
 local spamThreads = {}
+local currentChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+
+-- Keep track of respawns
+LocalPlayer.CharacterAdded:Connect(function(char)
+    currentChar = char
+end)
 
 -- Get Remote Function
 local function getRemote()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Fireflies") then
-        local remote = char.Fireflies:FindFirstChild("Remote")
+    if currentChar and currentChar:FindFirstChild("Fireflies") then
+        local remote = currentChar.Fireflies:FindFirstChild("Remote")
         if remote and remote:IsA("RemoteFunction") then
             return remote
         end
@@ -2086,7 +2091,7 @@ local function getRemote()
     return nil
 end
 
--- Start a single spam loop (safe max speed)
+-- Start a single spam loop
 local function startLoop(index)
     spamThreads[index] = task.spawn(function()
         while spamEnabled do
@@ -2094,7 +2099,7 @@ local function startLoop(index)
             if remote then
                 remote:InvokeServer("Button1Down")
             end
-            task.wait(0.001) -- insanely fast, avoids Roblox freezing
+            task.wait(0.001) -- max safe speed
         end
     end)
 end
