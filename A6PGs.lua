@@ -2135,3 +2135,206 @@ section:AddSlider("Spam Intensity", 1, 25, 1, function(val)
         end
     end
 end)
+
+local shared = odh_shared_plugins
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local vU = game:GetService("VirtualUser")
+local Camera = workspace.CurrentCamera
+
+-- Section
+local section = shared.AddSection("Shoot Murd (TP)")
+
+-- Vars
+local guiButton
+local guiSize = 40
+local guiEnabled = false
+
+-- Utility: find murderer
+local function getMurderer()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local backpack = plr:FindFirstChild("Backpack")
+            if backpack and backpack:FindFirstChild("Knife") then
+                return plr
+            end
+            local char = plr.Character
+            if char and char:FindFirstChild("Knife") then
+                return plr
+            end
+        end
+    end
+    return nil
+end
+
+-- Utility: check if you have gun
+local function getGun()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Gun") then
+        return char.Gun
+    end
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack and backpack:FindFirstChild("Gun") then
+        return backpack.Gun
+    end
+    return nil
+end
+
+-- Core shoot logic (with smart teleporting & line of sight check)
+local function shootMurderer()
+    local gun = getGun()
+    if not gun then return end
+
+    local murderer = getMurderer()
+    if not murderer or not murderer.Character or not murderer.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+    local hrp = char.HumanoidRootPart
+    local oldCFrame = hrp.CFrame
+
+    -- Equip gun if in backpack
+    if gun.Parent == LocalPlayer.Backpack then
+        LocalPlayer.Character.Humanoid:EquipTool(gun)
+    end
+
+    local murdHRP = murderer.Character.HumanoidRootPart
+
+    -- candidate offsets (avoid front until last)
+    local offsets = {
+        Vector3.new(0, 0, 3),   -- directly behind
+        Vector3.new(-3, 0, 3),  -- back-left
+        Vector3.new(3, 0, 3),   -- back-right
+        Vector3.new(-4, 0, 2),  -- diagonal left
+        Vector3.new(4, 0, 2),   -- diagonal right
+        Vector3.new(0, 0, -3),  -- in front (fallback)
+    }
+
+    local function hasLineOfSight(pos, target)
+        local rayParams = RaycastParams.new()
+        rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+        rayParams.FilterDescendantsInstances = {char, murderer.Character}
+
+        local result = workspace:Raycast(pos, (target.Position - pos).Unit * (target.Position - pos).Magnitude, rayParams)
+        return not result -- clear if ray hits nothing
+    end
+
+    -- pick best spot
+    local chosenCFrame
+    for i, offset in ipairs(offsets) do
+        -- skip "in front" until last
+        if i ~= #offsets then
+            local testPos = murdHRP.Position 
+                + (murdHRP.CFrame.LookVector * offset.Z) 
+                + (murdHRP.CFrame.RightVector * offset.X)
+            if hasLineOfSight(testPos, murdHRP) then
+                chosenCFrame = CFrame.new(testPos, murdHRP.Position)
+                break
+            end
+        end
+    end
+
+    -- fallback: in front
+    if not chosenCFrame then
+        local fallbackPos = murdHRP.Position - (murdHRP.CFrame.LookVector * 3)
+        chosenCFrame = CFrame.new(fallbackPos, murdHRP.Position)
+    end
+
+    -- Teleport to chosen spot
+    hrp.CFrame = chosenCFrame
+
+    -- wait for position to register
+    task.wait(0.3)
+
+    -- Aim camera at murderer
+    Camera.CFrame = CFrame.new(Camera.CFrame.Position, murdHRP.Position)
+
+    -- Tap to shoot
+    local screenPos = Camera:WorldToViewportPoint(murdHRP.Position)
+    local tapPos = Vector2.new(screenPos.X, screenPos.Y)
+    vU:Button1Down(tapPos, Camera.CFrame)
+    task.wait(0.1)
+    vU:Button1Up(tapPos, Camera.CFrame)
+
+    -- small wait before returning
+    task.wait(0.3)
+
+    -- Teleport back
+    hrp.CFrame = oldCFrame
+end
+
+-- Original button (always visible)
+section:AddButton("Shoot Murderer", shootMurderer)
+
+-- Create/Destroy GUI button
+local function createGuiButton()
+    if guiButton then guiButton:Destroy() end
+
+    local screenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ShootMurdGUI")
+    if not screenGui then
+        screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "ShootMurdGUI"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    guiButton = Instance.new("TextButton")
+    guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
+    guiButton.Position = UDim2.new(0.5, 0, 0.8, 0)
+    guiButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    guiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    guiButton.Font = Enum.Font.SourceSansBold
+    guiButton.TextSize = guiSize / 2
+    guiButton.Text = "SM"
+    guiButton.Parent = screenGui
+
+    local uicorner = Instance.new("UICorner")
+    uicorner.CornerRadius = UDim.new(1, 0)
+    uicorner.Parent = guiButton
+
+    -- draggable
+    local dragging, dragStart, startPos
+    guiButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiButton.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    guiButton.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            guiButton.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    guiButton.MouseButton1Click:Connect(shootMurderer)
+end
+
+-- Toggle
+section:AddToggle("Enable Shoot Murderer Bindable Button", function(enabled)
+    guiEnabled = enabled
+    if guiEnabled then
+        createGuiButton()
+    else
+        if guiButton then guiButton:Destroy() guiButton = nil end
+    end
+end)
+
+-- Slider (short label "SM")
+section:AddSlider("SM", 30, 150, 40, function(size)
+    guiSize = size
+    if guiButton then
+        guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
+        guiButton.TextSize = guiSize / 2
+    end
+end)
