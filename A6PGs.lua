@@ -2146,9 +2146,7 @@ local Camera = workspace.CurrentCamera
 local section = shared.AddSection("Shoot Murd (TP)")
 
 -- Vars
-local guiButton
-local guiSize = 40
-local guiEnabled = false
+local behindDistance = 6 -- default offset behind murderer
 
 -- Utility: find murderer
 local function getMurderer()
@@ -2180,7 +2178,7 @@ local function getGun()
     return nil
 end
 
--- Core shoot logic (with smart teleporting & line of sight check)
+-- Core shoot logic (always teleport behind murderer)
 local function shootMurderer()
     local gun = getGun()
     if not gun then return end
@@ -2201,80 +2199,47 @@ local function shootMurderer()
 
     local murdHRP = murderer.Character.HumanoidRootPart
 
-    -- candidate offsets (avoid front until last)
-    local offsets = {
-        Vector3.new(0, 0, 3),   -- directly behind
-        Vector3.new(-3, 0, 3),  -- back-left
-        Vector3.new(3, 0, 3),   -- back-right
-        Vector3.new(-4, 0, 2),  -- diagonal left
-        Vector3.new(4, 0, 2),   -- diagonal right
-        Vector3.new(0, 0, -3),  -- in front (fallback)
-    }
+    -- Teleport directly behind murderer with adjustable distance
+    local behindPos = murdHRP.CFrame * CFrame.new(0, 0, behindDistance)
+    hrp.CFrame = behindPos
 
-    local function hasLineOfSight(pos, target)
-        local rayParams = RaycastParams.new()
-        rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-        rayParams.FilterDescendantsInstances = {char, murderer.Character}
-
-        local result = workspace:Raycast(pos, (target.Position - pos).Unit * (target.Position - pos).Magnitude, rayParams)
-        return not result -- clear if ray hits nothing
-    end
-
-    -- pick best spot
-    local chosenCFrame
-    for i, offset in ipairs(offsets) do
-        -- skip "in front" until last
-        if i ~= #offsets then
-            local testPos = murdHRP.Position 
-                + (murdHRP.CFrame.LookVector * offset.Z) 
-                + (murdHRP.CFrame.RightVector * offset.X)
-            if hasLineOfSight(testPos, murdHRP) then
-                chosenCFrame = CFrame.new(testPos, murdHRP.Position)
-                break
-            end
-        end
-    end
-
-    -- fallback: in front
-    if not chosenCFrame then
-        local fallbackPos = murdHRP.Position - (murdHRP.CFrame.LookVector * 3)
-        chosenCFrame = CFrame.new(fallbackPos, murdHRP.Position)
-    end
-
-    -- Teleport to chosen spot
-    hrp.CFrame = chosenCFrame
-
-    -- wait for position to register
+    -- wait a moment to register
     task.wait(0.3)
 
     -- Aim camera at murderer
     Camera.CFrame = CFrame.new(Camera.CFrame.Position, murdHRP.Position)
 
-    -- Tap to shoot
+    -- Tap to shoot (simulate mobile tap at target)
     local screenPos = Camera:WorldToViewportPoint(murdHRP.Position)
     local tapPos = Vector2.new(screenPos.X, screenPos.Y)
     vU:Button1Down(tapPos, Camera.CFrame)
     task.wait(0.1)
     vU:Button1Up(tapPos, Camera.CFrame)
 
-    -- small wait before returning
+    -- small wait before teleporting back
     task.wait(0.3)
 
     -- Teleport back
     hrp.CFrame = oldCFrame
 end
 
--- Original button (always visible)
-section:AddButton("Shoot Murderer", shootMurderer)
+-- Main button
+section:AddButton("Shoot Murderer", function()
+    shootMurderer()
+end)
 
--- Create/Destroy GUI button
+-- === GUI Button + Slider ===
+local guiButton
+local guiSize = 40
+local guiName = "ShootMurdererGUI"
+
 local function createGuiButton()
     if guiButton then guiButton:Destroy() end
 
-    local screenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ShootMurdGUI")
+    local screenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild(guiName)
     if not screenGui then
         screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "ShootMurdGUI"
+        screenGui.Name = guiName
         screenGui.ResetOnSpawn = false
         screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
     end
@@ -2285,7 +2250,7 @@ local function createGuiButton()
     guiButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     guiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     guiButton.Font = Enum.Font.SourceSansBold
-    guiButton.TextSize = guiSize / 2
+    guiButton.TextSize = guiSize/2
     guiButton.Text = "SM"
     guiButton.Parent = screenGui
 
@@ -2317,24 +2282,30 @@ local function createGuiButton()
         end
     end)
 
-    guiButton.MouseButton1Click:Connect(shootMurderer)
+    guiButton.MouseButton1Click:Connect(function()
+        shootMurderer()
+    end)
 end
 
--- Toggle
-section:AddToggle("Enable Shoot Murderer Bindable Button", function(enabled)
-    guiEnabled = enabled
-    if guiEnabled then
+-- Toggle for GUI button
+section:AddToggle("Enable SM Bindable Button", function(enabled)
+    if enabled then
         createGuiButton()
     else
         if guiButton then guiButton:Destroy() guiButton = nil end
     end
 end)
 
--- Slider (short label "SM")
-section:AddSlider("SM", 30, 150, 40, function(size)
+-- Slider for button size
+section:AddSlider("SM Button Size", 30, 150, guiSize, function(size)
     guiSize = size
     if guiButton then
         guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
-        guiButton.TextSize = guiSize / 2
+        guiButton.TextSize = guiSize/2
     end
+end)
+
+-- Slider for behind distance
+section:AddSlider("Behind Distance", 3, 15, behindDistance, function(val)
+    behindDistance = val
 end)
