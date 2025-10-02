@@ -356,8 +356,6 @@ local RoleSelect = ReplicatedStorage.Remotes.Gameplay.RoleSelect -- RemoteEvent
 local shared = odh_shared_plugins
 local my_own_section = shared.AddSection("Radio Abuse")
 
-my_own_section:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")
-
 -- File to store saved songs
 local saveFile = "saved_songs.json"
 
@@ -493,6 +491,8 @@ my_own_section:AddToggle("Auto Play Selected Audio", function(state)
         if LocalPlayer.Character then
             task.wait(1)
             playSelectedSong()
+            
+                my_own_section:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")   
         end
     end
 end)
