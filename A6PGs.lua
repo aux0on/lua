@@ -491,6 +491,42 @@ my_own_section:AddToggle("Auto Play Selected Audio", function(state)
         if LocalPlayer.Character then
             task.wait(1)
             playSelectedSong()
+        end
+    end
+end)
+
+-- ✅ Credits label here, outside the toggle
+my_own_section:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")
+
+my_own_section:AddToggle("Auto Play Selected Audio", function(state)
+    autoPlayEnabled = state
+
+    -- Disconnect old connections
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    if charConnection then
+        charConnection:Disconnect()
+        charConnection = nil
+    end
+
+    if autoPlayEnabled then
+        -- Trigger when RoleSelect remote fires
+        connection = RoleSelect.OnClientEvent:Connect(function(...)
+            playSelectedSong()
+        end)
+
+        -- Trigger after each respawn
+        charConnection = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1) -- short delay to ensure character fully loads
+            playSelectedSong()
+        end)
+
+        -- Also play immediately if you’re already spawned
+        if LocalPlayer.Character then
+            task.wait(1)
+            playSelectedSong()
             
                 my_own_section:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")   
         end
