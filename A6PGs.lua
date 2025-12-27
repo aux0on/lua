@@ -910,23 +910,53 @@ end
 do
     local shared = odh_shared_plugins
     local my_own_section = shared.AddSection("Dual Effect")
-    my_own_section:AddLabel("Must Own Dual Effect")
-
+    my_own_section:AddLabel("Must Own Dual Effect + Selected Effect")
+    
     local toggle_enabled = false
     local connection
-
+    local selected_effect = "Electric" -- Default effect
+    
+    -- Add dropdown for effect selection
+    my_own_section:AddDropdown("Select Second Effect", {
+        "Vampiric2024",
+        "SynthEffect2025",
+        "Sunbeams2024",
+        "Snowstorm2024",
+        "Retro2025",
+        "Radioactive",
+        "Musical",
+        "Heatwave2025",
+        "Heartify",
+        "Gifts2024",
+        "Ghosts2024",
+        "FlamingoEffect2025",
+        "Burn",
+        "Cursed2024",
+        "Starry2024",
+        "Bats2024",
+        "Aquatic2025",
+        "Jellyfish2024",
+        "Carrots2025",
+        "BlueFire",
+        "Rainbows2025",
+        "Elitify",
+        "Electric",
+        "Ghostify"
+    }, function(selected)
+        selected_effect = selected
+    end)
+    
     my_own_section:AddToggle("Auto Equip Dual Effect", function(enabled)
         toggle_enabled = enabled
-
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local RoleSelect = ReplicatedStorage.Remotes.Gameplay.RoleSelect
         local Equip = ReplicatedStorage.Remotes.Inventory.Equip
-
+        
         if connection then
             connection:Disconnect()
             connection = nil
         end
-
+        
         if enabled then
             connection = RoleSelect.OnClientEvent:Connect(function(...)
                 local args = { ... }
@@ -934,7 +964,7 @@ do
                     Equip:FireServer("Dual", "Effects")
                     task.delay(18, function()
                         if toggle_enabled then
-                            Equip:FireServer("Electric", "Effects")
+                            Equip:FireServer(selected_effect, "Effects")
                         end
                     end)
                 end
@@ -1356,7 +1386,7 @@ makeEmoteHandler("103788740211648", "DS", "EmoteGUI_DualSwing")  -- Dual Swing
 
 end
 
--- Advanced Accurate Silent Aim with Aggressive Options
+-- Advanced Accurate Silent Aim - Optimized for MM2
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -1381,21 +1411,25 @@ local hitbox = "HumanoidRootPart"
 local verticalPrediction = 1.0
 local horizontalPrediction = 1.0
 local simulationDivider = 1.0
-local predictionInterval = 50 -- ms
+local predictionInterval = 50
 local prioritizePing = true
 local jumpPrediction = true
 
 -- Aggression tuning
 local aggressiveMode = false
-local aggressionMultiplier = 1.5 -- default 150%
+local aggressionMultiplier = 1.5
+
+-- Advanced features
+local adaptivePrediction = true
 
 local lastPredictionUpdate = 0
 local cachedPrediction = 0.1
+local pingHistory = {}
 
 -- ===============================
 -- UI
 -- ===============================
-local section = shared.AddSection("Silent Aim (Specs)")
+local section = shared.AddSection("Silent Aim (Beta)")
 
 section:AddToggle("Enable Silent Aim", function(state)
     silentAimEnabled = state
@@ -1405,7 +1439,7 @@ section:AddToggle("Crosshair Targeting", function(state)
     useCrosshairMode = state
 end)
 
-section:AddDropdown("Hitbox", { "Head", "HumanoidRootPart", "ClosestPart" }, function(choice)
+local hitboxDropdown = section:AddDropdown("Hitbox", { "Head", "HumanoidRootPart", "ClosestPart" }, function(choice)
     hitbox = choice
 end)
 
@@ -1417,7 +1451,6 @@ section:AddSlider("Horizontal Prediction", 0, 200, 100, function(val)
     horizontalPrediction = val / 100
 end)
 
--- ✅ Simulation divider max raised to 100
 section:AddSlider("Simulation Divider", 1, 100, 1, function(val)
     simulationDivider = val
 end)
@@ -1434,12 +1467,15 @@ section:AddToggle("Jump Prediction", function(state)
     jumpPrediction = state
 end)
 
--- ✅ Aggressive Mode Controls
+section:AddToggle("Adaptive Prediction", function(state)
+    adaptivePrediction = state
+end)
+
 section:AddToggle("Aggressive Mode", function(state)
     aggressiveMode = state
 end)
 
-section:AddSlider("Aggression %", 100, 200, 150, function(val)
+section:AddSlider("Aggression %", 100, 300, 150, function(val)
     aggressionMultiplier = val / 100
 end)
 
@@ -1448,7 +1484,20 @@ end)
 -- ===============================
 local function getCurrentPing()
     local pingMs = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-    return pingMs / 1000
+    
+    -- Store ping history for smoothing
+    table.insert(pingHistory, pingMs)
+    if #pingHistory > 10 then
+        table.remove(pingHistory, 1)
+    end
+    
+    -- Average ping for stability
+    local sum = 0
+    for _, p in ipairs(pingHistory) do
+        sum = sum + p
+    end
+    
+    return (sum / #pingHistory) / 1000
 end
 
 local function getPredictionTime()
@@ -1459,20 +1508,39 @@ local function getPredictionTime()
         if prioritizePing then
             cachedPrediction = getCurrentPing()
         end
+        
+        -- Adaptive prediction based on network conditions
+        if adaptivePrediction and #pingHistory > 5 then
+            local variance = 0
+            local avg = cachedPrediction * 1000
+            for _, p in ipairs(pingHistory) do
+                variance = variance + math.abs(p - avg)
+            end
+            variance = variance / #pingHistory
+            
+            -- Increase prediction if ping is unstable
+            if variance > 20 then
+                cachedPrediction = cachedPrediction * 1.2
+            end
+        end
     end
     return cachedPrediction
 end
 
 local function getHitboxPart(character)
     if not character then return nil end
+    
     if hitbox == "Head" and character:FindFirstChild("Head") then
         return character.Head
     elseif hitbox == "HumanoidRootPart" and character:FindFirstChild("HumanoidRootPart") then
         return character.HumanoidRootPart
     elseif hitbox == "ClosestPart" then
         local closest, dist = nil, math.huge
+        local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not myPos then return nil end
+        
         for _, part in ipairs(character:GetChildren()) do
-            if part:IsA("BasePart") then
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                 local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
                 if onScreen then
                     local mouse = LocalPlayer:GetMouse()
@@ -1483,14 +1551,15 @@ local function getHitboxPart(character)
                 end
             end
         end
-        return closest
+        return closest or character:FindFirstChild("HumanoidRootPart")
     end
 end
 
 local function getMurderer()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
-            if plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife") then
+            local backpack = plr:FindFirstChild("Backpack")
+            if (backpack and backpack:FindFirstChild("Knife")) or plr.Character:FindFirstChild("Knife") then
                 return plr
             end
         end
@@ -1555,18 +1624,31 @@ local function hookFunc(self, ...)
     -- Calculate prediction
     local t = getPredictionTime()
     local velocity = part.AssemblyLinearVelocity
+    
+    -- Get humanoid for jump detection
+    local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local isJumping = humanoid and humanoid:GetState() == Enum.HumanoidStateType.Freefall
 
     -- Apply aggressive tuning if enabled
     local hPred = horizontalPrediction
+    local vPred = verticalPrediction
     local simDiv = simulationDivider
+    
     if aggressiveMode then
         hPred = hPred * aggressionMultiplier
+        vPred = vPred * aggressionMultiplier
         simDiv = math.max(0.5, simDiv / aggressionMultiplier)
     end
 
+    -- Enhanced velocity calculation
     local velX = (velocity.X / simDiv) * hPred
-    local velY = (velocity.Y / simDiv) * (jumpPrediction and verticalPrediction or 0)
+    local velY = (velocity.Y / simDiv) * (jumpPrediction and vPred or 0)
     local velZ = (velocity.Z / simDiv) * hPred
+    
+    -- Extra jump compensation
+    if isJumping and jumpPrediction then
+        velY = velY * 1.3
+    end
 
     local predicted = part.Position + Vector3.new(velX, velY, velZ) * t
 
@@ -2066,249 +2148,386 @@ end)
 
 local shared = odh_shared_plugins
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local Player = Players.LocalPlayer
 
--- Section
-local section = shared.AddSection("Firefly Jar Spam")
-section:AddLabel("MMV ONLY")
+local AllBool = false
 
--- Vars
-local spamEnabled = false
-local spamAmount = 1
-local spamThreads = {}
-local currentChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-
--- Keep track of respawns
-LocalPlayer.CharacterAdded:Connect(function(char)
-    currentChar = char
-end)
-
--- Get Remote Function
-local function getRemote()
-    if currentChar and currentChar:FindFirstChild("Fireflies") then
-        local remote = currentChar.Fireflies:FindFirstChild("Remote")
-        if remote and remote:IsA("RemoteFunction") then
-            return remote
-        end
-    end
-    return nil
+-- === Helper Message Function === --
+local function Message(_Title, _Text, Time)
+    game:GetService("StarterGui"):SetCore("SendNotification", {Title = _Title, Text = _Text, Duration = Time})
 end
 
--- Start a single spam loop
-local function startLoop(index)
-    spamThreads[index] = task.spawn(function()
-        while spamEnabled do
-            local remote = getRemote()
-            if remote then
-                remote:InvokeServer("Button1Down")
+-- === Advanced SkidFling Function === --
+local function SkidFling(TargetPlayer)
+    local Character = Player.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    local RootPart = Humanoid and Humanoid.RootPart
+
+    local TCharacter = TargetPlayer.Character
+    local THumanoid
+    local TRootPart
+    local THead
+    local Accessory
+    local Handle
+
+    if TCharacter:FindFirstChildOfClass("Humanoid") then
+        THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
+    end
+    if THumanoid and THumanoid.RootPart then
+        TRootPart = THumanoid.RootPart
+    end
+    if TCharacter:FindFirstChild("Head") then
+        THead = TCharacter.Head
+    end
+    if TCharacter:FindFirstChildOfClass("Accessory") then
+        Accessory = TCharacter:FindFirstChildOfClass("Accessory")
+    end
+    if Accessory and Accessory:FindFirstChild("Handle") then
+        Handle = Accessory.Handle
+    end
+
+    if Character and Humanoid and RootPart then
+        if RootPart.Velocity.Magnitude < 50 then
+            getgenv().OldPos = RootPart.CFrame
+        end
+        if THumanoid and THumanoid.Sit and not AllBool then
+            return Message("Error Occurred", "Target is sitting", 5)
+        end
+        if THead then
+            workspace.CurrentCamera.CameraSubject = THead
+        elseif not THead and Handle then
+            workspace.CurrentCamera.CameraSubject = Handle
+        elseif THumanoid and TRootPart then
+            workspace.CurrentCamera.CameraSubject = THumanoid
+        end
+        if not TCharacter:FindFirstChildWhichIsA("BasePart") then
+            return
+        end
+        
+        local FPos = function(BasePart, Pos, Ang)
+            RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+            Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+            RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+            RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+        end
+        
+        local SFBasePart = function(BasePart)
+            local TimeToWait = 2
+            local Time = tick()
+            local Angle = 0
+
+            repeat
+                if RootPart and THumanoid then
+                    if BasePart.Velocity.Magnitude < 50 then
+                        Angle = Angle + 100
+
+                        FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(2.25, 1.5, -2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(-2.25, -1.5, 2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                    else
+                        FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5, -THumanoid.WalkSpeed), CFrame.Angles(0, 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+                        
+                        FPos(BasePart, CFrame.new(0, 1.5, TRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5, -TRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(0, 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, 1.5, TRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5 ,0), CFrame.Angles(math.rad(-90), 0, 0))
+                        task.wait()
+
+                        FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                        task.wait()
+                    end
+                else
+                    break
+                end
+            until BasePart.Velocity.Magnitude > 500 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= Players or not TargetPlayer.Character == TCharacter or THumanoid.Sit or Humanoid.Health <= 0 or tick() > Time + TimeToWait
+        end
+        
+        workspace.FallenPartsDestroyHeight = 0/0
+        
+        local BV = Instance.new("BodyVelocity")
+        BV.Name = "EpixVel"
+        BV.Parent = RootPart
+        BV.Velocity = Vector3.new(9e8, 9e8, 9e8)
+        BV.MaxForce = Vector3.new(1/0, 1/0, 1/0)
+        
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        
+        if TRootPart and THead then
+            if (TRootPart.CFrame.p - THead.CFrame.p).Magnitude > 5 then
+                SFBasePart(THead)
+            else
+                SFBasePart(TRootPart)
             end
-            task.wait(0.001) -- max safe speed
+        elseif TRootPart and not THead then
+            SFBasePart(TRootPart)
+        elseif not TRootPart and THead then
+            SFBasePart(THead)
+        elseif not TRootPart and not THead and Accessory and Handle then
+            SFBasePart(Handle)
+        else
+            return Message("Error Occurred", "Target is missing everything", 5)
+        end
+        
+        BV:Destroy()
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        workspace.CurrentCamera.CameraSubject = Humanoid
+        
+        repeat
+            RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
+            Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+            Humanoid:ChangeState("GettingUp")
+            table.foreach(Character:GetChildren(), function(_, x)
+                if x:IsA("BasePart") then
+                    x.Velocity, x.RotVelocity = Vector3.new(), Vector3.new()
+                end
+            end)
+            task.wait()
+        until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
+        workspace.FallenPartsDestroyHeight = getgenv().FPDH
+    else
+        return Message("Error Occurred", "Random error", 5)
+    end
+end
+
+-- === Helper Functions === --
+local function FindMurderer()
+    for _, plr in pairs(Players:GetPlayers()) do
+        local bp = plr:FindFirstChildOfClass("Backpack")
+        if bp and bp:FindFirstChild("Knife") then
+            return plr
+        end
+    end
+end
+
+local function FindSheriff()
+    for _, plr in pairs(Players:GetPlayers()) do
+        local bp = plr:FindFirstChildOfClass("Backpack")
+        if bp and bp:FindFirstChild("Gun") then
+            return plr
+        end
+    end
+end
+
+local function FlingAll()
+    AllBool = true
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= Player then
+            SkidFling(plr)
+        end
+    end
+    AllBool = false
+end
+
+-- === Plugin Section === --
+local fling_section = shared.AddSection("Fling")
+
+fling_section:AddButton("Fling Sheriff", function()
+    local sheriff = FindSheriff()
+    if sheriff then
+        SkidFling(sheriff)
+    else
+        Message("Error", "Sheriff not found", 3)
+    end
+end)
+
+fling_section:AddButton("Fling Murderer", function()
+    local murderer = FindMurderer()
+    if murderer then
+        SkidFling(murderer)
+    else
+        Message("Error", "Murderer not found", 3)
+    end
+end)
+
+fling_section:AddButton("Fling All", function()
+    FlingAll()
+end)
+
+local selectedPlayer = nil
+fling_section:AddPlayerDropdown("Fling Player", function(player)
+    selectedPlayer = player
+    if player and player ~= Player then
+        SkidFling(player)
+    end
+end)
+
+-- === Loop Fling Player Toggle === --
+local loopingPlayer = false
+fling_section:AddToggle("Loop Fling Player", function(state)
+    loopingPlayer = state
+    task.spawn(function()
+        while loopingPlayer do
+            if selectedPlayer and selectedPlayer ~= Player and selectedPlayer.Parent == Players then
+                SkidFling(selectedPlayer)
+            else
+                Message("Error", "No valid player selected", 3)
+                loopingPlayer = false
+                break
+            end
         end
     end)
-end
-
--- Stop all loops
-local function stopAll()
-    spamEnabled = false
-    for i, t in pairs(spamThreads) do
-        spamThreads[i] = nil
-    end
-end
-
--- Toggle
-section:AddToggle("Spam Firefly Jar", function(state)
-    spamEnabled = state
-    if state then
-        for i = 1, spamAmount do
-            startLoop(i)
-        end
-    else
-        stopAll()
-    end
 end)
 
--- Slider (max = 25 for safe limit)
-section:AddSlider("Spam Intensity", 1, 25, 1, function(val)
-    spamAmount = val
-    if spamEnabled then
-        stopAll()
-        spamEnabled = true
-        for i = 1, spamAmount do
-            startLoop(i)
+-- === Loop Fling All Toggle === --
+local loopingAll = false
+fling_section:AddToggle("Loop Fling All", function(state)
+    loopingAll = state
+    task.spawn(function()
+        while loopingAll do
+            FlingAll()
+            task.wait(5) -- repeat every 5 seconds, adjust as needed
         end
-    end
+    end)
 end)
 
 local shared = odh_shared_plugins
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local vU = game:GetService("VirtualUser")
-local Camera = workspace.CurrentCamera
 
--- Section
-local section = shared.AddSection("Shoot Murd (TP)")
+local auto_haste_section = shared.AddSection("Perks")
 
--- Vars
-local behindDistance = 6 -- default offset behind murderer
+local autoHasteEnabled = false
+local defaultSpeed = 16
+local hasteSpeed = 18
+local connection
 
--- Utility: find murderer
-local function getMurderer()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            local backpack = plr:FindFirstChild("Backpack")
-            if backpack and backpack:FindFirstChild("Knife") then
-                return plr
-            end
-            local char = plr.Character
-            if char and char:FindFirstChild("Knife") then
-                return plr
-            end
-        end
-    end
-    return nil
-end
-
--- Utility: check if you have gun
-local function getGun()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Gun") then
-        return char.Gun
-    end
+local function hasKnife()
     local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if backpack and backpack:FindFirstChild("Gun") then
-        return backpack.Gun
+    local character = LocalPlayer.Character
+    
+    if backpack and backpack:FindFirstChild("Knife") then
+        return true
     end
-    return nil
+    
+    if character and character:FindFirstChild("Knife") then
+        return true
+    end
+    
+    return false
 end
 
--- Core shoot logic (always teleport behind murderer)
-local function shootMurderer()
-    local gun = getGun()
-    if not gun then return end
-
-    local murderer = getMurderer()
-    if not murderer or not murderer.Character or not murderer.Character:FindFirstChild("HumanoidRootPart") then return end
-
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-
-    local hrp = char.HumanoidRootPart
-    local oldCFrame = hrp.CFrame
-
-    -- Equip gun if in backpack
-    if gun.Parent == LocalPlayer.Backpack then
-        LocalPlayer.Character.Humanoid:EquipTool(gun)
+local function isKnifeEquipped()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Knife") then
+        return true
     end
-
-    local murdHRP = murderer.Character.HumanoidRootPart
-
-    -- Teleport directly behind murderer with adjustable distance
-    local behindPos = murdHRP.CFrame * CFrame.new(0, 0, behindDistance)
-    hrp.CFrame = behindPos
-
-    -- wait a moment to register
-    task.wait(0.3)
-
-    -- Aim camera at murderer
-    Camera.CFrame = CFrame.new(Camera.CFrame.Position, murdHRP.Position)
-
-    -- Tap to shoot (simulate mobile tap at target)
-    local screenPos = Camera:WorldToViewportPoint(murdHRP.Position)
-    local tapPos = Vector2.new(screenPos.X, screenPos.Y)
-    vU:Button1Down(tapPos, Camera.CFrame)
-    task.wait(0.1)
-    vU:Button1Up(tapPos, Camera.CFrame)
-
-    -- small wait before teleporting back
-    task.wait(0.3)
-
-    -- Teleport back
-    hrp.CFrame = oldCFrame
+    return false
 end
 
--- Main button
-section:AddButton("Shoot Murderer", function()
-    shootMurderer()
-end)
-
--- === GUI Button + Slider ===
-local guiButton
-local guiSize = 40
-local guiName = "ShootMurdererGUI"
-
-local function createGuiButton()
-    if guiButton then guiButton:Destroy() end
-
-    local screenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild(guiName)
-    if not screenGui then
-        screenGui = Instance.new("ScreenGui")
-        screenGui.Name = guiName
-        screenGui.ResetOnSpawn = false
-        screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
-
-    guiButton = Instance.new("TextButton")
-    guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
-    guiButton.Position = UDim2.new(0.5, 0, 0.8, 0)
-    guiButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    guiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    guiButton.Font = Enum.Font.SourceSansBold
-    guiButton.TextSize = guiSize/2
-    guiButton.Text = "SM"
-    guiButton.Parent = screenGui
-
-    local uicorner = Instance.new("UICorner")
-    uicorner.CornerRadius = UDim.new(1, 0)
-    uicorner.Parent = guiButton
-
-    -- draggable
-    local dragging, dragStart, startPos
-    guiButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = guiButton.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-    guiButton.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            guiButton.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    guiButton.MouseButton1Click:Connect(function()
-        shootMurderer()
-    end)
-end
-
--- Toggle for GUI button
-section:AddToggle("Enable SM Bindable Button", function(enabled)
-    if enabled then
-        createGuiButton()
+local function updateSpeed()
+    if not autoHasteEnabled then return end
+    if not hasKnife() then return end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    if isKnifeEquipped() then
+        humanoid.WalkSpeed = hasteSpeed
     else
-        if guiButton then guiButton:Destroy() guiButton = nil end
+        humanoid.WalkSpeed = defaultSpeed
     end
+end
+
+local function setupAutoHaste()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    
+    if not autoHasteEnabled then
+        -- Reset speed when disabled
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = defaultSpeed
+            end
+        end
+        return
+    end
+    
+    -- Monitor character changes
+    connection = LocalPlayer.CharacterAdded:Connect(function(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        
+        character.ChildAdded:Connect(function(child)
+            if child.Name == "Knife" then
+                updateSpeed()
+            end
+        end)
+        
+        character.ChildRemoved:Connect(function(child)
+            if child.Name == "Knife" then
+                updateSpeed()
+            end
+        end)
+        
+        task.wait(0.5)
+        updateSpeed()
+    end)
+    
+    if LocalPlayer.Character then
+        local character = LocalPlayer.Character
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        
+        if humanoid then
+            character.ChildAdded:Connect(function(child)
+                if child.Name == "Knife" then
+                    updateSpeed()
+                end
+            end)
+            
+            character.ChildRemoved:Connect(function(child)
+                if child.Name == "Knife" then
+                    updateSpeed()
+                end
+            end)
+            
+            updateSpeed()
+        end
+    end
+end
+
+auto_haste_section:AddToggle("Enable Auto Haste", function(bool)
+    autoHasteEnabled = bool
+    setupAutoHaste()
 end)
 
--- Slider for button size
-section:AddSlider("SM Button Size", 30, 150, guiSize, function(size)
-    guiSize = size
-    if guiButton then
-        guiButton.Size = UDim2.new(0, guiSize, 0, guiSize)
-        guiButton.TextSize = guiSize/2
-    end
-end)
-
--- Slider for behind distance
-section:AddSlider("Behind Distance", 3, 15, behindDistance, function(val)
-    behindDistance = val
-end)
+-- Only 1 label now + renamed
+auto_haste_section:AddLabel("Stacks With Other Perks")
