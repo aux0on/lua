@@ -2335,7 +2335,7 @@ local function enableBlind()
 end
 
 -- Toggle
-headless_section:AddToggle("Enable Blind All", function(state)
+blind_section:AddToggle("Enable Blind All", function(state)
     blindEnabled = state
     if state then
         enableBlind()
