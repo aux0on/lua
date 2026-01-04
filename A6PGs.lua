@@ -2256,3 +2256,99 @@ end)
 
 -- Only 1 label now + renamed
 auto_haste_section:AddLabel("Stacks With Other Perks")
+
+local shared = odh_shared_plugins
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Section
+local blind_section = shared.AddSection("Blind Everyone")
+
+-- Default Blind Emote ID
+local blindEmoteId = 70883871260184
+
+-- Vars
+local blindEnabled = false
+local currentTrack
+local frozen = true -- freeze always ON
+
+-- === Play Emote (from Emotes.lua) ===
+local function playEmote(humanoid, emoteId)
+    if not humanoid or not humanoid:IsDescendantOf(workspace) then return end
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then return end
+
+    -- stop any running track
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack:Destroy()
+        currentTrack = nil
+    end
+
+    -- load new track
+    local emote = Instance.new("Animation")
+    emote.AnimationId = "rbxassetid://" .. tostring(emoteId)
+    currentTrack = animator:LoadAnimation(emote)
+    currentTrack.Priority = Enum.AnimationPriority.Action
+    currentTrack.Looped = true
+    currentTrack:Play()
+
+    -- loop fixer: if Roblox cancels the track, restart it
+    currentTrack.Stopped:Connect(function()
+        if blindEnabled and humanoid and humanoid.Parent then
+            task.wait(0.1)
+            playEmote(humanoid, emoteId)
+        end
+    end)
+end
+
+-- === Stop Emote ===
+local function stopEmote()
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack:Destroy()
+        currentTrack = nil
+    end
+end
+
+-- === Apply Freeze Mode (fixed: allow movement) ===
+local function applyFreeze(humanoid)
+    if humanoid and frozen then
+        humanoid.StateChanged:Connect(function(_, new)
+            if blindEnabled and humanoid.Parent then
+                if not currentTrack or not currentTrack.IsPlaying then
+                    task.wait(0.05)
+                    playEmote(humanoid, blindEmoteId)
+                end
+            end
+        end)
+    end
+end
+
+-- === Enable Blind ===
+local function enableBlind()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = char:WaitForChild("Humanoid")
+
+    applyFreeze(humanoid)
+    playEmote(humanoid, blindEmoteId)
+end
+
+-- Toggle
+headless_section:AddToggle("Enable Blind All", function(state)
+    blindEnabled = state
+    if state then
+        enableBlind()
+    else
+        stopEmote()
+    end
+end)
+
+-- Respawn support (auto re-enable if toggle is on)
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if blindEnabled then
+        local humanoid = char:WaitForChild("Humanoid")
+        task.wait(0.5)
+        enableBlind()
+    end
+end)
