@@ -2262,7 +2262,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- Section
-local blind_section = shared.AddSection("Blind Everyone")
+local blind_section = shared.AddSection("Blind/Skybox")
 
 -- Default Blind Emote ID
 local blindEmoteId = 70883871260184
@@ -2335,7 +2335,7 @@ local function enableBlind()
 end
 
 -- Toggle
-blind_section:AddToggle("Enable Blind All", function(state)
+blind_section:AddToggle("Enable Blind All/FE Skybox", function(state)
     blindEnabled = state
     if state then
         enableBlind()
