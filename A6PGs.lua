@@ -2262,13 +2262,13 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- Section
-local blind_section = shared.AddSection("Blind/Skybox")
+local skybox_section = shared.AddSection("Skybox")
 
--- Default Blind Emote ID
-local blindEmoteId = 70883871260184
+-- Default Skybox Emote ID
+local skyboxEmoteId = 70883871260184
 
 -- Vars
-local blindEnabled = false
+local skyboxEnabled = false
 local currentTrack
 local frozen = true -- freeze always ON
 
@@ -2295,7 +2295,7 @@ local function playEmote(humanoid, emoteId)
 
     -- loop fixer: if Roblox cancels the track, restart it
     currentTrack.Stopped:Connect(function()
-        if blindEnabled and humanoid and humanoid.Parent then
+        if skyboxEnabled and humanoid and humanoid.Parent then
             task.wait(0.1)
             playEmote(humanoid, emoteId)
         end
@@ -2315,30 +2315,30 @@ end
 local function applyFreeze(humanoid)
     if humanoid and frozen then
         humanoid.StateChanged:Connect(function(_, new)
-            if blindEnabled and humanoid.Parent then
+            if skyboxEnabled and humanoid.Parent then
                 if not currentTrack or not currentTrack.IsPlaying then
                     task.wait(0.05)
-                    playEmote(humanoid, blindEmoteId)
+                    playEmote(humanoid, skyboxEmoteId)
                 end
             end
         end)
     end
 end
 
--- === Enable Blind ===
-local function enableBlind()
+-- === Enable Skybox ===
+local function enableSkybox()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local humanoid = char:WaitForChild("Humanoid")
 
     applyFreeze(humanoid)
-    playEmote(humanoid, blindEmoteId)
+    playEmote(humanoid, skyboxEmoteId)
 end
 
 -- Toggle
-blind_section:AddToggle("Enable Blind All/FE Skybox", function(state)
-    blindEnabled = state
+skybox_section:AddToggle("Enable FE Skybox", function(state)
+    skyboxEnabled = state
     if state then
-        enableBlind()
+        enableSkybox()
     else
         stopEmote()
     end
@@ -2346,9 +2346,9 @@ end)
 
 -- Respawn support (auto re-enable if toggle is on)
 LocalPlayer.CharacterAdded:Connect(function(char)
-    if blindEnabled then
+    if skyboxEnabled then
         local humanoid = char:WaitForChild("Humanoid")
         task.wait(0.5)
-        enableBlind()
+        enableSkybox()
     end
 end)
