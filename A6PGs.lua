@@ -2,6 +2,11 @@
 
 -- Official Safe File
 
+writefile = nil
+readfile = nil
+delfile = nil
+listfiles = nil
+
 -- ✅ HiddenGui Error Patch (put this first)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
