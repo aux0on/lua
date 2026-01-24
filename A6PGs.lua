@@ -864,10 +864,14 @@ end
 do
     local hlSection = shared.AddSection("FE Headless")
     local hlId = 78837807518622
+    local hlId2 = 117080641351340
     local hlOn = false
+    local hlOn2 = false
     local hlTrack
+    local hlTrack2
     
     local function stopHl() if hlTrack then hlTrack:Stop() hlTrack:Destroy() hlTrack = nil end end
+    local function stopHl2() if hlTrack2 then hlTrack2:Stop() hlTrack2:Destroy() hlTrack2 = nil end end
     
     local function playHl(hum)
         if not hum then return end
@@ -883,9 +887,29 @@ do
         hlTrack.Stopped:Connect(function() if hlOn and hum.Parent then task.wait(0.1) playHl(hum) end end)
     end
     
+    local function playHl2(hum)
+        if not hum then return end
+        local ani = hum:FindFirstChildOfClass("Animator")
+        if not ani then return end
+        stopHl2()
+        local a = Instance.new("Animation")
+        a.AnimationId = "rbxassetid://"..hlId2
+        hlTrack2 = ani:LoadAnimation(a)
+        hlTrack2.Priority = Enum.AnimationPriority.Action
+        hlTrack2.Looped = true
+        hlTrack2:Play()
+        hlTrack2.Stopped:Connect(function() if hlOn2 and hum.Parent then task.wait(0.1) playHl2(hum) end end)
+    end
+    
     local function applyFreeze(hum)
         hum.StateChanged:Connect(function()
             if hlOn and hum.Parent and (not hlTrack or not hlTrack.IsPlaying) then task.wait(0.05) playHl(hum) end
+        end)
+    end
+    
+    local function applyFreeze2(hum)
+        hum.StateChanged:Connect(function()
+            if hlOn2 and hum.Parent and (not hlTrack2 or not hlTrack2.IsPlaying) then task.wait(0.05) playHl2(hum) end
         end)
     end
     
@@ -896,12 +920,27 @@ do
         playHl(h)
     end
     
+    local function enableHl2()
+        local c = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local h = c:WaitForChild("Humanoid")
+        applyFreeze2(h)
+        playHl2(h)
+    end
+    
     hlSection:AddToggle("Enable Headless", function(s)
         hlOn = s
         if s then enableHl() else stopHl() end
     end)
     
-    LocalPlayer.CharacterAdded:Connect(function(c) if hlOn then task.wait(0.5) enableHl() end end)
+    hlSection:AddToggle("Enable Headless V2", function(s)
+        hlOn2 = s
+        if s then enableHl2() else stopHl2() end
+    end)
+    
+    LocalPlayer.CharacterAdded:Connect(function(c) 
+        if hlOn then task.wait(0.5) enableHl() end
+        if hlOn2 then task.wait(0.5) enableHl2() end
+    end)
 end
 
 do
