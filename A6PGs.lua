@@ -869,12 +869,30 @@ do
     local hlOn2 = false
     local hlTrack
     local hlTrack2
+    local freezeConnection
+    local freezeConnection2
+    local stoppedConnection
+    local stoppedConnection2
     
-    local function stopHl() if hlTrack then hlTrack:Stop() hlTrack:Destroy() hlTrack = nil end end
-    local function stopHl2() if hlTrack2 then hlTrack2:Stop() hlTrack2:Destroy() hlTrack2 = nil end end
+    local function stopHl()
+        if stoppedConnection then stoppedConnection:Disconnect() stoppedConnection = nil end
+        if hlTrack then hlTrack:Stop() hlTrack:Destroy() hlTrack = nil end
+    end
+    
+    local function stopHl2()
+        if stoppedConnection2 then stoppedConnection2:Disconnect() stoppedConnection2 = nil end
+        if hlTrack2 then hlTrack2:Stop() hlTrack2:Destroy() hlTrack2 = nil end
+    end
+    
+    local function cleanup()
+        stopHl()
+        stopHl2()
+        if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
+        if freezeConnection2 then freezeConnection2:Disconnect() freezeConnection2 = nil end
+    end
     
     local function playHl(hum)
-        if not hum then return end
+        if not hum or not hum.Parent then return end
         local ani = hum:FindFirstChildOfClass("Animator")
         if not ani then return end
         stopHl()
@@ -884,11 +902,14 @@ do
         hlTrack.Priority = Enum.AnimationPriority.Action
         hlTrack.Looped = true
         hlTrack:Play()
-        hlTrack.Stopped:Connect(function() if hlOn and hum.Parent then task.wait(0.1) playHl(hum) end end)
+        if stoppedConnection then stoppedConnection:Disconnect() end
+        stoppedConnection = hlTrack.Stopped:Connect(function()
+            if hlOn and hum.Parent then task.wait(0.1) playHl(hum) end
+        end)
     end
     
     local function playHl2(hum)
-        if not hum then return end
+        if not hum or not hum.Parent then return end
         local ani = hum:FindFirstChildOfClass("Animator")
         if not ani then return end
         stopHl2()
@@ -898,48 +919,80 @@ do
         hlTrack2.Priority = Enum.AnimationPriority.Action
         hlTrack2.Looped = true
         hlTrack2:Play()
-        hlTrack2.Stopped:Connect(function() if hlOn2 and hum.Parent then task.wait(0.1) playHl2(hum) end end)
+        if stoppedConnection2 then stoppedConnection2:Disconnect() end
+        stoppedConnection2 = hlTrack2.Stopped:Connect(function()
+            if hlOn2 and hum.Parent then task.wait(0.1) playHl2(hum) end
+        end)
     end
     
     local function applyFreeze(hum)
-        hum.StateChanged:Connect(function()
-            if hlOn and hum.Parent and (not hlTrack or not hlTrack.IsPlaying) then task.wait(0.05) playHl(hum) end
+        if freezeConnection then freezeConnection:Disconnect() end
+        freezeConnection = hum.StateChanged:Connect(function()
+            if hlOn and hum.Parent and (not hlTrack or not hlTrack.IsPlaying) then
+                task.wait(0.05)
+                if hlOn and hum.Parent then playHl(hum) end
+            end
         end)
     end
     
     local function applyFreeze2(hum)
-        hum.StateChanged:Connect(function()
-            if hlOn2 and hum.Parent and (not hlTrack2 or not hlTrack2.IsPlaying) then task.wait(0.05) playHl2(hum) end
+        if freezeConnection2 then freezeConnection2:Disconnect() end
+        freezeConnection2 = hum.StateChanged:Connect(function()
+            if hlOn2 and hum.Parent and (not hlTrack2 or not hlTrack2.IsPlaying) then
+                task.wait(0.05)
+                if hlOn2 and hum.Parent then playHl2(hum) end
+            end
         end)
     end
     
     local function enableHl()
-        local c = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local h = c:WaitForChild("Humanoid")
+        local c = LocalPlayer.Character
+        if not c then return end
+        local h = c:FindFirstChild("Humanoid")
+        if not h then return end
         applyFreeze(h)
         playHl(h)
     end
     
     local function enableHl2()
-        local c = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local h = c:WaitForChild("Humanoid")
+        local c = LocalPlayer.Character
+        if not c then return end
+        local h = c:FindFirstChild("Humanoid")
+        if not h then return end
         applyFreeze2(h)
         playHl2(h)
     end
     
     hlSection:AddToggle("Enable Headless", function(s)
         hlOn = s
-        if s then enableHl() else stopHl() end
+        if s then
+            enableHl()
+        else
+            stopHl()
+            if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
+        end
     end)
     
     hlSection:AddToggle("Enable Headless V2", function(s)
         hlOn2 = s
-        if s then enableHl2() else stopHl2() end
+        if s then
+            enableHl2()
+        else
+            stopHl2()
+            if freezeConnection2 then freezeConnection2:Disconnect() freezeConnection2 = nil end
+        end
     end)
     
-    LocalPlayer.CharacterAdded:Connect(function(c) 
-        if hlOn then task.wait(0.5) enableHl() end
-        if hlOn2 then task.wait(0.5) enableHl2() end
+    -- Clean up before character is removed
+    LocalPlayer.CharacterRemoving:Connect(function()
+        cleanup()
+    end)
+    
+    -- Re-enable after character is added
+    LocalPlayer.CharacterAdded:Connect(function(c)
+        task.wait(0.5)
+        if hlOn then enableHl() end
+        if hlOn2 then enableHl2() end
     end)
 end
 
@@ -1060,32 +1113,73 @@ do
     local skyId = 70883871260184
     local skyOn = false
     local skyTrack
+    local freezeConnection
+    local stoppedConnection
+    
+    local function stopSky()
+        if stoppedConnection then stoppedConnection:Disconnect() stoppedConnection = nil end
+        if skyTrack then skyTrack:Stop() skyTrack:Destroy() skyTrack = nil end
+    end
+    
+    local function cleanup()
+        stopSky()
+        if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
+    end
     
     local function playSky(hum)
-        if not hum then return end
+        if not hum or not hum.Parent then return end
         local ani = hum:FindFirstChildOfClass("Animator")
         if not ani then return end
-        if skyTrack then skyTrack:Stop() skyTrack:Destroy() end
-        
+        stopSky()
         local a = Instance.new("Animation")
         a.AnimationId = "rbxassetid://"..skyId
         skyTrack = ani:LoadAnimation(a)
         skyTrack.Priority = Enum.AnimationPriority.Action
         skyTrack.Looped = true
         skyTrack:Play()
-        skyTrack.Stopped:Connect(function() if skyOn and hum.Parent then task.wait(0.1) playSky(hum) end end)
+        if stoppedConnection then stoppedConnection:Disconnect() end
+        stoppedConnection = skyTrack.Stopped:Connect(function()
+            if skyOn and hum.Parent then task.wait(0.1) playSky(hum) end
+        end)
+    end
+    
+    local function applyFreeze(hum)
+        if freezeConnection then freezeConnection:Disconnect() end
+        freezeConnection = hum.StateChanged:Connect(function()
+            if skyOn and hum.Parent and (not skyTrack or not skyTrack.IsPlaying) then
+                task.wait(0.05)
+                if skyOn and hum.Parent then playSky(hum) end
+            end
+        end)
     end
     
     local function enSky()
-        local c = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local h = c:WaitForChild("Humanoid")
-        h.StateChanged:Connect(function() if skyOn and (not skyTrack or not skyTrack.IsPlaying) then task.wait(0.05) playSky(h) end end)
+        local c = LocalPlayer.Character
+        if not c then return end
+        local h = c:FindFirstChild("Humanoid")
+        if not h then return end
+        applyFreeze(h)
         playSky(h)
     end
     
     skySection:AddToggle("Enable FE Skybox", function(s)
         skyOn = s
-        if s then enSky() else if skyTrack then skyTrack:Stop() end end
+        if s then
+            enSky()
+        else
+            stopSky()
+            if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
+        end
     end)
-    LocalPlayer.CharacterAdded:Connect(function() if skyOn then task.wait(0.5) enSky() end end)
+    
+    -- Clean up before character is removed
+    LocalPlayer.CharacterRemoving:Connect(function()
+        cleanup()
+    end)
+    
+    -- Re-enable after character is added
+    LocalPlayer.CharacterAdded:Connect(function(c)
+        task.wait(0.5)
+        if skyOn then enSky() end
+    end)
 end
