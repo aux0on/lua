@@ -1183,3 +1183,435 @@ do
         if skyOn then enSky() end
     end)
 end
+
+local shared = odh_shared_plugins
+local section = shared.AddSection("Bomb Jump")
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Bomb jump variables
+local ScreenGui = nil
+local MainFrame = nil
+local CircleButton = nil
+local dragging = false
+local dragStart = nil
+local startPos = nil
+local onCooldown = false
+local bombJumpEnabled = false
+local guiEnabled = false
+local debounce = false
+
+-- Touch tracking for detecting real taps vs camera movement
+local activeTouches = {}
+local TAP_MOVEMENT_THRESHOLD = 10 -- pixels moved to be considered a drag vs tap
+local TAP_TIME_THRESHOLD = 0.3 -- max time for a tap in seconds
+
+-- Bomb names to detect
+local BOMB_NAMES = {"Bomb", "PrankBomb", "FakeBomb"}
+
+section:AddLabel("Bomb Jump Features")
+section:AddParagraph("Info", "Toggle features below. Press E for manual bomb jump.")
+
+-- Create GUI
+function CreateGUI()
+    if ScreenGui then ScreenGui:Destroy() end
+    
+    ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "BombJumpGUI"
+    ScreenGui.Parent = game.CoreGui
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true
+
+    MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 65, 0, 65)
+    MainFrame.Position = UDim2.new(0, 20, 0, 20)
+    MainFrame.BackgroundTransparency = 1
+    MainFrame.Active = true
+    MainFrame.Selectable = true
+    MainFrame.Parent = ScreenGui
+
+    CircleButton = Instance.new("TextButton")
+    CircleButton.Size = UDim2.new(1, 0, 1, 0)
+    CircleButton.Position = UDim2.new(0, 0, 0, 0)
+    CircleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    CircleButton.BackgroundTransparency = 0.5
+    CircleButton.Text = "clutch"
+    CircleButton.TextColor3 = Color3.fromRGB(220, 220, 220)
+    CircleButton.Font = Enum.Font.GothamBold
+    CircleButton.TextSize = 14
+    CircleButton.AutoButtonColor = false
+    CircleButton.Active = true
+    CircleButton.Selectable = true
+    CircleButton.Parent = MainFrame
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0.15, 0)
+    UICorner.Parent = CircleButton
+end
+
+function QuickButtonPress()
+    if not CircleButton then return end
+    
+    CircleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    
+    task.spawn(function()
+        task.wait(0.1)
+        if CircleButton and not onCooldown then
+            CircleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
+    end)
+end
+
+function GetCenterPosition()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local camera = Workspace.CurrentCamera
+        local lookDir = camera.CFrame.LookVector
+        return character.HumanoidRootPart.Position + (lookDir * 5)
+    end
+    return nil
+end
+
+function MakeCharacterJump()
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end
+
+function ResetCooldown()
+    onCooldown = false
+    
+    if CircleButton and CircleButton.Parent then
+        CircleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        CircleButton.Text = "clutch"
+    end
+end
+
+function StartCooldown()
+    onCooldown = true
+    debounce = false
+    
+    if CircleButton then
+        CircleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        CircleButton.Text = "24"
+    end
+    
+    task.spawn(function()
+        for i = 23, 0, -1 do
+            if onCooldown and CircleButton then
+                CircleButton.Text = tostring(i)
+                task.wait(1)
+            else
+                break
+            end
+        end
+        
+        if onCooldown then
+            ResetCooldown()
+        end
+    end)
+end
+
+function UnequipBomb()
+    task.spawn(function()
+        task.wait(0.5)
+        local character = LocalPlayer.Character
+        if character then
+            for _, bombName in ipairs(BOMB_NAMES) do
+                local bomb = character:FindFirstChild(bombName)
+                if bomb then
+                    bomb.Parent = LocalPlayer.Backpack or character
+                    break
+                end
+            end
+        end
+    end)
+end
+
+function GetBombInHand()
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    
+    -- Check if any bomb is currently equipped
+    for _, bombName in ipairs(BOMB_NAMES) do
+        local bomb = character:FindFirstChild(bombName)
+        if bomb then
+            return bomb
+        end
+    end
+    
+    return nil
+end
+
+function GetAnyBomb()
+    local character = LocalPlayer.Character
+    if not character then return false, nil end
+    
+    -- First check if bomb is in hand
+    for _, bombName in ipairs(BOMB_NAMES) do
+        local bomb = character:FindFirstChild(bombName)
+        if bomb then return true, bomb end
+    end
+    
+    -- Check backpack
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        for _, bombName in ipairs(BOMB_NAMES) do
+            local bomb = backpack:FindFirstChild(bombName)
+            if bomb then
+                bomb.Parent = character
+                return true, bomb
+            end
+        end
+    end
+    
+    -- Try to get FakeBomb from server
+    local success = pcall(function()
+        ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
+    end)
+    
+    if success then
+        for _ = 1, 5 do
+            for _, bombName in ipairs(BOMB_NAMES) do
+                local bomb = character:FindFirstChild(bombName)
+                if bomb then return true, bomb end
+                
+                if backpack then
+                    bomb = backpack:FindFirstChild(bombName)
+                    if bomb then
+                        bomb.Parent = character
+                        return true, bomb
+                    end
+                end
+            end
+            task.wait(0.05)
+        end
+    end
+    
+    return false, nil
+end
+
+function FastBombJump()
+    if onCooldown or debounce then return end
+    debounce = true
+    
+    QuickButtonPress()
+    
+    local success, bomb = GetAnyBomb()
+    
+    if success and bomb then
+        local position = GetCenterPosition()
+        if position then
+            local remote = bomb:FindFirstChild("Remote")
+            if remote then
+                pcall(function()
+                    remote:FireServer(CFrame.new(position), 50)
+                end)
+            end
+            
+            MakeCharacterJump()
+            UnequipBomb()
+            
+            task.spawn(function()
+                task.wait(0.1)
+                StartCooldown()
+            end)
+        end
+    end
+    
+    task.spawn(function()
+        task.wait(0.5)
+        debounce = false
+    end)
+end
+
+function SetupInputSystem()
+    if not MainFrame or not CircleButton then return end
+    
+    local connection
+    local dragInput
+    
+    local function update(input)
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+    
+    CircleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            connection = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    if connection then
+                        connection:Disconnect()
+                        connection = nil
+                    end
+                end
+            end)
+        end
+    end)
+    
+    CircleButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+    
+    CircleButton.MouseButton1Click:Connect(function()
+        if not onCooldown and not dragging then
+            FastBombJump()
+        end
+    end)
+    
+    if UserInputService.TouchEnabled then
+        CircleButton.TouchTap:Connect(function()
+            if not onCooldown and not dragging then
+                FastBombJump()
+            end
+        end)
+    end
+end
+
+-- Track touch inputs to distinguish real taps from camera drags
+local inputBeganConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.UserInputType == Enum.UserInputType.Touch or 
+       input.UserInputType == Enum.UserInputType.MouseButton1 then
+        
+        -- Store touch data
+        activeTouches[input] = {
+            startPosition = input.Position,
+            startTime = tick(),
+            moved = false
+        }
+    end
+end)
+
+local inputChangedConnection = UserInputService.InputChanged:Connect(function(input)
+    local touchData = activeTouches[input]
+    if not touchData then return end
+    
+    -- Calculate distance moved
+    local delta = input.Position - touchData.startPosition
+    local distance = math.sqrt(delta.X * delta.X + delta.Y * delta.Y)
+    
+    -- Mark as moved if exceeds threshold
+    if distance > TAP_MOVEMENT_THRESHOLD then
+        touchData.moved = true
+    end
+end)
+
+local inputEndedConnection = UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then 
+        activeTouches[input] = nil
+        return 
+    end
+    
+    local touchData = activeTouches[input]
+    if not touchData then return end
+    
+    -- Check if this was a real tap (not moved and quick)
+    local touchDuration = tick() - touchData.startTime
+    local isRealTap = not touchData.moved and touchDuration <= TAP_TIME_THRESHOLD
+    
+    -- Only trigger auto bomb jump on real taps
+    if isRealTap and bombJumpEnabled and not onCooldown and not debounce then
+        local bombInHand = GetBombInHand()
+        if bombInHand then
+            FastBombJump()
+        end
+    end
+    
+    -- Clean up
+    activeTouches[input] = nil
+end)
+
+-- Character respawn handler
+local characterConnection = LocalPlayer.CharacterAdded:Connect(function()
+    ResetCooldown()
+    activeTouches = {} -- Clear touch tracking on respawn
+end)
+
+-- Plugin Toggles
+section:AddToggle("Enable Auto Bomb Jump", function(bool)
+    bombJumpEnabled = bool
+end)
+
+section:AddToggle("Show Clutch Button", function(bool)
+    guiEnabled = bool
+    if bool then
+        CreateGUI()
+        SetupInputSystem()
+    else
+        if ScreenGui then
+            ScreenGui:Destroy()
+            ScreenGui = nil
+        end
+    end
+end)
+
+section:AddButton("Reset Button Position", function()
+    if MainFrame and guiEnabled then
+        MainFrame.Position = UDim2.new(0, 20, 0, 20)
+    end
+end)
+
+section:AddKeybind("Manual Bomb Jump", "E", function()
+    if not onCooldown and not debounce then
+        FastBombJump()
+    end
+end)
+
+-- Cleanup function
+local function Cleanup()
+    if ScreenGui then
+        ScreenGui:Destroy()
+    end
+    
+    if inputBeganConnection then
+        inputBeganConnection:Disconnect()
+    end
+    
+    if inputChangedConnection then
+        inputChangedConnection:Disconnect()
+    end
+    
+    if inputEndedConnection then
+        inputEndedConnection:Disconnect()
+    end
+    
+    if characterConnection then
+        characterConnection:Disconnect()
+    end
+    
+    activeTouches = {}
+    ResetCooldown()
+    bombJumpEnabled = false
+    guiEnabled = false
+end
+
+return Cleanup
