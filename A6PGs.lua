@@ -1185,7 +1185,7 @@ do
 end
 
 local shared = odh_shared_plugins
-local section = shared.AddSection("Bomb Jump")
+local section = shared.AddSection("Bomb Jump+")
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1194,30 +1194,36 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Bomb jump variables
 local ScreenGui = nil
 local MainFrame = nil
 local CircleButton = nil
+local TimerGui = nil
+local TimerFrame = nil
+local TimerLabel = nil
 local dragging = false
 local dragStart = nil
 local startPos = nil
+local timerDragging = false
+local timerDragStart = nil
+local timerStartPos = nil
 local onCooldown = false
 local bombJumpEnabled = false
+local clickBombJumpEnabled = false
 local guiEnabled = false
+local timerGuiEnabled = false
 local debounce = false
+local guiScale = 1
 
--- Touch tracking for detecting real taps vs camera movement
 local activeTouches = {}
-local TAP_MOVEMENT_THRESHOLD = 10 -- pixels moved to be considered a drag vs tap
-local TAP_TIME_THRESHOLD = 0.3 -- max time for a tap in seconds
+local TAP_MOVEMENT_THRESHOLD = 10
+local TAP_TIME_THRESHOLD = 0.3
 
--- Bomb names to detect
 local BOMB_NAMES = {"Bomb", "PrankBomb", "FakeBomb"}
 
-section:AddLabel("Bomb Jump Features")
-section:AddParagraph("Info", "Toggle features below. Press E for manual bomb jump.")
+local bombEquipConnections = {}
 
--- Create GUI
+section:AddLabel("Different Bomb Jump Options")
+
 function CreateGUI()
     if ScreenGui then ScreenGui:Destroy() end
     
@@ -1228,7 +1234,7 @@ function CreateGUI()
     ScreenGui.IgnoreGuiInset = true
 
     MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 65, 0, 65)
+    MainFrame.Size = UDim2.new(0, 65 * guiScale, 0, 65 * guiScale)
     MainFrame.Position = UDim2.new(0, 20, 0, 20)
     MainFrame.BackgroundTransparency = 1
     MainFrame.Active = true
@@ -1243,7 +1249,7 @@ function CreateGUI()
     CircleButton.Text = "clutch"
     CircleButton.TextColor3 = Color3.fromRGB(220, 220, 220)
     CircleButton.Font = Enum.Font.GothamBold
-    CircleButton.TextSize = 14
+    CircleButton.TextSize = 14 * guiScale
     CircleButton.AutoButtonColor = false
     CircleButton.Active = true
     CircleButton.Selectable = true
@@ -1252,6 +1258,106 @@ function CreateGUI()
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0.15, 0)
     UICorner.Parent = CircleButton
+end
+
+function CreateTimerGUI()
+    if TimerGui then TimerGui:Destroy() end
+    
+    TimerGui = Instance.new("ScreenGui")
+    TimerGui.Name = "BombJumpTimerGUI"
+    TimerGui.Parent = game.CoreGui
+    TimerGui.ResetOnSpawn = false
+    TimerGui.IgnoreGuiInset = true
+
+    TimerFrame = Instance.new("Frame")
+    TimerFrame.Size = UDim2.new(0, 70 * guiScale, 0, 70 * guiScale)
+    TimerFrame.Position = UDim2.new(0, 100, 0, 20)
+    TimerFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    TimerFrame.BackgroundTransparency = 0.5
+    TimerFrame.Active = true
+    TimerFrame.Selectable = true
+    TimerFrame.Parent = TimerGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0.15, 0)
+    UICorner.Parent = TimerFrame
+
+    TimerLabel = Instance.new("TextLabel")
+    TimerLabel.Size = UDim2.new(1, 0, 1, 0)
+    TimerLabel.Position = UDim2.new(0, 0, 0, 0)
+    TimerLabel.BackgroundTransparency = 1
+    TimerLabel.Text = "Ready"
+    TimerLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    TimerLabel.Font = Enum.Font.GothamBold
+    TimerLabel.TextSize = 16 * guiScale
+    TimerLabel.Parent = TimerFrame
+    
+    SetupTimerDragging()
+end
+
+function UpdateGUIScale(newScale)
+    guiScale = newScale
+    
+    if MainFrame then
+        MainFrame.Size = UDim2.new(0, 65 * guiScale, 0, 65 * guiScale)
+    end
+    if CircleButton then
+        CircleButton.TextSize = 14 * guiScale
+    end
+    
+    if TimerFrame then
+        TimerFrame.Size = UDim2.new(0, 70 * guiScale, 0, 70 * guiScale)
+    end
+    if TimerLabel then
+        TimerLabel.TextSize = 16 * guiScale
+    end
+end
+
+function SetupTimerDragging()
+    if not TimerFrame then return end
+    
+    local connection
+    local dragInput
+    
+    local function update(input)
+        local delta = input.Position - timerDragStart
+        TimerFrame.Position = UDim2.new(
+            timerStartPos.X.Scale, 
+            timerStartPos.X.Offset + delta.X,
+            timerStartPos.Y.Scale, 
+            timerStartPos.Y.Offset + delta.Y
+        )
+    end
+    
+    TimerFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            timerDragging = true
+            timerDragStart = input.Position
+            timerStartPos = TimerFrame.Position
+            
+            connection = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    timerDragging = false
+                    if connection then
+                        connection:Disconnect()
+                        connection = nil
+                    end
+                end
+            end)
+        end
+    end)
+    
+    TimerFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and timerDragging then
+            update(input)
+        end
+    end)
 end
 
 function QuickButtonPress()
@@ -1294,6 +1400,10 @@ function ResetCooldown()
         CircleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
         CircleButton.Text = "clutch"
     end
+    
+    if TimerLabel and TimerLabel.Parent then
+        TimerLabel.Text = "Ready"
+    end
 end
 
 function StartCooldown()
@@ -1302,13 +1412,22 @@ function StartCooldown()
     
     if CircleButton then
         CircleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        CircleButton.Text = "24"
+        CircleButton.Text = "22"
+    end
+    
+    if TimerLabel then
+        TimerLabel.Text = "22"
     end
     
     task.spawn(function()
-        for i = 23, 0, -1 do
-            if onCooldown and CircleButton then
-                CircleButton.Text = tostring(i)
+        for i = 21, 0, -1 do
+            if onCooldown then
+                if CircleButton then
+                    CircleButton.Text = tostring(i)
+                end
+                if TimerLabel then
+                    TimerLabel.Text = tostring(i)
+                end
                 task.wait(1)
             else
                 break
@@ -1341,7 +1460,6 @@ function GetBombInHand()
     local character = LocalPlayer.Character
     if not character then return nil end
     
-    -- Check if any bomb is currently equipped
     for _, bombName in ipairs(BOMB_NAMES) do
         local bomb = character:FindFirstChild(bombName)
         if bomb then
@@ -1356,13 +1474,11 @@ function GetAnyBomb()
     local character = LocalPlayer.Character
     if not character then return false, nil end
     
-    -- First check if bomb is in hand
     for _, bombName in ipairs(BOMB_NAMES) do
         local bomb = character:FindFirstChild(bombName)
         if bomb then return true, bomb end
     end
     
-    -- Check backpack
     local backpack = LocalPlayer:FindFirstChild("Backpack")
     if backpack then
         for _, bombName in ipairs(BOMB_NAMES) do
@@ -1374,7 +1490,6 @@ function GetAnyBomb()
         end
     end
     
-    -- Try to get FakeBomb from server
     local success = pcall(function()
         ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
     end)
@@ -1495,14 +1610,39 @@ function SetupInputSystem()
     end
 end
 
--- Track touch inputs to distinguish real taps from camera drags
+function SetupBombEquipDetection()
+    for _, connection in pairs(bombEquipConnections) do
+        connection:Disconnect()
+    end
+    bombEquipConnections = {}
+    
+    if not clickBombJumpEnabled then return end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local connection = character.ChildAdded:Connect(function(child)
+        if not clickBombJumpEnabled then return end
+        
+        for _, bombName in ipairs(BOMB_NAMES) do
+            if child.Name == bombName then
+                if not onCooldown and not debounce then
+                    FastBombJump()
+                end
+                break
+            end
+        end
+    end)
+    
+    table.insert(bombEquipConnections, connection)
+end
+
 local inputBeganConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
     if input.UserInputType == Enum.UserInputType.Touch or 
        input.UserInputType == Enum.UserInputType.MouseButton1 then
         
-        -- Store touch data
         activeTouches[input] = {
             startPosition = input.Position,
             startTime = tick(),
@@ -1515,11 +1655,9 @@ local inputChangedConnection = UserInputService.InputChanged:Connect(function(in
     local touchData = activeTouches[input]
     if not touchData then return end
     
-    -- Calculate distance moved
     local delta = input.Position - touchData.startPosition
     local distance = math.sqrt(delta.X * delta.X + delta.Y * delta.Y)
     
-    -- Mark as moved if exceeds threshold
     if distance > TAP_MOVEMENT_THRESHOLD then
         touchData.moved = true
     end
@@ -1534,11 +1672,9 @@ local inputEndedConnection = UserInputService.InputEnded:Connect(function(input,
     local touchData = activeTouches[input]
     if not touchData then return end
     
-    -- Check if this was a real tap (not moved and quick)
     local touchDuration = tick() - touchData.startTime
     local isRealTap = not touchData.moved and touchDuration <= TAP_TIME_THRESHOLD
     
-    -- Only trigger auto bomb jump on real taps
     if isRealTap and bombJumpEnabled and not onCooldown and not debounce then
         local bombInHand = GetBombInHand()
         if bombInHand then
@@ -1546,19 +1682,34 @@ local inputEndedConnection = UserInputService.InputEnded:Connect(function(input,
         end
     end
     
-    -- Clean up
     activeTouches[input] = nil
 end)
 
--- Character respawn handler
 local characterConnection = LocalPlayer.CharacterAdded:Connect(function()
     ResetCooldown()
-    activeTouches = {} -- Clear touch tracking on respawn
+    activeTouches = {}
+    
+    if clickBombJumpEnabled then
+        task.wait(0.5)
+        SetupBombEquipDetection()
+    end
 end)
 
--- Plugin Toggles
 section:AddToggle("Enable Auto Bomb Jump", function(bool)
     bombJumpEnabled = bool
+end)
+
+section:AddToggle("Enable Equip Bomb Jump", function(bool)
+    clickBombJumpEnabled = bool
+    
+    if bool then
+        SetupBombEquipDetection()
+    else
+        for _, connection in pairs(bombEquipConnections) do
+            connection:Disconnect()
+        end
+        bombEquipConnections = {}
+    end
 end)
 
 section:AddToggle("Show Clutch Button", function(bool)
@@ -1574,10 +1725,20 @@ section:AddToggle("Show Clutch Button", function(bool)
     end
 end)
 
-section:AddButton("Reset Button Position", function()
-    if MainFrame and guiEnabled then
-        MainFrame.Position = UDim2.new(0, 20, 0, 20)
+section:AddToggle("Show Cooldown Timer", function(bool)
+    timerGuiEnabled = bool
+    if bool then
+        CreateTimerGUI()
+    else
+        if TimerGui then
+            TimerGui:Destroy()
+            TimerGui = nil
+        end
     end
+end)
+
+section:AddSlider("GUI Size", 0.5, 2, 1, 0.1, function(value)
+    UpdateGUIScale(value)
 end)
 
 section:AddKeybind("Manual Bomb Jump", "E", function()
@@ -1586,10 +1747,13 @@ section:AddKeybind("Manual Bomb Jump", "E", function()
     end
 end)
 
--- Cleanup function
 local function Cleanup()
     if ScreenGui then
         ScreenGui:Destroy()
+    end
+    
+    if TimerGui then
+        TimerGui:Destroy()
     end
     
     if inputBeganConnection then
@@ -1608,10 +1772,17 @@ local function Cleanup()
         characterConnection:Disconnect()
     end
     
+    for _, connection in pairs(bombEquipConnections) do
+        connection:Disconnect()
+    end
+    
     activeTouches = {}
+    bombEquipConnections = {}
     ResetCooldown()
     bombJumpEnabled = false
+    clickBombJumpEnabled = false
     guiEnabled = false
+    timerGuiEnabled = false
 end
 
 return Cleanup
