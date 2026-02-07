@@ -750,39 +750,94 @@ muteSection:AddToggle("Disable ODH Button Sounds", function(s)
 end)
 
 do
-    local rfxSection = shared.AddSection("RFX")
-    local rfx = {Blur=nil, CC=nil, Bloom=nil, Sun=nil, DOF=nil}
-    local rfxOn = false
+    local rtxSection = shared.AddSection("RTX")
+    local rtx = {Sky=nil, Blur=nil, CC=nil, Bloom=nil, Sun=nil}
+    local rtxOn = false
     
-    local function mkRfx()
-        if not rfx.Blur then rfx.Blur = Instance.new("BlurEffect", Services.Lighting) rfx.Blur.Size = 2 end
-        if not rfx.CC then rfx.CC = Instance.new("ColorCorrectionEffect", Services.Lighting) rfx.CC.Brightness = 0.05 rfx.CC.Contrast = 0.1 rfx.CC.Saturation = 0.15 rfx.CC.TintColor = Color3.fromRGB(255,245,230) end
-        if not rfx.Bloom then rfx.Bloom = Instance.new("BloomEffect", Services.Lighting) rfx.Bloom.Intensity = 0.5 rfx.Bloom.Size = 40 end
-        if not rfx.Sun then rfx.Sun = Instance.new("SunRaysEffect", Services.Lighting) rfx.Sun.Intensity = 0.2 end
-        if not rfx.DOF then rfx.DOF = Instance.new("DepthOfFieldEffect", Services.Lighting) rfx.DOF.InFocusRadius = 30 rfx.DOF.FocusDistance = 25 end
-    end
-    
-    local function setRfx(s)
-        rfxOn = s
-        if s then mkRfx() end
-        for _, v in pairs(rfx) do if v then v.Enabled = s end end
-    end
-    
-    rfxSection:AddToggle("Enable RFX", setRfx)
-    rfxSection:AddSlider("RFX Intensity", 1, 100, 50, function(v)
-        if rfxOn then
-            if rfx.Bloom then rfx.Bloom.Intensity = v/100 end
-            if rfx.Sun then rfx.Sun.Intensity = v/100 * 0.4 end
-            if rfx.CC then rfx.CC.Contrast = v/100 * 0.3 end
+    local function createRtxEffects()
+        -- Create Sky
+        if not rtx.Sky then
+            rtx.Sky = Instance.new("Sky")
+            rtx.Sky.SkyboxBk = "http://www.roblox.com/asset/?id=144933338"
+            rtx.Sky.SkyboxDn = "http://www.roblox.com/asset/?id=144931530"
+            rtx.Sky.SkyboxFt = "http://www.roblox.com/asset/?id=144933262"
+            rtx.Sky.SkyboxLf = "http://www.roblox.com/asset/?id=144933244"
+            rtx.Sky.SkyboxRt = "http://www.roblox.com/asset/?id=144933299"
+            rtx.Sky.SkyboxUp = "http://www.roblox.com/asset/?id=144931564"
+            rtx.Sky.StarCount = 5000
+            rtx.Sky.SunAngularSize = 5
+            rtx.Sky.Parent = Services.Lighting
         end
-    end)
-    rfxSection:AddDropdown("RFX Presets", {"Cinematic", "Warm", "Cold", "HDR"}, function(p)
-        if not rfxOn or not rfx.CC then return end
-        if p == "Cinematic" then rfx.CC.TintColor = Color3.fromRGB(255,240,220) rfx.Bloom.Intensity = 0.3
-        elseif p == "Warm" then rfx.CC.TintColor = Color3.fromRGB(255,220,180) rfx.Bloom.Intensity = 0.4
-        elseif p == "Cold" then rfx.CC.TintColor = Color3.fromRGB(200,220,255) rfx.Bloom.Intensity = 0.35
-        elseif p == "HDR" then rfx.CC.TintColor = Color3.new(1,1,1) rfx.Bloom.Intensity = 0.6 end
-    end)
+        
+        -- Create Bloom
+        if not rtx.Bloom then
+            rtx.Bloom = Instance.new("BloomEffect")
+            rtx.Bloom.Intensity = 0.3
+            rtx.Bloom.Size = 10
+            rtx.Bloom.Threshold = 0.8
+            rtx.Bloom.Parent = Services.Lighting
+        end
+        
+        -- Create Blur
+        if not rtx.Blur then
+            rtx.Blur = Instance.new("BlurEffect")
+            rtx.Blur.Size = 5
+            rtx.Blur.Parent = Services.Lighting
+        end
+        
+        -- Create Color Correction
+        if not rtx.CC then
+            rtx.CC = Instance.new("ColorCorrectionEffect")
+            rtx.CC.Brightness = 0
+            rtx.CC.Contrast = 0.1
+            rtx.CC.Saturation = 0.25
+            rtx.CC.TintColor = Color3.fromRGB(255, 255, 255)
+            rtx.CC.Parent = Services.Lighting
+        end
+        
+        -- Create Sun Rays
+        if not rtx.Sun then
+            rtx.Sun = Instance.new("SunRaysEffect")
+            rtx.Sun.Intensity = 0.1
+            rtx.Sun.Spread = 0.8
+            rtx.Sun.Parent = Services.Lighting
+        end
+    end
+    
+    local function setRtx(enabled)
+        rtxOn = enabled
+        
+        if enabled then
+            -- Create effects
+            createRtxEffects()
+            
+            -- Set lighting properties
+            Services.Lighting.Brightness = 2.25
+            Services.Lighting.ExposureCompensation = 0.1
+            Services.Lighting.ClockTime = 17.55
+            
+            -- Enable all effects
+            for _, v in pairs(rtx) do
+                if v then v.Enabled = true end
+            end
+        else
+            -- Destroy all RTX effects
+            for _, v in pairs(rtx) do
+                if v then
+                    v:Destroy()
+                end
+            end
+            
+            -- Reset rtx table
+            rtx = {Sky=nil, Blur=nil, CC=nil, Bloom=nil, Sun=nil}
+            
+            -- Reset lighting properties
+            Services.Lighting.Brightness = 2
+            Services.Lighting.ExposureCompensation = 0
+        end
+    end
+    
+    rtxSection:AddToggle("Enable RTX", setRtx)
 end
 
 do
@@ -1184,7 +1239,6 @@ do
     end)
 end
 
-local shared = odh_shared_plugins
 local section = shared.AddSection("Bomb Jump+")
 
 local Players = game:GetService("Players")
@@ -1194,25 +1248,20 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
-local ScreenGui = nil
-local MainFrame = nil
-local CircleButton = nil
-local TimerGui = nil
-local TimerFrame = nil
-local TimerLabel = nil
-local dragging = false
-local dragStart = nil
-local startPos = nil
-local timerDragging = false
-local timerDragStart = nil
-local timerStartPos = nil
+local bjGui = nil
+local bjBtn = nil
+local timerGui = nil
+local timerDisplay = nil
 local onCooldown = false
 local bombJumpEnabled = false
 local clickBombJumpEnabled = false
 local guiEnabled = false
 local timerGuiEnabled = false
 local debounce = false
-local guiScale = 1
+local bjSize = 40
+local timerSize = 40
+local autoGetBomb = false
+local justRespawned = false
 
 local activeTouches = {}
 local TAP_MOVEMENT_THRESHOLD = 10
@@ -1224,151 +1273,114 @@ local bombEquipConnections = {}
 
 section:AddLabel("Different Bomb Jump Options")
 
-function CreateGUI()
-    if ScreenGui then ScreenGui:Destroy() end
+function CreateBJButton()
+    if bjGui then bjGui:Destroy() end
     
-    ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "BombJumpGUI"
-    ScreenGui.Parent = game.CoreGui
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.IgnoreGuiInset = true
-
-    MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 65 * guiScale, 0, 65 * guiScale)
-    MainFrame.Position = UDim2.new(0, 20, 0, 20)
-    MainFrame.BackgroundTransparency = 1
-    MainFrame.Active = true
-    MainFrame.Selectable = true
-    MainFrame.Parent = ScreenGui
-
-    CircleButton = Instance.new("TextButton")
-    CircleButton.Size = UDim2.new(1, 0, 1, 0)
-    CircleButton.Position = UDim2.new(0, 0, 0, 0)
-    CircleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    CircleButton.BackgroundTransparency = 0.5
-    CircleButton.Text = "clutch"
-    CircleButton.TextColor3 = Color3.fromRGB(220, 220, 220)
-    CircleButton.Font = Enum.Font.GothamBold
-    CircleButton.TextSize = 14 * guiScale
-    CircleButton.AutoButtonColor = false
-    CircleButton.Active = true
-    CircleButton.Selectable = true
-    CircleButton.Parent = MainFrame
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0.15, 0)
-    UICorner.Parent = CircleButton
-end
-
-function CreateTimerGUI()
-    if TimerGui then TimerGui:Destroy() end
+    bjGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+    bjGui.Name = "BJGui"
+    bjGui.ResetOnSpawn = false
     
-    TimerGui = Instance.new("ScreenGui")
-    TimerGui.Name = "BombJumpTimerGUI"
-    TimerGui.Parent = game.CoreGui
-    TimerGui.ResetOnSpawn = false
-    TimerGui.IgnoreGuiInset = true
-
-    TimerFrame = Instance.new("Frame")
-    TimerFrame.Size = UDim2.new(0, 70 * guiScale, 0, 70 * guiScale)
-    TimerFrame.Position = UDim2.new(0, 100, 0, 20)
-    TimerFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    TimerFrame.BackgroundTransparency = 0.5
-    TimerFrame.Active = true
-    TimerFrame.Selectable = true
-    TimerFrame.Parent = TimerGui
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0.15, 0)
-    UICorner.Parent = TimerFrame
-
-    TimerLabel = Instance.new("TextLabel")
-    TimerLabel.Size = UDim2.new(1, 0, 1, 0)
-    TimerLabel.Position = UDim2.new(0, 0, 0, 0)
-    TimerLabel.BackgroundTransparency = 1
-    TimerLabel.Text = "Ready"
-    TimerLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-    TimerLabel.Font = Enum.Font.GothamBold
-    TimerLabel.TextSize = 16 * guiScale
-    TimerLabel.Parent = TimerFrame
+    bjBtn = Instance.new("TextButton", bjGui)
+    bjBtn.Name = "BJButton"
+    bjBtn.Text = "Ready"
+    bjBtn.TextSize = 14
+    bjBtn.Size = UDim2.new(0, bjSize, 0, bjSize)
+    bjBtn.Position = UDim2.new(0.5, -bjSize/2, 0.8, 0)
+    bjBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    bjBtn.TextColor3 = Color3.new(1, 1, 1)
+    bjBtn.Font = Enum.Font.SourceSansLight
+    bjBtn.BackgroundTransparency = 0.3
+    Instance.new("UICorner", bjBtn).CornerRadius = UDim.new(1, 0)
     
-    SetupTimerDragging()
-end
-
-function UpdateGUIScale(newScale)
-    guiScale = newScale
+    local stroke = Instance.new("UIStroke", bjBtn)
+    stroke.Thickness = 2.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     
-    if MainFrame then
-        MainFrame.Size = UDim2.new(0, 65 * guiScale, 0, 65 * guiScale)
-    end
-    if CircleButton then
-        CircleButton.TextSize = 14 * guiScale
-    end
+    local gradient = Instance.new("UIGradient", stroke)
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    }
+    gradient.Rotation = 45
     
-    if TimerFrame then
-        TimerFrame.Size = UDim2.new(0, 70 * guiScale, 0, 70 * guiScale)
-    end
-    if TimerLabel then
-        TimerLabel.TextSize = 16 * guiScale
-    end
-end
-
-function SetupTimerDragging()
-    if not TimerFrame then return end
+    bjBtn.MouseButton1Click:Connect(function()
+        if not onCooldown and not debounce then
+            FastBombJump()
+        end
+    end)
     
-    local connection
-    local dragInput
-    
-    local function update(input)
-        local delta = input.Position - timerDragStart
-        TimerFrame.Position = UDim2.new(
-            timerStartPos.X.Scale, 
-            timerStartPos.X.Offset + delta.X,
-            timerStartPos.Y.Scale, 
-            timerStartPos.Y.Offset + delta.Y
-        )
-    end
-    
-    TimerFrame.InputBegan:Connect(function(input)
+    local dragging, dragStart, startPos
+    bjBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            timerDragging = true
-            timerDragStart = input.Position
-            timerStartPos = TimerFrame.Position
-            
-            connection = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    timerDragging = false
-                    if connection then
-                        connection:Disconnect()
-                        connection = nil
-                    end
-                end
+            dragging = true
+            dragStart = input.Position
+            startPos = bjBtn.Position
+            input.Changed:Connect(function() 
+                if input.UserInputState == Enum.UserInputState.End then 
+                    dragging = false 
+                end 
             end)
         end
     end)
     
-    TimerFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and timerDragging then
-            update(input)
+    bjBtn.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            bjBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 end
 
-function QuickButtonPress()
-    if not CircleButton then return end
+function CreateTimerDisplay()
+    if timerGui then timerGui:Destroy() end
     
-    CircleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    timerGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+    timerGui.Name = "TimerGui"
+    timerGui.ResetOnSpawn = false
     
-    task.spawn(function()
-        task.wait(0.1)
-        if CircleButton and not onCooldown then
-            CircleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    timerDisplay = Instance.new("TextLabel", timerGui)
+    timerDisplay.Name = "TimerDisplay"
+    timerDisplay.Text = "Ready"
+    timerDisplay.TextSize = 14
+    timerDisplay.Size = UDim2.new(0, timerSize, 0, timerSize)
+    timerDisplay.Position = UDim2.new(0.5, -timerSize/2 + 60, 0.8, 0)
+    timerDisplay.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    timerDisplay.TextColor3 = Color3.new(1, 1, 1)
+    timerDisplay.Font = Enum.Font.SourceSansLight
+    timerDisplay.BackgroundTransparency = 0.3
+    Instance.new("UICorner", timerDisplay).CornerRadius = UDim.new(1, 0)
+    
+    local stroke = Instance.new("UIStroke", timerDisplay)
+    stroke.Thickness = 2.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    
+    local gradient = Instance.new("UIGradient", stroke)
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    }
+    gradient.Rotation = 45
+    
+    local dragging = false
+    local dragStart, startPos
+    
+    timerDisplay.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = timerDisplay.Position
+            input.Changed:Connect(function() 
+                if input.UserInputState == Enum.UserInputState.End then 
+                    dragging = false 
+                end 
+            end)
+        end
+    end)
+    
+    timerDisplay.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            timerDisplay.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 end
@@ -1396,13 +1408,14 @@ end
 function ResetCooldown()
     onCooldown = false
     
-    if CircleButton and CircleButton.Parent then
-        CircleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-        CircleButton.Text = "clutch"
+    if bjBtn and bjBtn.Parent then
+        bjBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        bjBtn.Text = "Ready"
     end
     
-    if TimerLabel and TimerLabel.Parent then
-        TimerLabel.Text = "Ready"
+    if timerDisplay and timerDisplay.Parent then
+        timerDisplay.Text = "Ready"
+        timerDisplay.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     end
 end
 
@@ -1410,28 +1423,28 @@ function StartCooldown()
     onCooldown = true
     debounce = false
     
-    if CircleButton then
-        CircleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        CircleButton.Text = "22"
+    if bjBtn then
+        bjBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        bjBtn.Text = "Wait"
     end
     
-    if TimerLabel then
-        TimerLabel.Text = "22"
+    if timerDisplay then
+        timerDisplay.Text = "Wait"
+        timerDisplay.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     end
     
     task.spawn(function()
-        for i = 21, 0, -1 do
-            if onCooldown then
-                if CircleButton then
-                    CircleButton.Text = tostring(i)
-                end
-                if TimerLabel then
-                    TimerLabel.Text = tostring(i)
-                end
-                task.wait(1)
-            else
-                break
+        for i = 22, 1, -1 do
+            if not onCooldown then break end
+            
+            if bjBtn and bjBtn.Parent then
+                bjBtn.Text = tostring(i)
             end
+            
+            if timerDisplay then
+                timerDisplay.Text = tostring(i)
+            end
+            task.wait(1)
         end
         
         if onCooldown then
@@ -1516,10 +1529,8 @@ function GetAnyBomb()
 end
 
 function FastBombJump()
-    if onCooldown or debounce then return end
+    if onCooldown or debounce or justRespawned then return end
     debounce = true
-    
-    QuickButtonPress()
     
     local success, bomb = GetAnyBomb()
     
@@ -1549,67 +1560,6 @@ function FastBombJump()
     end)
 end
 
-function SetupInputSystem()
-    if not MainFrame or not CircleButton then return end
-    
-    local connection
-    local dragInput
-    
-    local function update(input)
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
-    end
-    
-    CircleButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-            
-            connection = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                    if connection then
-                        connection:Disconnect()
-                        connection = nil
-                    end
-                end
-            end)
-        end
-    end)
-    
-    CircleButton.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
-    
-    CircleButton.MouseButton1Click:Connect(function()
-        if not onCooldown and not dragging then
-            FastBombJump()
-        end
-    end)
-    
-    if UserInputService.TouchEnabled then
-        CircleButton.TouchTap:Connect(function()
-            if not onCooldown and not dragging then
-                FastBombJump()
-            end
-        end)
-    end
-end
-
 function SetupBombEquipDetection()
     for _, connection in pairs(bombEquipConnections) do
         connection:Disconnect()
@@ -1622,7 +1572,7 @@ function SetupBombEquipDetection()
     if not character then return end
     
     local connection = character.ChildAdded:Connect(function(child)
-        if not clickBombJumpEnabled then return end
+        if not clickBombJumpEnabled or justRespawned then return end
         
         for _, bombName in ipairs(BOMB_NAMES) do
             if child.Name == bombName then
@@ -1688,9 +1638,23 @@ end)
 local characterConnection = LocalPlayer.CharacterAdded:Connect(function()
     ResetCooldown()
     activeTouches = {}
+    justRespawned = true
+    
+    -- Disable bomb jump for 1 second after respawn to prevent character falling
+    task.spawn(function()
+        task.wait(1)
+        justRespawned = false
+    end)
+    
+    if autoGetBomb then
+        task.wait(1.2)
+        pcall(function()
+            ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
+        end)
+    end
     
     if clickBombJumpEnabled then
-        task.wait(0.5)
+        task.wait(1.2)
         SetupBombEquipDetection()
     end
 end)
@@ -1712,33 +1676,42 @@ section:AddToggle("Enable Equip Bomb Jump", function(bool)
     end
 end)
 
-section:AddToggle("Show Clutch Button", function(bool)
-    guiEnabled = bool
-    if bool then
-        CreateGUI()
-        SetupInputSystem()
-    else
-        if ScreenGui then
-            ScreenGui:Destroy()
-            ScreenGui = nil
-        end
+section:AddToggle("Auto-Get Fake Bomb", function(bool)
+    autoGetBomb = bool
+end)
+
+section:AddToggle("Enable BJ Button", function(e)
+    guiEnabled = e
+    if e then 
+        CreateBJButton() 
+    else 
+        if bjGui then bjGui:Destroy() end 
     end
 end)
 
-section:AddToggle("Show Cooldown Timer", function(bool)
-    timerGuiEnabled = bool
-    if bool then
-        CreateTimerGUI()
-    else
-        if TimerGui then
-            TimerGui:Destroy()
-            TimerGui = nil
-        end
+section:AddSlider("BJ Button Size", 30, 150, bjSize, function(s)
+    bjSize = s
+    if bjBtn then 
+        bjBtn.Size = UDim2.new(0, s, 0, s)
+        bjBtn.Position = UDim2.new(0.5, -s/2, 0.8, 0)
     end
 end)
 
-section:AddSlider("GUI Size", 0.5, 2, 1, 0.1, function(value)
-    UpdateGUIScale(value)
+section:AddToggle("Enable Timer Display", function(e)
+    timerGuiEnabled = e
+    if e then 
+        CreateTimerDisplay() 
+    else 
+        if timerGui then timerGui:Destroy() end 
+    end
+end)
+
+section:AddSlider("Timer Display Size", 30, 150, timerSize, function(s)
+    timerSize = s
+    if timerDisplay then 
+        timerDisplay.Size = UDim2.new(0, s, 0, s)
+        timerDisplay.Position = UDim2.new(0.5, -s/2 + 60, 0.8, 0)
+    end
 end)
 
 section:AddKeybind("Manual Bomb Jump", "E", function()
@@ -1748,29 +1721,13 @@ section:AddKeybind("Manual Bomb Jump", "E", function()
 end)
 
 local function Cleanup()
-    if ScreenGui then
-        ScreenGui:Destroy()
-    end
+    if bjGui then bjGui:Destroy() end
+    if timerGui then timerGui:Destroy() end
     
-    if TimerGui then
-        TimerGui:Destroy()
-    end
-    
-    if inputBeganConnection then
-        inputBeganConnection:Disconnect()
-    end
-    
-    if inputChangedConnection then
-        inputChangedConnection:Disconnect()
-    end
-    
-    if inputEndedConnection then
-        inputEndedConnection:Disconnect()
-    end
-    
-    if characterConnection then
-        characterConnection:Disconnect()
-    end
+    if inputBeganConnection then inputBeganConnection:Disconnect() end
+    if inputChangedConnection then inputChangedConnection:Disconnect() end
+    if inputEndedConnection then inputEndedConnection:Disconnect() end
+    if characterConnection then characterConnection:Disconnect() end
     
     for _, connection in pairs(bombEquipConnections) do
         connection:Disconnect()
@@ -1783,6 +1740,458 @@ local function Cleanup()
     clickBombJumpEnabled = false
     guiEnabled = false
     timerGuiEnabled = false
+    autoGetBomb = false
 end
 
-return Cleanup
+do
+    local Players = game:GetService("Players")
+    local plr = Players.LocalPlayer
+    
+    local feAnimSection = shared.AddSection("FE Animations")
+    
+    -- Store current animation selections
+    local animState = {
+        all = "Default",
+        idle = "Default",
+        walk = "Default",
+        run = "Default",
+        jump = "Default",
+        climb = "Default",
+        fall = "Default"
+    }
+    
+    -- Store original animations on first load
+    local originalAnims = {}
+    
+    -- Animation presets
+    local animPresets = {
+        ["Default"] = nil, -- Will use original animations
+        ["Vampire"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1083445855",
+            idle2 = "http://www.roblox.com/asset/?id=1083450166",
+            walk = "http://www.roblox.com/asset/?id=1083473930",
+            run = "http://www.roblox.com/asset/?id=1083462077",
+            jump = "http://www.roblox.com/asset/?id=1083455352",
+            climb = "http://www.roblox.com/asset/?id=1083439238",
+            fall = "http://www.roblox.com/asset/?id=1083443587"
+        },
+        ["Hero"] = {
+            idle1 = "http://www.roblox.com/asset/?id=616111295",
+            idle2 = "http://www.roblox.com/asset/?id=616113536",
+            walk = "http://www.roblox.com/asset/?id=616122287",
+            run = "http://www.roblox.com/asset/?id=616117076",
+            jump = "http://www.roblox.com/asset/?id=616115533",
+            climb = "http://www.roblox.com/asset/?id=616104706",
+            fall = "http://www.roblox.com/asset/?id=616108001"
+        },
+        ["Zombie Classic"] = {
+            idle1 = "http://www.roblox.com/asset/?id=616158929",
+            idle2 = "http://www.roblox.com/asset/?id=616160636",
+            walk = "http://www.roblox.com/asset/?id=616168032",
+            run = "http://www.roblox.com/asset/?id=616163682",
+            jump = "http://www.roblox.com/asset/?id=616161997",
+            climb = "http://www.roblox.com/asset/?id=616156119",
+            fall = "http://www.roblox.com/asset/?id=616157476"
+        },
+        ["Mage"] = {
+            idle1 = "http://www.roblox.com/asset/?id=707742142",
+            idle2 = "http://www.roblox.com/asset/?id=707855907",
+            walk = "http://www.roblox.com/asset/?id=707897309",
+            run = "http://www.roblox.com/asset/?id=707861613",
+            jump = "http://www.roblox.com/asset/?id=707853694",
+            climb = "http://www.roblox.com/asset/?id=707826056",
+            fall = "http://www.roblox.com/asset/?id=707829716"
+        },
+        ["Ghost"] = {
+            idle1 = "http://www.roblox.com/asset/?id=616006778",
+            idle2 = "http://www.roblox.com/asset/?id=616008087",
+            walk = "http://www.roblox.com/asset/?id=616010382",
+            run = "http://www.roblox.com/asset/?id=616013216",
+            jump = "http://www.roblox.com/asset/?id=616008936",
+            climb = "http://www.roblox.com/asset/?id=616003713",
+            fall = "http://www.roblox.com/asset/?id=616005863"
+        },
+        ["Elder"] = {
+            idle1 = "http://www.roblox.com/asset/?id=845397899",
+            idle2 = "http://www.roblox.com/asset/?id=845400520",
+            walk = "http://www.roblox.com/asset/?id=845403856",
+            run = "http://www.roblox.com/asset/?id=845386501",
+            jump = "http://www.roblox.com/asset/?id=845398858",
+            climb = "http://www.roblox.com/asset/?id=845392038",
+            fall = "http://www.roblox.com/asset/?id=845396048"
+        },
+        ["Levitation"] = {
+            idle1 = "http://www.roblox.com/asset/?id=616006778",
+            idle2 = "http://www.roblox.com/asset/?id=616008087",
+            walk = "http://www.roblox.com/asset/?id=616013216",
+            run = "http://www.roblox.com/asset/?id=616010382",
+            jump = "http://www.roblox.com/asset/?id=616008936",
+            climb = "http://www.roblox.com/asset/?id=616003713",
+            fall = "http://www.roblox.com/asset/?id=616005863"
+        },
+        ["Astronaut"] = {
+            idle1 = "http://www.roblox.com/asset/?id=891621366",
+            idle2 = "http://www.roblox.com/asset/?id=891633237",
+            walk = "http://www.roblox.com/asset/?id=891667138",
+            run = "http://www.roblox.com/asset/?id=891636393",
+            jump = "http://www.roblox.com/asset/?id=891627522",
+            climb = "http://www.roblox.com/asset/?id=891609353",
+            fall = "http://www.roblox.com/asset/?id=891617961"
+        },
+        ["Ninja"] = {
+            idle1 = "http://www.roblox.com/asset/?id=656117400",
+            idle2 = "http://www.roblox.com/asset/?id=656118341",
+            walk = "http://www.roblox.com/asset/?id=656121766",
+            run = "http://www.roblox.com/asset/?id=656118852",
+            jump = "http://www.roblox.com/asset/?id=656117878",
+            climb = "http://www.roblox.com/asset/?id=656114359",
+            fall = "http://www.roblox.com/asset/?id=656115606"
+        },
+        ["Werewolf"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1083195517",
+            idle2 = "http://www.roblox.com/asset/?id=1083214717",
+            walk = "http://www.roblox.com/asset/?id=1083178339",
+            run = "http://www.roblox.com/asset/?id=1083216690",
+            jump = "http://www.roblox.com/asset/?id=1083218792",
+            climb = "http://www.roblox.com/asset/?id=1083182000",
+            fall = "http://www.roblox.com/asset/?id=1083189019"
+        },
+        ["Cartoon"] = {
+            idle1 = "http://www.roblox.com/asset/?id=742637544",
+            idle2 = "http://www.roblox.com/asset/?id=742638445",
+            walk = "http://www.roblox.com/asset/?id=742640026",
+            run = "http://www.roblox.com/asset/?id=742638842",
+            jump = "http://www.roblox.com/asset/?id=742637942",
+            climb = "http://www.roblox.com/asset/?id=742636889",
+            fall = "http://www.roblox.com/asset/?id=742637151"
+        },
+        ["Pirate"] = {
+            idle1 = "http://www.roblox.com/asset/?id=750781874",
+            idle2 = "http://www.roblox.com/asset/?id=750782770",
+            walk = "http://www.roblox.com/asset/?id=750785693",
+            run = "http://www.roblox.com/asset/?id=750783738",
+            jump = "http://www.roblox.com/asset/?id=750782230",
+            climb = "http://www.roblox.com/asset/?id=750779899",
+            fall = "http://www.roblox.com/asset/?id=750780242"
+        },
+        ["Sneaky"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1132473842",
+            idle2 = "http://www.roblox.com/asset/?id=1132477671",
+            walk = "http://www.roblox.com/asset/?id=1132510133",
+            run = "http://www.roblox.com/asset/?id=1132494274",
+            jump = "http://www.roblox.com/asset/?id=1132489853",
+            climb = "http://www.roblox.com/asset/?id=1132461372",
+            fall = "http://www.roblox.com/asset/?id=1132469004"
+        },
+        ["Toy"] = {
+            idle1 = "http://www.roblox.com/asset/?id=782841498",
+            idle2 = "http://www.roblox.com/asset/?id=782845736",
+            walk = "http://www.roblox.com/asset/?id=782843345",
+            run = "http://www.roblox.com/asset/?id=782842708",
+            jump = "http://www.roblox.com/asset/?id=782847020",
+            climb = "http://www.roblox.com/asset/?id=782843869",
+            fall = "http://www.roblox.com/asset/?id=782846423"
+        },
+        ["Knight"] = {
+            idle1 = "http://www.roblox.com/asset/?id=657595757",
+            idle2 = "http://www.roblox.com/asset/?id=657568135",
+            walk = "http://www.roblox.com/asset/?id=657552124",
+            run = "http://www.roblox.com/asset/?id=657564596",
+            jump = "http://www.roblox.com/asset/?id=658409194",
+            climb = "http://www.roblox.com/asset/?id=658360781",
+            fall = "http://www.roblox.com/asset/?id=657600338"
+        },
+        ["Confident"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1069977950",
+            idle2 = "http://www.roblox.com/asset/?id=1069987858",
+            walk = "http://www.roblox.com/asset/?id=1070017263",
+            run = "http://www.roblox.com/asset/?id=1070001516",
+            jump = "http://www.roblox.com/asset/?id=1069984524",
+            climb = "http://www.roblox.com/asset/?id=1069946257",
+            fall = "http://www.roblox.com/asset/?id=1069973677"
+        },
+        ["Popstar"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1212900985",
+            idle2 = "http://www.roblox.com/asset/?id=1212900985",
+            walk = "http://www.roblox.com/asset/?id=1212980338",
+            run = "http://www.roblox.com/asset/?id=1212980348",
+            jump = "http://www.roblox.com/asset/?id=1212954642",
+            climb = "http://www.roblox.com/asset/?id=1213044953",
+            fall = "http://www.roblox.com/asset/?id=1212900995"
+        },
+        ["Princess"] = {
+            idle1 = "http://www.roblox.com/asset/?id=941003647",
+            idle2 = "http://www.roblox.com/asset/?id=941013098",
+            walk = "http://www.roblox.com/asset/?id=941028902",
+            run = "http://www.roblox.com/asset/?id=941015281",
+            jump = "http://www.roblox.com/asset/?id=941008832",
+            climb = "http://www.roblox.com/asset/?id=940996062",
+            fall = "http://www.roblox.com/asset/?id=941000007"
+        },
+        ["Cowboy"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1014390418",
+            idle2 = "http://www.roblox.com/asset/?id=1014398616",
+            walk = "http://www.roblox.com/asset/?id=1014421541",
+            run = "http://www.roblox.com/asset/?id=1014401683",
+            jump = "http://www.roblox.com/asset/?id=1014394726",
+            climb = "http://www.roblox.com/asset/?id=1014380606",
+            fall = "http://www.roblox.com/asset/?id=1014384571"
+        },
+        ["Patrol"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1149612882",
+            idle2 = "http://www.roblox.com/asset/?id=1150842221",
+            walk = "http://www.roblox.com/asset/?id=1151231493",
+            run = "http://www.roblox.com/asset/?id=1150967949",
+            jump = "http://www.roblox.com/asset/?id=1150944216",
+            climb = "http://www.roblox.com/asset/?id=1148811837",
+            fall = "http://www.roblox.com/asset/?id=1148863382"
+        },
+        ["Zombie FE"] = {
+            idle1 = "http://www.roblox.com/asset/?id=3489171152",
+            idle2 = "http://www.roblox.com/asset/?id=3489171152",
+            walk = "http://www.roblox.com/asset/?id=3489174223",
+            run = "http://www.roblox.com/asset/?id=3489173414",
+            jump = "http://www.roblox.com/asset/?id=616161997",
+            climb = "http://www.roblox.com/asset/?id=616156119",
+            fall = "http://www.roblox.com/asset/?id=616157476"
+        }
+    }
+    
+    local function saveOriginalAnimations(character)
+        local Animate = character:FindFirstChild("Animate")
+        if not Animate then return end
+        
+        -- Only save if we haven't already
+        if originalAnims.idle1 then return end
+        
+        if Animate:FindFirstChild("idle") then
+            local anim1 = Animate.idle:FindFirstChild("Animation1")
+            local anim2 = Animate.idle:FindFirstChild("Animation2")
+            if anim1 then originalAnims.idle1 = anim1.AnimationId end
+            if anim2 then originalAnims.idle2 = anim2.AnimationId end
+        end
+        
+        if Animate:FindFirstChild("walk") then
+            local walkAnim = Animate.walk:FindFirstChild("WalkAnim")
+            if walkAnim then originalAnims.walk = walkAnim.AnimationId end
+        end
+        
+        if Animate:FindFirstChild("run") then
+            local runAnim = Animate.run:FindFirstChild("RunAnim")
+            if runAnim then originalAnims.run = runAnim.AnimationId end
+        end
+        
+        if Animate:FindFirstChild("jump") then
+            local jumpAnim = Animate.jump:FindFirstChild("JumpAnim")
+            if jumpAnim then originalAnims.jump = jumpAnim.AnimationId end
+        end
+        
+        if Animate:FindFirstChild("climb") then
+            local climbAnim = Animate.climb:FindFirstChild("ClimbAnim")
+            if climbAnim then originalAnims.climb = climbAnim.AnimationId end
+        end
+        
+        if Animate:FindFirstChild("fall") then
+            local fallAnim = Animate.fall:FindFirstChild("FallAnim")
+            if fallAnim then originalAnims.fall = fallAnim.AnimationId end
+        end
+    end
+    
+    local function stopAllAnimations()
+        local character = plr.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+        
+        -- Stop all currently playing animations
+        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+            track:Stop(0)
+        end
+    end
+    
+    local function applyAnimations()
+        -- Safety check for character
+        if not plr or not plr.Character then 
+            warn("Character not found!")
+            return 
+        end
+        
+        local character = plr.Character
+        local Animate = character:FindFirstChild("Animate")
+        
+        if not Animate then
+            warn("Animate script not found!")
+            return
+        end
+        
+        -- Save original animations on first run
+        saveOriginalAnimations(character)
+        
+        -- Stop all current animations first
+        stopAllAnimations()
+        
+        -- Disable and wait briefly
+        Animate.Disabled = true
+        task.wait(0.1)
+        
+        -- Determine which preset to use for each animation type
+        local function getPresetForType(animType)
+            -- Individual selection takes priority
+            if animState[animType] ~= "Default" then
+                return animState[animType]
+            end
+            -- Fall back to "All Animations" if not default
+            if animState.all ~= "Default" then
+                return animState.all
+            end
+            -- Return "Default" to use original animations
+            return "Default"
+        end
+        
+        -- Apply idle animations
+        local idlePreset = getPresetForType("idle")
+        if Animate:FindFirstChild("idle") then
+            local anim1 = Animate.idle:FindFirstChild("Animation1")
+            local anim2 = Animate.idle:FindFirstChild("Animation2")
+            
+            if idlePreset == "Default" then
+                if anim1 and originalAnims.idle1 then anim1.AnimationId = originalAnims.idle1 end
+                if anim2 and originalAnims.idle2 then anim2.AnimationId = originalAnims.idle2 end
+            elseif animPresets[idlePreset] then
+                local preset = animPresets[idlePreset]
+                if anim1 and preset.idle1 then anim1.AnimationId = preset.idle1 end
+                if anim2 and preset.idle2 then anim2.AnimationId = preset.idle2 end
+            end
+        end
+        
+        -- Apply walk animation
+        local walkPreset = getPresetForType("walk")
+        if Animate:FindFirstChild("walk") then
+            local walkAnim = Animate.walk:FindFirstChild("WalkAnim")
+            
+            if walkPreset == "Default" then
+                if walkAnim and originalAnims.walk then walkAnim.AnimationId = originalAnims.walk end
+            elseif animPresets[walkPreset] then
+                local preset = animPresets[walkPreset]
+                if walkAnim and preset.walk then walkAnim.AnimationId = preset.walk end
+            end
+        end
+        
+        -- Apply run animation
+        local runPreset = getPresetForType("run")
+        if Animate:FindFirstChild("run") then
+            local runAnim = Animate.run:FindFirstChild("RunAnim")
+            
+            if runPreset == "Default" then
+                if runAnim and originalAnims.run then runAnim.AnimationId = originalAnims.run end
+            elseif animPresets[runPreset] then
+                local preset = animPresets[runPreset]
+                if runAnim and preset.run then runAnim.AnimationId = preset.run end
+            end
+        end
+        
+        -- Apply jump animation
+        local jumpPreset = getPresetForType("jump")
+        if Animate:FindFirstChild("jump") then
+            local jumpAnim = Animate.jump:FindFirstChild("JumpAnim")
+            
+            if jumpPreset == "Default" then
+                if jumpAnim and originalAnims.jump then jumpAnim.AnimationId = originalAnims.jump end
+            elseif animPresets[jumpPreset] then
+                local preset = animPresets[jumpPreset]
+                if jumpAnim and preset.jump then jumpAnim.AnimationId = preset.jump end
+            end
+        end
+        
+        -- Apply climb animation
+        local climbPreset = getPresetForType("climb")
+        if Animate:FindFirstChild("climb") then
+            local climbAnim = Animate.climb:FindFirstChild("ClimbAnim")
+            
+            if climbPreset == "Default" then
+                if climbAnim and originalAnims.climb then climbAnim.AnimationId = originalAnims.climb end
+            elseif animPresets[climbPreset] then
+                local preset = animPresets[climbPreset]
+                if climbAnim and preset.climb then climbAnim.AnimationId = preset.climb end
+            end
+        end
+        
+        -- Apply fall animation
+        local fallPreset = getPresetForType("fall")
+        if Animate:FindFirstChild("fall") then
+            local fallAnim = Animate.fall:FindFirstChild("FallAnim")
+            
+            if fallPreset == "Default" then
+                if fallAnim and originalAnims.fall then fallAnim.AnimationId = originalAnims.fall end
+            elseif animPresets[fallPreset] then
+                local preset = animPresets[fallPreset]
+                if fallAnim and preset.fall then fallAnim.AnimationId = preset.fall end
+            end
+        end
+        
+        -- Re-enable animate script
+        Animate.Disabled = false
+    end
+    
+    -- Apply animations when character spawns
+    plr.CharacterAdded:Connect(function(character)
+        character:WaitForChild("Animate")
+        task.wait(0.5) -- Wait for character to fully load
+        applyAnimations()
+    end)
+    
+    -- Apply to current character if it exists
+    if plr.Character then
+        saveOriginalAnimations(plr.Character)
+    end
+    
+    -- All Animations Dropdown
+    feAnimSection:AddDropdown("All Animations", {
+        "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
+        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
+        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
+        "Princess", "Cowboy", "Patrol", "Zombie FE"
+    }, function(selected)
+        animState.all = selected
+        applyAnimations()
+    end)
+    
+    -- Individual Animation Dropdowns
+    local animOptions = {
+        "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
+        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
+        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
+        "Princess", "Cowboy", "Patrol", "Zombie FE"
+    }
+    
+    feAnimSection:AddDropdown("Idle Animation", animOptions, function(selected)
+        animState.idle = selected
+        applyAnimations()
+    end)
+    
+    feAnimSection:AddDropdown("Walk Animation", animOptions, function(selected)
+        animState.walk = selected
+        applyAnimations()
+    end)
+    
+    feAnimSection:AddDropdown("Run Animation", animOptions, function(selected)
+        animState.run = selected
+        applyAnimations()
+    end)
+    
+    feAnimSection:AddDropdown("Jump Animation", animOptions, function(selected)
+        animState.jump = selected
+        applyAnimations()
+    end)
+    
+    feAnimSection:AddDropdown("Climb Animation", animOptions, function(selected)
+        animState.climb = selected
+        applyAnimations()
+    end)
+    
+    feAnimSection:AddDropdown("Fall Animation", animOptions, function(selected)
+        animState.fall = selected
+        applyAnimations()
+    end)
+end
