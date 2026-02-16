@@ -1,3 +1,7 @@
+local shared = odh_shared_plugins
+local _game = shared.game_name
+if _game == "Murder Mystery 2" or _game == "Murder Mystery Modded" then
+
 local Services = {
     Players = game:GetService("Players"),
     ReplicatedStorage = game:GetService("ReplicatedStorage"),
@@ -56,8 +60,6 @@ if not hiddenGui then
     hiddenGui.IgnoreGuiInset = true
     hiddenGui.Parent = hiddenGuiParent
 end
-
-local shared = odh_shared_plugins
 
 local serverSection = shared.AddSection("Server Options")
 
@@ -159,25 +161,20 @@ local RoleSelect = Services.ReplicatedStorage.Remotes.Gameplay.RoleSelect
 local radioSection = shared.AddSection("Radio Abuse")
 local songSaveFile = "saved_songs.json"
 local savedSongs = {}
-
 if isfile and readfile and isfile(songSaveFile) then
     local ok, data = pcall(function() return Services.HttpService:JSONDecode(readfile(songSaveFile)) end)
     if ok and type(data) == "table" then savedSongs = data end
 end
-
 local function saveSongs()
     if writefile then writefile(songSaveFile, Services.HttpService:JSONEncode(savedSongs)) end
 end
-
 local function getSongNames()
     local names = {}
     for _, song in ipairs(savedSongs) do table.insert(names, song.name or song.id) end
     return names
 end
-
 local songDropdown
 local lastSelectedSong = nil
-
 songDropdown = radioSection:AddDropdown("Saved Songs", getSongNames(), function(selectedName)
     for _, song in ipairs(savedSongs) do
         if song.name == selectedName then
@@ -187,7 +184,6 @@ songDropdown = radioSection:AddDropdown("Saved Songs", getSongNames(), function(
         end
     end
 end)
-
 radioSection:AddTextBox("Add Audio ID", function(text)
     local id = text:match("%d+")
     if id then
@@ -201,7 +197,6 @@ radioSection:AddTextBox("Add Audio ID", function(text)
         shared.Notify("Invalid audio ID!", 2)
     end
 end)
-
 radioSection:AddButton("Delete Selected Audio", function()
     if lastSelectedSong then
         for i, song in ipairs(savedSongs) do
@@ -216,34 +211,24 @@ radioSection:AddButton("Delete Selected Audio", function()
         end
     end
 end)
-
 local autoPlayEnabled = false
-local apConn, apCharConn
-
+local apCharConn
 local function playSelectedSong()
     if lastSelectedSong then
         PlaySong:FireServer("https://www.roblox.com/asset/?id=" .. lastSelectedSong.id)
     end
 end
-
 radioSection:AddToggle("Auto Play Selected Audio", function(state)
     autoPlayEnabled = state
-    if apConn then apConn:Disconnect() apConn = nil end
     if apCharConn then apCharConn:Disconnect() apCharConn = nil end
     
     if autoPlayEnabled then
-        apConn = RoleSelect.OnClientEvent:Connect(playSelectedSong)
         apCharConn = LocalPlayer.CharacterAdded:Connect(function()
             task.wait(1)
             playSelectedSong()
         end)
-        if LocalPlayer.Character then
-            task.wait(1)
-            playSelectedSong()
-        end
     end
 end)
-
 radioSection:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")
 
 local speedGlitchSection = shared.AddSection("Auto Speedglitch")
@@ -288,54 +273,164 @@ Services.RunService.Stepped:Connect(function()
     end
 end)
 
-local mapVoterSection = shared.AddSection("Map Voter")
-local voterRespawnAmount = 12
-local savedPos = nil
-local isRespawning = false
-
-mapVoterSection:AddSlider("Votes Amount", 1, 20, voterRespawnAmount, function(v) voterRespawnAmount = v end)
-mapVoterSection:AddButton("Vote Map", function()
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-    savedPos = LocalPlayer.Character.HumanoidRootPart.Position
-    isRespawning = true
-    local count = 0
+do
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
     
-    task.spawn(function()
-        while count < voterRespawnAmount and isRespawning do
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                LocalPlayer.Character.Humanoid.Health = 0
-                count += 1
+    local mapVoterSection = shared.AddSection("Map Voter")
+    local voterRespawnAmount = 12
+    local savedPos = nil
+    local isRespawning = false
+    local vmButtonEnabled = false
+    local vmButtonGui = nil
+    local vmButtonSize = 60
+    
+    local function msg(t, txt, d) 
+        Services.StarterGui:SetCore("SendNotification", {Title=t, Text=txt, Duration=d}) 
+    end
+    
+    -- Create draggable button
+    local function createDraggableButton(text, position, size, callback)
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "VMButton_" .. text
+        ScreenGui.ResetOnSpawn = false
+        ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        
+        local Button = Instance.new("TextButton")
+        Button.Name = "DragButton"
+        Button.Parent = ScreenGui
+        Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        Button.Size = UDim2.new(0, size, 0, size)
+        Button.Position = UDim2.new(0, position.X, 0, position.Y)
+        Button.Font = Enum.Font.SourceSansLight
+        Button.Text = text
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Button.TextSize = 18
+        Button.TextWrapped = true
+        Button.BackgroundTransparency = 0.3
+        
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(1, 0)
+        Corner.Parent = Button
+        
+        local stroke = Instance.new("UIStroke", Button)
+        stroke.Thickness = 2.5
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        
+        local gradient = Instance.new("UIGradient", stroke)
+        gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        }
+        gradient.Rotation = 45
+        
+        -- Dragging functionality
+        local dragging = false
+        local dragStart, startPos
+        
+        Button.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = Button.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
             end
-            task.wait(0.3)
+        end)
+        
+        Button.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+        
+        -- Button click
+        Button.MouseButton1Click:Connect(callback)
+        
+        ScreenGui.Parent = Services.CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+        
+        return ScreenGui, Button
+    end
+    
+    local function voteMap()
+        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then 
+            msg("Error", "Character not found", 3)
+            return 
         end
-        isRespawning = false
-        savedPos = nil
+        
+        savedPos = LocalPlayer.Character.HumanoidRootPart.Position
+        isRespawning = true
+        local count = 0
+        
+        msg("Vote Map", "Starting " .. voterRespawnAmount .. " respawns...", 3)
+        
+        task.spawn(function()
+            while count < voterRespawnAmount and isRespawning do
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                    LocalPlayer.Character.Humanoid.Health = 0
+                    count += 1
+                end
+                task.wait(0.3)
+            end
+            isRespawning = false
+            savedPos = nil
+            msg("Vote Map", "Completed " .. count .. " votes!", 3)
+        end)
+        
+        LocalPlayer.CharacterAdded:Connect(function(char)
+            if savedPos then
+                char:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(savedPos)
+            end
+        end)
+    end
+    
+    mapVoterSection:AddSlider("Votes Amount", 1, 20, voterRespawnAmount, function(v) 
+        voterRespawnAmount = v 
     end)
     
-    LocalPlayer.CharacterAdded:Connect(function(char)
-        if savedPos then
-            char:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(savedPos)
+    mapVoterSection:AddButton("Vote Map", function()
+        voteMap()
+    end)
+    
+    mapVoterSection:AddToggle("Enable VM Button", function(enabled)
+        vmButtonEnabled = enabled
+        
+        if enabled then
+            vmButtonGui, vmButton = createDraggableButton("VM", {X = 310, Y = 100}, vmButtonSize, function()
+                voteMap()
+            end)
+        else
+            if vmButtonGui then
+                vmButtonGui:Destroy()
+                vmButtonGui = nil
+            end
         end
     end)
-end)
+    
+    mapVoterSection:AddSlider("VM Button Size", 30, 150, vmButtonSize, function(size)
+        vmButtonSize = size
+        if vmButtonGui then
+            local button = vmButtonGui:FindFirstChild("DragButton")
+            if button then
+                button.Size = UDim2.new(0, size, 0, size)
+            end
+        end
+    end)
+end
 
-local whitelistSection = shared.AddSection("Whitelist")
+local whitelistSection = shared.AddSection("Kill All")
 local whitelist = {}
 
-whitelistSection:AddLabel("Ignores WL Players")
+whitelistSection:AddLabel("Ignores Whitelisted Players")
 whitelistSection:AddPlayerDropdown("Whitelist Player", function(p)
     if not table.find(whitelist, p.UserId) then
         table.insert(whitelist, p.UserId)
         shared.Notify(p.Name .. " whitelisted.", 2)
-    end
-end)
-whitelistSection:AddPlayerDropdown("Unwhitelist Player", function(p)
-    for i, id in ipairs(whitelist) do
-        if id == p.UserId then
-            table.remove(whitelist, i)
-            shared.Notify(p.Name .. " unwhitelisted.", 2)
-            break
-        end
     end
 end)
 whitelistSection:AddButton("Clear Whitelist", function()
@@ -525,6 +620,11 @@ do
 end
 
 do
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local HttpService = game:GetService("HttpService")
+    local LocalPlayer = Players.LocalPlayer
+    
     local spraySection = shared.AddSection("Spray Paint")
     local decalSave = "saved_decals.json"
     local decals = {
@@ -536,25 +636,28 @@ do
     }
     
     if isfile and isfile(decalSave) then
-        local ok, data = pcall(function() return Services.HttpService:JSONDecode(readfile(decalSave)) end)
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(decalSave)) end)
         if ok and type(data) == "table" then decals = data end
     end
     
     local function saveDecals()
-        if writefile then writefile(decalSave, Services.HttpService:JSONEncode(decals)) end
+        if writefile then writefile(decalSave, HttpService:JSONEncode(decals)) end
     end
-    
+
+    spraySection:AddLabel('<font color="rgb(255,0,0)">Warning: Using This In MMV Gets You Banned.</font>', nil, true)
+
     local sprayId = 0
     local sprayTargetMode = "Nearest Player"
     local spraySelectedPlr = nil
     local sprayDecalName = nil
     local sprayLoop = false
+    local sprayBehind = false
     local sprayThread
     local decalDropdown
     
     local function getSprayTool()
         local c = LocalPlayer.Character
-        return (c and c:FindFirstChild("SprayPaint")) or (LocalPlayer.Backpack:FindFirstChild("SprayPaint"))
+        return (c and c:FindFirstChild("SprayPaint")) or (LocalPlayer.Backpack and LocalPlayer.Backpack:FindFirstChild("SprayPaint"))
     end
     
     local function getSprayTarget()
@@ -562,7 +665,7 @@ do
             local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if not r then return nil end
             local n, s = nil, math.huge
-            for _, p in pairs(Services.Players:GetPlayers()) do
+            for _, p in pairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
                     local t = p.Character:FindFirstChild("HumanoidRootPart")
                     if t then
@@ -574,7 +677,7 @@ do
             return n
         elseif sprayTargetMode == "Random" then
             local t = {}
-            for _, p in pairs(Services.Players:GetPlayers()) do if p ~= LocalPlayer and p.Character then table.insert(t, p) end end
+            for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer and p.Character then table.insert(t, p) end end
             return (#t > 0 and t[math.random(1, #t)]) or nil
         elseif sprayTargetMode == "Select Player" then
             return spraySelectedPlr
@@ -584,14 +687,28 @@ do
     local function performSpray(tgt)
         local tool = getSprayTool()
         if not tool or not tgt or not tgt.Character then return end
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum then
             tool.Parent = LocalPlayer.Character
             hum:EquipTool(tool)
         end
         local torso = tgt.Character:FindFirstChild("UpperTorso") or tgt.Character:FindFirstChild("Torso") or tgt.Character:FindFirstChild("HumanoidRootPart")
         if not torso then return end
-        tool:FindFirstChildWhichIsA("RemoteEvent"):FireServer(sprayId, Enum.NormalId.Front, 2048, torso, torso.CFrame + torso.CFrame.LookVector * 0.6)
+        
+        -- Determine spray position based on sprayBehind toggle
+        local sprayPosition, normalId
+        if sprayBehind then
+            -- Spray on the back (facing away from the target's view) - slightly further back
+            normalId = Enum.NormalId.Back
+            sprayPosition = torso.CFrame - torso.CFrame.LookVector * 1.2
+        else
+            -- Spray on the front (default behavior)
+            normalId = Enum.NormalId.Front
+            sprayPosition = torso.CFrame + torso.CFrame.LookVector * 0.6
+        end
+        
+        tool:FindFirstChildWhichIsA("RemoteEvent"):FireServer(sprayId, normalId, 2048, torso, sprayPosition)
+        
         if hum then hum:UnequipTools() end
     end
     
@@ -607,6 +724,10 @@ do
     spraySection:AddToggle("Loop Spray Paint", function(s)
         sprayLoop = s
         if s and not sprayThread then sprayThread = task.spawn(sprayLooper) end
+    end)
+    
+    spraySection:AddToggle("Spray Behind Target", function(s)
+        sprayBehind = s
     end)
     
     spraySection:AddDropdown("Target Type", {"Nearest Player", "Random", "Select Player"}, function(o) sprayTargetMode = tostring(o) end)
@@ -639,14 +760,25 @@ do
     spraySection:AddButton("Spray Paint Player", function() performSpray(getSprayTarget()) end)
     
     local autoGet = false
-    spraySection:AddToggle("Auto-Get Spray Tool", function(s) autoGet = s end)
-    LocalPlayer.CharacterAdded:Connect(function()
+    spraySection:AddToggle("Auto-Get Spray Tool", function(s) 
+        autoGet = s 
+    end)
+    
+    LocalPlayer.CharacterAdded:Connect(function(char)
         if autoGet then
-            task.wait(1)
-            Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("SprayPaint")
+            task.wait(1.5)
+            pcall(function()
+                ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("SprayPaint")
+            end)
         end
     end)
-    spraySection:AddButton("Get Spray Tool", function() Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("SprayPaint") end)
+    
+    spraySection:AddButton("Get Spray Tool", function() 
+        pcall(function()
+            ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("SprayPaint")
+        end)
+    end)
+    
     spraySection:AddLabel('Credits: <font color="rgb(0,255,0)">@not_.gato</font>', nil, true)
 end
 
@@ -920,14 +1052,19 @@ do
     local hlSection = shared.AddSection("FE Headless")
     local hlId = 78837807518622
     local hlId2 = 117080641351340
+    local hlId3 = 136055001302601
     local hlOn = false
     local hlOn2 = false
+    local hlOn3 = false
     local hlTrack
     local hlTrack2
+    local hlTrack3
     local freezeConnection
     local freezeConnection2
+    local freezeConnection3
     local stoppedConnection
     local stoppedConnection2
+    local stoppedConnection3
     
     local function stopHl()
         if stoppedConnection then stoppedConnection:Disconnect() stoppedConnection = nil end
@@ -939,11 +1076,18 @@ do
         if hlTrack2 then hlTrack2:Stop() hlTrack2:Destroy() hlTrack2 = nil end
     end
     
+    local function stopHl3()
+        if stoppedConnection3 then stoppedConnection3:Disconnect() stoppedConnection3 = nil end
+        if hlTrack3 then hlTrack3:Stop() hlTrack3:Destroy() hlTrack3 = nil end
+    end
+    
     local function cleanup()
         stopHl()
         stopHl2()
+        stopHl3()
         if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
         if freezeConnection2 then freezeConnection2:Disconnect() freezeConnection2 = nil end
+        if freezeConnection3 then freezeConnection3:Disconnect() freezeConnection3 = nil end
     end
     
     local function playHl(hum)
@@ -980,6 +1124,23 @@ do
         end)
     end
     
+    local function playHl3(hum)
+        if not hum or not hum.Parent then return end
+        local ani = hum:FindFirstChildOfClass("Animator")
+        if not ani then return end
+        stopHl3()
+        local a = Instance.new("Animation")
+        a.AnimationId = "rbxassetid://"..hlId3
+        hlTrack3 = ani:LoadAnimation(a)
+        hlTrack3.Priority = Enum.AnimationPriority.Action
+        hlTrack3.Looped = true
+        hlTrack3:Play()
+        if stoppedConnection3 then stoppedConnection3:Disconnect() end
+        stoppedConnection3 = hlTrack3.Stopped:Connect(function()
+            if hlOn3 and hum.Parent then task.wait(0.1) playHl3(hum) end
+        end)
+    end
+    
     local function applyFreeze(hum)
         if freezeConnection then freezeConnection:Disconnect() end
         freezeConnection = hum.StateChanged:Connect(function()
@@ -996,6 +1157,16 @@ do
             if hlOn2 and hum.Parent and (not hlTrack2 or not hlTrack2.IsPlaying) then
                 task.wait(0.05)
                 if hlOn2 and hum.Parent then playHl2(hum) end
+            end
+        end)
+    end
+    
+    local function applyFreeze3(hum)
+        if freezeConnection3 then freezeConnection3:Disconnect() end
+        freezeConnection3 = hum.StateChanged:Connect(function()
+            if hlOn3 and hum.Parent and (not hlTrack3 or not hlTrack3.IsPlaying) then
+                task.wait(0.05)
+                if hlOn3 and hum.Parent then playHl3(hum) end
             end
         end)
     end
@@ -1018,6 +1189,15 @@ do
         playHl2(h)
     end
     
+    local function enableHl3()
+        local c = LocalPlayer.Character
+        if not c then return end
+        local h = c:FindFirstChild("Humanoid")
+        if not h then return end
+        applyFreeze3(h)
+        playHl3(h)
+    end
+    
     hlSection:AddToggle("Enable Headless", function(s)
         hlOn = s
         if s then
@@ -1038,83 +1218,540 @@ do
         end
     end)
     
-    -- Clean up before character is removed
+    hlSection:AddToggle("Enable Headless V3", function(s)
+        hlOn3 = s
+        if s then
+            enableHl3()
+        else
+            stopHl3()
+            if freezeConnection3 then freezeConnection3:Disconnect() freezeConnection3 = nil end
+        end
+    end)
+    
     LocalPlayer.CharacterRemoving:Connect(function()
         cleanup()
     end)
     
-    -- Re-enable after character is added
     LocalPlayer.CharacterAdded:Connect(function(c)
         task.wait(0.5)
         if hlOn then enableHl() end
         if hlOn2 then enableHl2() end
+        if hlOn3 then enableHl3() end
     end)
 end
 
 do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
+    
     local flingSection = shared.AddSection("Fling")
     local flingLoopPlr = false
     local flingLoopAll = false
     local flingSelPlr = nil
+    local flingActive = true
+    local autoFlingSheriff = false
+    local autoFlingMurderer = false
     
-    local function msg(t, txt, d) Services.StarterGui:SetCore("SendNotification", {Title=t, Text=txt, Duration=d}) end
+    -- Whitelist
+    local whitelist = {}
     
-    local function skidFling(target)
-        local c = LocalPlayer.Character
-        local r = c and c:FindFirstChild("HumanoidRootPart")
-        if not r then return end
-        
-        local tc = target.Character
-        local tr = tc and tc:FindFirstChild("HumanoidRootPart")
-        if not tr then return end
-        
-        local oldPos = r.CFrame
-        local bv = Instance.new("BodyVelocity", r)
-        bv.Velocity = Vector3.new(9e8, 9e8, 9e8)
-        bv.MaxForce = Vector3.new(1/0, 1/0, 1/0)
-        
-        local t = tick()
-        while tick() - t < 2 and target.Parent and tc.Parent and r.Parent do
-            r.CFrame = tr.CFrame * CFrame.new(0,0,0)
-            r.Velocity = Vector3.new(9e7, 9e7*10, 9e7)
-            r.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
-            task.wait()
-        end
-        
-        bv:Destroy()
-        r.CFrame = oldPos
-        r.Velocity = Vector3.zero
+    -- Bindable button states
+    local sheriffButtonEnabled = false
+    local murdererButtonEnabled = false
+    local playerButtonEnabled = false
+    local sheriffButtonGui = nil
+    local murdererButtonGui = nil
+    local playerButtonGui = nil
+    local sheriffButtonSize = 60
+    local murdererButtonSize = 60
+    local playerButtonSize = 60
+    
+    local function msg(t, txt, d) 
+        Services.StarterGui:SetCore("SendNotification", {Title=t, Text=txt, Duration=d}) 
     end
     
-    flingSection:AddButton("Fling Sheriff", function()
-        for _, p in pairs(Services.Players:GetPlayers()) do
-            if p.Backpack:FindFirstChild("Gun") then skidFling(p) return end
+    -- Whitelist functions
+    local function isWhitelisted(player)
+        return whitelist[player.UserId] == true
+    end
+    
+    local function addToWhitelist(player)
+        whitelist[player.UserId] = true
+        msg("Whitelist", player.Name .. " added to whitelist", 3)
+    end
+    
+    local function clearWhitelist()
+        whitelist = {}
+        msg("Whitelist", "Whitelist cleared!", 3)
+    end
+    
+    -- Better detection for Sheriff and Murderer
+    local function findSheriff()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and not isWhitelisted(p) then
+                if p.Backpack:FindFirstChild("Gun") then
+                    return p
+                end
+                if p.Character and p.Character:FindFirstChild("Gun") then
+                    return p
+                end
+            end
         end
-        msg("Error", "No Sheriff", 3)
+        return nil
+    end
+    
+    local function findMurderer()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and not isWhitelisted(p) then
+                if p.Backpack:FindFirstChild("Knife") then
+                    return p
+                end
+                if p.Character and p.Character:FindFirstChild("Knife") then
+                    return p
+                end
+            end
+        end
+        return nil
+    end
+    
+    local function OdhSkid(TargetPlayer, duration)
+        if isWhitelisted(TargetPlayer) then
+            msg("Whitelist", TargetPlayer.Name .. " is whitelisted!", 3)
+            return
+        end
+        
+        local localPlayer = Players.LocalPlayer
+        local Character = localPlayer.Character
+        local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+        local RootPart = Humanoid and Humanoid.RootPart
+
+        local TCharacter = TargetPlayer.Character
+        if not TCharacter then return end
+        
+        local THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
+        local TRootPart = THumanoid and THumanoid.RootPart
+        local THead = TCharacter:FindFirstChild("Head")
+        local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
+        local Handle = Accessory and Accessory:FindFirstChild("Handle")
+
+        if not (Character and Humanoid and RootPart) then return end
+        
+        if RootPart.Velocity.Magnitude < 50 then
+            getgenv().OldPos = RootPart.CFrame
+        end
+        
+        if THead then
+            workspace.CurrentCamera.CameraSubject = THead
+        elseif not THead and Handle then
+            workspace.CurrentCamera.CameraSubject = Handle
+        elseif THumanoid and TRootPart then
+            workspace.CurrentCamera.CameraSubject = THumanoid
+        end
+        
+        if not TCharacter:FindFirstChildWhichIsA("BasePart") then
+            return
+        end
+        
+        local FPos = function(BasePart, Pos, Ang)
+            RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+            Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+            RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+            RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+        end
+        
+        local SFBasePart = function(BasePart)
+            local TimeToWait = duration or 2
+            local Time = tick()
+            local Angle = 0
+
+            repeat
+                if RootPart and THumanoid then
+                    if BasePart.Velocity.Magnitude < 50 then
+                        Angle = Angle + 100
+                        FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(2.25, 1.5, -2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(-2.25, -1.5, 2.25) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection,CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                    else
+                        FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, -THumanoid.WalkSpeed), CFrame.Angles(0, 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, 1.5, THumanoid.WalkSpeed), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, 1.5, TRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, -TRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(0, 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, 1.5, TRootPart.Velocity.Magnitude / 1.25), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5 ,0), CFrame.Angles(math.rad(-90), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0))
+                        task.wait()
+                    end
+                else
+                    break
+                end
+            until not flingActive or BasePart.Velocity.Magnitude > 500 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= Players or not TargetPlayer.Character == TCharacter or THumanoid.Sit or tick() > Time + TimeToWait
+        end
+        
+        local previousDestroyHeight = workspace.FallenPartsDestroyHeight
+        workspace.FallenPartsDestroyHeight = 0/0
+        
+        local BV = Instance.new("BodyVelocity")
+        BV.Name = "EpixVel"
+        BV.Parent = RootPart
+        BV.Velocity = Vector3.new(9e8, 9e8, 9e8)
+        BV.MaxForce = Vector3.new(1/0, 1/0, 1/0)
+        
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        
+        if TRootPart and THead then
+            if (TRootPart.CFrame.p - THead.CFrame.p).Magnitude > 5 then
+                SFBasePart(THead)
+            else
+                SFBasePart(TRootPart)
+            end
+        elseif TRootPart and not THead then
+            SFBasePart(TRootPart)
+        elseif not TRootPart and THead then
+            SFBasePart(THead)
+        elseif not TRootPart and not THead and Accessory and Handle then
+            SFBasePart(Handle)
+        end
+        
+        BV:Destroy()
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        workspace.CurrentCamera.CameraSubject = Humanoid
+        
+        repeat
+            if Character and Humanoid and RootPart and getgenv().OldPos then
+                RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
+                Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+                Humanoid:ChangeState("GettingUp")
+                table.foreach(Character:GetChildren(), function(_, x)
+                    if x:IsA("BasePart") then
+                        x.Velocity, x.RotVelocity = Vector3.new(), Vector3.new()
+                    end
+                end)
+            end
+            task.wait()
+        until not flingActive or (RootPart and getgenv().OldPos and (RootPart.Position - getgenv().OldPos.p).Magnitude < 25)
+        
+        workspace.FallenPartsDestroyHeight = previousDestroyHeight
+    end
+    
+    -- Create draggable buttons (similar to bomb jump script)
+    local function createDraggableButton(text, position, size, callback)
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "FlingButton_" .. text
+        ScreenGui.ResetOnSpawn = false
+        ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        
+        local Button = Instance.new("TextButton")
+        Button.Name = "DragButton"
+        Button.Parent = ScreenGui
+        Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        Button.Size = UDim2.new(0, size, 0, size)
+        Button.Position = UDim2.new(0, position.X, 0, position.Y)
+        Button.Font = Enum.Font.SourceSansLight
+        Button.Text = text
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Button.TextSize = 18
+        Button.TextWrapped = true
+        Button.BackgroundTransparency = 0.3
+        
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(1, 0)
+        Corner.Parent = Button
+        
+        local stroke = Instance.new("UIStroke", Button)
+        stroke.Thickness = 2.5
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        
+        local gradient = Instance.new("UIGradient", stroke)
+        gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        }
+        gradient.Rotation = 45
+        
+        -- Dragging functionality
+        local dragging = false
+        local dragStart, startPos
+        
+        Button.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = Button.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+        
+        Button.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+        
+        -- Button click
+        Button.MouseButton1Click:Connect(callback)
+        
+        ScreenGui.Parent = Services.CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+        
+        return ScreenGui, Button
+    end
+    
+    -- Auto fling loops
+    task.spawn(function()
+        while true do
+            task.wait(1)
+            if autoFlingSheriff then
+                local sheriff = findSheriff()
+                if sheriff then
+                    OdhSkid(sheriff, 2)
+                    task.wait(3) -- Wait for cooldown
+                end
+            end
+        end
+    end)
+    
+    task.spawn(function()
+        while true do
+            task.wait(1)
+            if autoFlingMurderer then
+                local murderer = findMurderer()
+                if murderer then
+                    OdhSkid(murderer, 2)
+                    task.wait(3) -- Wait for cooldown
+                end
+            end
+        end
+    end)
+    
+    -- Regular buttons
+    flingSection:AddButton("Fling Sheriff", function()
+        local sheriff = findSheriff()
+        if sheriff then
+            OdhSkid(sheriff, 2)
+        else
+            msg("Error", "No Sheriff Found", 3)
+        end
     end)
     
     flingSection:AddButton("Fling Murderer", function()
-        for _, p in pairs(Services.Players:GetPlayers()) do
-            if p.Backpack:FindFirstChild("Knife") then skidFling(p) return end
+        local murderer = findMurderer()
+        if murderer then
+            OdhSkid(murderer, 2)
+        else
+            msg("Error", "No Murderer Found", 3)
         end
-        msg("Error", "No Murderer", 3)
     end)
     
-    flingSection:AddButton("Fling All", function() for _, p in pairs(Services.Players:GetPlayers()) do if p ~= LocalPlayer then skidFling(p) end end end)
-    flingSection:AddPlayerDropdown("Fling Player", function(p) flingSelPlr = p if p ~= LocalPlayer then skidFling(p) end end)
+    flingSection:AddButton("Fling All", function() 
+        for _, p in pairs(Players:GetPlayers()) do 
+            if p ~= LocalPlayer and not isWhitelisted(p) then 
+                OdhSkid(p, 2)
+                task.wait(0.5)
+            end 
+        end 
+    end)
     
+    flingSection:AddPlayerDropdown("Fling Player", function(p) 
+        flingSelPlr = p 
+        if p ~= LocalPlayer and not isWhitelisted(p) then 
+            OdhSkid(p, 2) 
+        end 
+    end)
+    
+    -- Auto fling toggles
+    flingSection:AddToggle("Auto Fling Sheriff", function(enabled)
+        autoFlingSheriff = enabled
+        if enabled then
+            msg("Auto Fling", "Auto fling sheriff enabled", 3)
+        else
+            msg("Auto Fling", "Auto fling sheriff disabled", 3)
+        end
+    end)
+    
+    flingSection:AddToggle("Auto Fling Murderer", function(enabled)
+        autoFlingMurderer = enabled
+        if enabled then
+            msg("Auto Fling", "Auto fling murderer enabled", 3)
+        else
+            msg("Auto Fling", "Auto fling murderer disabled", 3)
+        end
+    end)
+    
+    -- Bindable button toggles
+    flingSection:AddToggle("Enable FS Button", function(enabled)
+        sheriffButtonEnabled = enabled
+        
+        if enabled then
+            sheriffButtonGui, sheriffButton = createDraggableButton("FS", {X = 100, Y = 100}, sheriffButtonSize, function()
+                local sheriff = findSheriff()
+                if sheriff then
+                    OdhSkid(sheriff, 2)
+                    msg("Success", "Flinging Sheriff: " .. sheriff.Name, 2)
+                else
+                    msg("Error", "No Sheriff Found", 3)
+                end
+            end)
+        else
+            if sheriffButtonGui then
+                sheriffButtonGui:Destroy()
+                sheriffButtonGui = nil
+            end
+        end
+    end)
+    
+    flingSection:AddSlider("Sheriff Button Size", 30, 150, sheriffButtonSize, function(size)
+        sheriffButtonSize = size
+        if sheriffButtonGui then
+            local button = sheriffButtonGui:FindFirstChild("DragButton")
+            if button then
+                button.Size = UDim2.new(0, size, 0, size)
+            end
+        end
+    end)
+    
+    flingSection:AddToggle("Enable FM Button", function(enabled)
+        murdererButtonEnabled = enabled
+        
+        if enabled then
+            murdererButtonGui, murdererButton = createDraggableButton("FM", {X = 170, Y = 100}, murdererButtonSize, function()
+                local murderer = findMurderer()
+                if murderer then
+                    OdhSkid(murderer, 2)
+                    msg("Success", "Flinging Murderer: " .. murderer.Name, 2)
+                else
+                    msg("Error", "No Murderer Found", 3)
+                end
+            end)
+        else
+            if murdererButtonGui then
+                murdererButtonGui:Destroy()
+                murdererButtonGui = nil
+            end
+        end
+    end)
+    
+    flingSection:AddSlider("Murderer Button Size", 30, 150, murdererButtonSize, function(size)
+        murdererButtonSize = size
+        if murdererButtonGui then
+            local button = murdererButtonGui:FindFirstChild("DragButton")
+            if button then
+                button.Size = UDim2.new(0, size, 0, size)
+            end
+        end
+    end)
+    
+    flingSection:AddToggle("Enable FP Bindable Button", function(enabled)
+        playerButtonEnabled = enabled
+        
+        if enabled then
+            playerButtonGui, playerButton = createDraggableButton("FP", {X = 240, Y = 100}, playerButtonSize, function()
+                if flingSelPlr and flingSelPlr.Parent then
+                    if not isWhitelisted(flingSelPlr) then
+                        OdhSkid(flingSelPlr, 2)
+                        msg("Success", "Flinging Player: " .. flingSelPlr.Name, 2)
+                    else
+                        msg("Whitelist", flingSelPlr.Name .. " is whitelisted!", 3)
+                    end
+                else
+                    msg("Error", "No Player Selected", 3)
+                end
+            end)
+        else
+            if playerButtonGui then
+                playerButtonGui:Destroy()
+                playerButtonGui = nil
+            end
+        end
+    end)
+    
+    flingSection:AddSlider("FP Button Size", 30, 150, playerButtonSize, function(size)
+        playerButtonSize = size
+        if playerButtonGui then
+            local button = playerButtonGui:FindFirstChild("DragButton")
+            if button then
+                button.Size = UDim2.new(0, size, 0, size)
+            end
+        end
+    end)
+    
+    -- Whitelist management
+    flingSection:AddPlayerDropdown("Add to Whitelist", function(p)
+        if p and p ~= LocalPlayer then
+            addToWhitelist(p)
+        end
+    end)
+    
+    flingSection:AddButton("Clear Whitelist", function()
+        clearWhitelist()
+    end)
+    
+    -- Loop toggles (FIXED - added delay to prevent crash)
     flingSection:AddToggle("Loop Fling Player", function(s)
         flingLoopPlr = s
         task.spawn(function()
             while flingLoopPlr do
-                if flingSelPlr and flingSelPlr.Parent then skidFling(flingSelPlr) else flingLoopPlr = false end
+                if flingSelPlr and flingSelPlr.Parent and not isWhitelisted(flingSelPlr) then 
+                    OdhSkid(flingSelPlr, 2)
+                    task.wait(3) -- Wait for cooldown before next fling (same as other flings)
+                else 
+                    flingLoopPlr = false
+                    if not flingSelPlr or not flingSelPlr.Parent then
+                        msg("Error", "Target left or invalid", 3)
+                    end
+                end
             end
         end)
     end)
     
     flingSection:AddToggle("Loop Fling All", function(s)
         flingLoopAll = s
-        task.spawn(function() while flingLoopAll do for _, p in pairs(Services.Players:GetPlayers()) do if p ~= LocalPlayer then skidFling(p) end end task.wait(5) end end)
+        task.spawn(function() 
+            while flingLoopAll do 
+                for _, p in pairs(Players:GetPlayers()) do 
+                    if p ~= LocalPlayer and p.Parent and not isWhitelisted(p) then 
+                        OdhSkid(p, 2)
+                        task.wait(0.5)
+                    end 
+                end 
+                task.wait(3) -- Wait between full cycles
+            end 
+        end)
+    end)
+    
+    -- Cleanup when player leaves
+    Players.PlayerRemoving:Connect(function(player)
+        if flingSelPlr == player then
+            flingSelPlr = nil
+            flingLoopPlr = false
+        end
     end)
 end
 
@@ -1227,12 +1864,10 @@ do
         end
     end)
     
-    -- Clean up before character is removed
     LocalPlayer.CharacterRemoving:Connect(function()
         cleanup()
     end)
     
-    -- Re-enable after character is added
     LocalPlayer.CharacterAdded:Connect(function(c)
         task.wait(0.5)
         if skyOn then enSky() end
@@ -1640,7 +2275,6 @@ local characterConnection = LocalPlayer.CharacterAdded:Connect(function()
     activeTouches = {}
     justRespawned = true
     
-    -- Disable bomb jump for 1 second after respawn to prevent character falling
     task.spawn(function()
         task.wait(1)
         justRespawned = false
@@ -1749,7 +2383,6 @@ do
     
     local feAnimSection = shared.AddSection("FE Animations")
     
-    -- Store current animation selections
     local animState = {
         all = "Default",
         idle = "Default",
@@ -1760,12 +2393,10 @@ do
         fall = "Default"
     }
     
-    -- Store original animations on first load
     local originalAnims = {}
     
-    -- Animation presets
     local animPresets = {
-        ["Default"] = nil, -- Will use original animations
+        ["Default"] = nil,
         ["Vampire"] = {
             idle1 = "http://www.roblox.com/asset/?id=1083445855",
             idle2 = "http://www.roblox.com/asset/?id=1083450166",
@@ -1961,7 +2592,6 @@ do
         local Animate = character:FindFirstChild("Animate")
         if not Animate then return end
         
-        -- Only save if we haven't already
         if originalAnims.idle1 then return end
         
         if Animate:FindFirstChild("idle") then
@@ -2004,52 +2634,64 @@ do
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid then return end
         
-        -- Stop all currently playing animations
         for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
             track:Stop(0)
         end
     end
     
+    -- NEW: Check if any animation is set to non-Default
+    local function shouldApplyAnimations()
+        -- If "All Animations" is set to something other than Default, apply
+        if animState.all ~= "Default" then
+            return true
+        end
+        
+        -- Check if ANY individual category is set to non-Default
+        if animState.idle ~= "Default" then return true end
+        if animState.walk ~= "Default" then return true end
+        if animState.run ~= "Default" then return true end
+        if animState.jump ~= "Default" then return true end
+        if animState.climb ~= "Default" then return true end
+        if animState.fall ~= "Default" then return true end
+        
+        -- All are Default, don't touch animations
+        return false
+    end
+    
     local function applyAnimations()
-        -- Safety check for character
         if not plr or not plr.Character then 
-            warn("Character not found!")
             return 
+        end
+        
+        -- NEW: Don't apply if everything is Default
+        if not shouldApplyAnimations() then
+            return
         end
         
         local character = plr.Character
         local Animate = character:FindFirstChild("Animate")
         
         if not Animate then
-            warn("Animate script not found!")
             return
         end
         
-        -- Save original animations on first run
         saveOriginalAnimations(character)
         
-        -- Stop all current animations first
         stopAllAnimations()
         
-        -- Disable and wait briefly
         Animate.Disabled = true
         task.wait(0.1)
         
-        -- Determine which preset to use for each animation type
         local function getPresetForType(animType)
-            -- Individual selection takes priority
             if animState[animType] ~= "Default" then
                 return animState[animType]
             end
-            -- Fall back to "All Animations" if not default
             if animState.all ~= "Default" then
                 return animState.all
             end
-            -- Return "Default" to use original animations
             return "Default"
         end
         
-        -- Apply idle animations
         local idlePreset = getPresetForType("idle")
         if Animate:FindFirstChild("idle") then
             local anim1 = Animate.idle:FindFirstChild("Animation1")
@@ -2065,7 +2707,6 @@ do
             end
         end
         
-        -- Apply walk animation
         local walkPreset = getPresetForType("walk")
         if Animate:FindFirstChild("walk") then
             local walkAnim = Animate.walk:FindFirstChild("WalkAnim")
@@ -2078,7 +2719,6 @@ do
             end
         end
         
-        -- Apply run animation
         local runPreset = getPresetForType("run")
         if Animate:FindFirstChild("run") then
             local runAnim = Animate.run:FindFirstChild("RunAnim")
@@ -2091,7 +2731,6 @@ do
             end
         end
         
-        -- Apply jump animation
         local jumpPreset = getPresetForType("jump")
         if Animate:FindFirstChild("jump") then
             local jumpAnim = Animate.jump:FindFirstChild("JumpAnim")
@@ -2104,7 +2743,6 @@ do
             end
         end
         
-        -- Apply climb animation
         local climbPreset = getPresetForType("climb")
         if Animate:FindFirstChild("climb") then
             local climbAnim = Animate.climb:FindFirstChild("ClimbAnim")
@@ -2117,7 +2755,6 @@ do
             end
         end
         
-        -- Apply fall animation
         local fallPreset = getPresetForType("fall")
         if Animate:FindFirstChild("fall") then
             local fallAnim = Animate.fall:FindFirstChild("FallAnim")
@@ -2130,23 +2767,19 @@ do
             end
         end
         
-        -- Re-enable animate script
         Animate.Disabled = false
     end
     
-    -- Apply animations when character spawns
     plr.CharacterAdded:Connect(function(character)
         character:WaitForChild("Animate")
-        task.wait(0.5) -- Wait for character to fully load
+        task.wait(0.5)
         applyAnimations()
     end)
     
-    -- Apply to current character if it exists
     if plr.Character then
         saveOriginalAnimations(plr.Character)
     end
     
-    -- All Animations Dropdown
     feAnimSection:AddDropdown("All Animations", {
         "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
@@ -2157,7 +2790,6 @@ do
         applyAnimations()
     end)
     
-    -- Individual Animation Dropdowns
     local animOptions = {
         "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
@@ -2194,4 +2826,171 @@ do
         animState.fall = selected
         applyAnimations()
     end)
+end
+
+do
+    local wallhopSection = shared.AddSection("Wallhop")
+    
+    -- Services
+    local UserInputService = game:GetService("UserInputService")
+    local Players = game:GetService("Players")
+    local Workspace = game:GetService("Workspace")
+    local RunService = game:GetService("RunService")
+    
+    -- Player specific
+    local player = Players.LocalPlayer
+    
+    -- Variables for Wallhop Functionality
+    local wallhopToggle = false
+    local InfiniteJumpEnabled = true
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local jumpConnection = nil
+    
+    -- Precise wall detection function
+    local function getWallRaycastResult()
+        local character = player.Character
+        if not character then return nil end
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then return nil end
+    
+        raycastParams.FilterDescendantsInstances = {character}
+        local detectionDistance = 2
+        local closestHit = nil
+        local minDistance = detectionDistance + 1
+        local hrpCF = humanoidRootPart.CFrame
+    
+        for i = 0, 7 do
+            local angle = math.rad(i * 45)
+            local direction = (hrpCF * CFrame.Angles(0, angle, 0)).LookVector
+            local ray = Workspace:Raycast(humanoidRootPart.Position, direction * detectionDistance, raycastParams)
+            if ray and ray.Instance and ray.Distance < minDistance then
+                minDistance = ray.Distance
+                closestHit = ray
+            end
+        end
+    
+        local blockCastSize = Vector3.new(1.5, 1, 0.5)
+        local blockCastOffset = CFrame.new(0, -1, -0.5)
+        local blockCastOriginCF = hrpCF * blockCastOffset
+        local blockCastDirection = hrpCF.LookVector
+        local blockCastDistance = 1.5
+        local blockResult = Workspace:Blockcast(blockCastOriginCF, blockCastSize, blockCastDirection * blockCastDistance, raycastParams)
+    
+        if blockResult and blockResult.Instance and blockResult.Distance < minDistance then
+             minDistance = blockResult.Distance
+             closestHit = blockResult
+        end
+    
+        return closestHit
+    end
+    
+    -- Core Wall Jump Execution Function
+    local function executeWallJump(wallRayResult)
+        if not InfiniteJumpEnabled then return end
+    
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local camera = Workspace.CurrentCamera
+    
+        if not (humanoid and rootPart and camera and humanoid:GetState() ~= Enum.HumanoidStateType.Dead and wallRayResult) then
+            return
+        end
+    
+        InfiniteJumpEnabled = false
+    
+        local maxInfluenceAngleRight = math.rad(20)
+        local maxInfluenceAngleLeft  = math.rad(-100)
+    
+        local wallNormal = wallRayResult.Normal
+        local baseDirectionAwayFromWall = Vector3.new(wallNormal.X, 0, wallNormal.Z).Unit
+        if baseDirectionAwayFromWall.Magnitude < 0.1 then
+             local dirToHit = (wallRayResult.Position - rootPart.Position) * Vector3.new(1,0,1)
+             baseDirectionAwayFromWall = -dirToHit.Unit
+             if baseDirectionAwayFromWall.Magnitude < 0.1 then
+                 baseDirectionAwayFromWall = -rootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+                 if baseDirectionAwayFromWall.Magnitude > 0.1 then baseDirectionAwayFromWall = baseDirectionAwayFromWall.Unit end
+                 if baseDirectionAwayFromWall.Magnitude < 0.1 then baseDirectionAwayFromWall = Vector3.new(0,0,1) end
+             end
+        end
+        baseDirectionAwayFromWall = Vector3.new(baseDirectionAwayFromWall.X, 0, baseDirectionAwayFromWall.Z).Unit
+        if baseDirectionAwayFromWall.Magnitude < 0.1 then baseDirectionAwayFromWall = Vector3.new(0,0,1) end
+    
+        local cameraLook = camera.CFrame.LookVector
+        local horizontalCameraLook = Vector3.new(cameraLook.X, 0, cameraLook.Z).Unit
+        if horizontalCameraLook.Magnitude < 0.1 then horizontalCameraLook = baseDirectionAwayFromWall end
+    
+        local dot = math.clamp(baseDirectionAwayFromWall:Dot(horizontalCameraLook), -1, 1)
+        local angleBetween = math.acos(dot)
+        local cross = baseDirectionAwayFromWall:Cross(horizontalCameraLook)
+        local rotationSign = -math.sign(cross.Y)
+        if rotationSign == 0 then angleBetween = 0 end
+    
+        local actualInfluenceAngle
+        if rotationSign == 1 then
+            actualInfluenceAngle = math.min(angleBetween, maxInfluenceAngleRight)
+        elseif rotationSign == -1 then
+            actualInfluenceAngle = math.min(angleBetween, maxInfluenceAngleLeft)
+        else
+            actualInfluenceAngle = 0
+        end
+    
+        local adjustmentRotation = CFrame.Angles(0, actualInfluenceAngle * rotationSign, 0)
+        local initialTargetLookDirection = adjustmentRotation * baseDirectionAwayFromWall
+    
+        rootPart.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + initialTargetLookDirection)
+        RunService.Heartbeat:Wait()
+    
+        local didJump = false
+        if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+             humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+             didJump = true
+    
+             rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, -1, 0)
+             task.wait(0.15)
+             rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, 1, 0)
+        end
+    
+        if didJump then
+             local directionTowardsWall = -baseDirectionAwayFromWall
+             task.wait(0.05)
+             rootPart.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + directionTowardsWall)
+        end
+    
+        task.wait(0.1)
+        InfiniteJumpEnabled = true
+    end
+    
+    -- Main Wallhop Toggle
+    wallhopSection:AddToggle("Enable Wallhop", function(enabled)
+        wallhopToggle = enabled
+        
+        if enabled then
+            if jumpConnection then jumpConnection:Disconnect() end
+            
+            jumpConnection = UserInputService.JumpRequest:Connect(function()
+                if not wallhopToggle then return end
+                
+                local wallRayResult = getWallRaycastResult()
+                if wallRayResult then
+                    executeWallJump(wallRayResult)
+                end
+            end)
+        else
+            if jumpConnection then
+                jumpConnection:Disconnect()
+                jumpConnection = nil
+            end
+        end
+    end)
+    
+    -- Cleanup on player leaving
+    Players.PlayerRemoving:Connect(function(plr)
+        if plr == player then
+            if jumpConnection then jumpConnection:Disconnect() end
+        end
+    end)
+end
+
 end
