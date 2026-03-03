@@ -2993,4 +2993,231 @@ do
     end)
 end
 
+local lagVCSection = shared.AddSection("FE Lag VC")
+local lagVCEnabled = false
+local lagVCCharConn
+
+lagVCSection:AddToggle("Enable Lag VC", function(state)
+    lagVCEnabled = state
+    if lagVCCharConn then lagVCCharConn:Disconnect() lagVCCharConn = nil end
+
+    if lagVCEnabled then
+        PlaySong:FireServer("https://www.roblox.com/asset/?id=6691278175")
+        lagVCCharConn = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1)
+            PlaySong:FireServer("https://www.roblox.com/asset/?id=6691278175")
+        end)
+    end
+end)
+
+local shared = odh_shared_plugins
+local _game = shared.game_name
+if _game == "Murder Mystery 2" or _game == "Murder Mystery Modded" then
+
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+do
+    local ssSection = shared.AddSection("Sign Spam")
+
+    local spamming = false
+    local spamThread = nil
+    local ssButtonEnabled = false
+    local ssButtonGui = nil
+    local ssButtonSize = 60
+    local autoGetGG = false
+
+    local function getSign()
+        pcall(function()
+            game:GetService("ReplicatedStorage").Remotes.Extras.ReplicateToy:InvokeServer("GGSign")
+        end)
+    end
+
+    local function findInBackpack()
+        local backpack = LocalPlayer:WaitForChild("Backpack")
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and string.lower(tool.Name):find("sign") then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function findSign()
+        local backpack = LocalPlayer:WaitForChild("Backpack")
+        local character = LocalPlayer.Character
+
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and string.lower(tool.Name):find("sign") then
+                return tool, backpack
+            end
+        end
+
+        if character then
+            for _, tool in ipairs(character:GetChildren()) do
+                if tool:IsA("Tool") and string.lower(tool.Name):find("sign") then
+                    return tool, character
+                end
+            end
+        end
+
+        return nil, nil
+    end
+
+    local function startSpam()
+        spamming = true
+        spamThread = task.spawn(function()
+            while spamming do
+                local character = LocalPlayer.Character
+                if not character then task.wait(0.1) continue end
+
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if not humanoid then task.wait(0.1) continue end
+
+                local tool, location = findSign()
+
+                if tool then
+                    if location == LocalPlayer:WaitForChild("Backpack") then
+                        humanoid:EquipTool(tool)
+                    end
+                    task.wait(0.05)
+                    humanoid:UnequipTools()
+                    task.wait(0.05)
+                else
+                    task.wait(0.5)
+                end
+            end
+        end)
+    end
+
+    local function stopSpam()
+        spamming = false
+        if spamThread then
+            task.cancel(spamThread)
+            spamThread = nil
+        end
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then humanoid:UnequipTools() end
+        end
+    end
+
+    local function createDraggableButton(text, position, size, callback)
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "SSButton_" .. text
+        ScreenGui.ResetOnSpawn = false
+        ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+        local Button = Instance.new("TextButton")
+        Button.Name = "DragButton"
+        Button.Parent = ScreenGui
+        Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        Button.Size = UDim2.new(0, size, 0, size)
+        Button.Position = UDim2.new(0, position.X, 0, position.Y)
+        Button.Font = Enum.Font.SourceSansLight
+        Button.Text = text
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Button.TextSize = 18
+        Button.TextWrapped = true
+        Button.BackgroundTransparency = 0.3
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(1, 0)
+        Corner.Parent = Button
+
+        local stroke = Instance.new("UIStroke", Button)
+        stroke.Thickness = 2.5
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+        local gradient = Instance.new("UIGradient", stroke)
+        gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        }
+        gradient.Rotation = 45
+
+        local dragging = false
+        local dragStart, startPos
+
+        Button.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = Button.Position
+
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+
+        Button.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+
+        Button.MouseButton1Click:Connect(callback)
+
+        ScreenGui.Parent = game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+
+        return ScreenGui, Button
+    end
+
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(1)
+        if autoGetGG then getSign() end
+    end)
+
+    ssSection:AddToggle("Enable Auto-Get GG", function(state)
+        autoGetGG = state
+        if state and not findInBackpack() then
+            getSign()
+        end
+    end)
+
+    ssSection:AddToggle("Enable Sign Spam", function(state)
+        if state then
+            startSpam()
+        else
+            stopSpam()
+        end
+    end)
+
+    ssSection:AddToggle("Enable SS Button", function(enabled)
+        ssButtonEnabled = enabled
+
+        if enabled then
+            ssButtonGui = createDraggableButton("SS", {X = 310, Y = 100}, ssButtonSize, function()
+                if spamming then
+                    stopSpam()
+                else
+                    startSpam()
+                end
+            end)
+        else
+            if ssButtonGui then
+                ssButtonGui:Destroy()
+                ssButtonGui = nil
+            end
+        end
+    end)
+
+    ssSection:AddSlider("SS Button Size", 30, 150, ssButtonSize, function(size)
+        ssButtonSize = size
+        if ssButtonGui then
+            local button = ssButtonGui:FindFirstChild("DragButton")
+            if button then
+                button.Size = UDim2.new(0, size, 0, size)
+            end
+        end
+    end)
+end
+
+end
+
 end
