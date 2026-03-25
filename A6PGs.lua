@@ -93,6 +93,7 @@ if not hiddenGui then
     RootMaid:GiveTask(hiddenGui)
 end
 
+do
     local pfSection = shared.AddSection("Ping & FPS")
 
     local Players = game:GetService("Players")
