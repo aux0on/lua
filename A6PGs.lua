@@ -3511,6 +3511,70 @@ do
     end)
 end
 
+do
+    local efSection = shared.AddSection("Equip Fix")
+
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    local efEnabled = false
+    local efConnection = nil
+    local efCharConnection = nil
+
+    local EQUIP_TOOLS = {"FakeBomb", "FireflyJar"}
+
+    local function SetupEquipFix(character)
+        if efConnection then efConnection:Disconnect() efConnection = nil end
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not humanoid then return end
+
+        efConnection = character.ChildAdded:Connect(function(child)
+            if not efEnabled then return end
+            for _, toolName in ipairs(EQUIP_TOOLS) do
+                if child.Name == toolName then
+                    task.wait(0.05)
+                    if humanoid and humanoid.Parent then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                    end
+                    break
+                end
+            end
+        end)
+    end
+
+    local function StartEquipFix()
+        if LocalPlayer.Character then
+            task.wait(0.5)
+            SetupEquipFix(LocalPlayer.Character)
+        end
+
+        efCharConnection = LocalPlayer.CharacterAdded:Connect(function(character)
+            if not efEnabled then return end
+            task.wait(0.5)
+            SetupEquipFix(character)
+        end)
+    end
+
+    local function StopEquipFix()
+        if efConnection then efConnection:Disconnect() efConnection = nil end
+        if efCharConnection then efCharConnection:Disconnect() efCharConnection = nil end
+    end
+
+    efSection:AddToggle("Enable Equip Fix", function(e)
+        efEnabled = e
+        if e then
+            StartEquipFix()
+        else
+            StopEquipFix()
+        end
+    end)
+
+    RootMaid:GiveTask(function()
+        StopEquipFix()
+        efEnabled = false
+    end)
+end 
+    
 end 
 
 RootMaid:GiveTask(function()
