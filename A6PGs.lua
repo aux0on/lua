@@ -2696,6 +2696,69 @@ do
             jump = "http://www.roblox.com/asset/?id=616161997",
             climb = "http://www.roblox.com/asset/?id=616156119",
             fall = "http://www.roblox.com/asset/?id=616157476"
+        },
+        ["NFL"] = {
+            idle1 = "http://www.roblox.com/asset/?id=17813099690",
+            idle2 = "http://www.roblox.com/asset/?id=17813099690",
+            walk = "http://www.roblox.com/asset/?id=17813094159",
+            run = "http://www.roblox.com/asset/?id=17813097917",
+            jump = "http://www.roblox.com/asset/?id=17813095531",
+            climb = "http://www.roblox.com/asset/?id=17813090073",
+            fall = "http://www.roblox.com/asset/?id=17813091713"
+        },
+        ["Wicked Dancing"] = {
+            idle1 = "http://www.roblox.com/asset/?id=109826788795456",
+            idle2 = "http://www.roblox.com/asset/?id=109826788795456",
+            walk = "http://www.roblox.com/asset/?id=94133616443608",
+            run = "http://www.roblox.com/asset/?id=79789194522561",
+            jump = "http://www.roblox.com/asset/?id=117245813823109",
+            climb = "http://www.roblox.com/asset/?id=123509187015792",
+            fall = "http://www.roblox.com/asset/?id=120392114143221"
+        },
+        ["No Boundaries"] = {
+            idle1 = "http://www.roblox.com/asset/?id=18755930927",
+            idle2 = "http://www.roblox.com/asset/?id=18755930927",
+            walk = "http://www.roblox.com/asset/?id=18755942776",
+            run = "http://www.roblox.com/asset/?id=18755945000",
+            jump = "http://www.roblox.com/asset/?id=18755925411",
+            climb = "http://www.roblox.com/asset/?id=18755936000",
+            fall = "http://www.roblox.com/asset/?id=18755929000"
+        },
+        ["Bold"] = {
+            idle1 = "http://www.roblox.com/asset/?id=18472444368",
+            idle2 = "http://www.roblox.com/asset/?id=18472444368",
+            walk = "http://www.roblox.com/asset/?id=18472440033",
+            run = "http://www.roblox.com/asset/?id=18472442112",
+            jump = "http://www.roblox.com/asset/?id=18472437361",
+            climb = "http://www.roblox.com/asset/?id=18472435815",
+            fall = "http://www.roblox.com/asset/?id=18472438876"
+        },
+        ["Catwalk Glam"] = {
+            idle1 = "http://www.roblox.com/asset/?id=15271543745",
+            idle2 = "http://www.roblox.com/asset/?id=15271543745",
+            walk = "http://www.roblox.com/asset/?id=15271541709",
+            run = "http://www.roblox.com/asset/?id=15271541709",
+            jump = "http://www.roblox.com/asset/?id=15271539731",
+            climb = "http://www.roblox.com/asset/?id=15271542273",
+            fall = "http://www.roblox.com/asset/?id=15271540258"
+        },
+        ["Adidas Sports"] = {
+            idle1 = "http://www.roblox.com/asset/?id=19275315147",
+            idle2 = "http://www.roblox.com/asset/?id=19275315147",
+            walk = "http://www.roblox.com/asset/?id=19275316678",
+            run = "http://www.roblox.com/asset/?id=19275318209",
+            jump = "http://www.roblox.com/asset/?id=19275313659",
+            climb = "http://www.roblox.com/asset/?id=19275315811",
+            fall = "http://www.roblox.com/asset/?id=19275314633"
+        },
+        ["Amazon Unboxed"] = {
+            idle1 = "http://www.roblox.com/asset/?id=82219139681769",
+            idle2 = "http://www.roblox.com/asset/?id=82219139681769",
+            walk = "http://www.roblox.com/asset/?id=128339543796138",
+            run = "http://www.roblox.com/asset/?id=114998633936467",
+            jump = "http://www.roblox.com/asset/?id=110418911914024",
+            climb = "http://www.roblox.com/asset/?id=117011755848398",
+            fall = "http://www.roblox.com/asset/?id=125108870423182"
         }
     }
     
@@ -2887,7 +2950,9 @@ do
         "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
-        "Princess", "Cowboy", "Patrol", "Zombie FE"
+        "Princess", "Cowboy", "Patrol", "Zombie FE",
+        "NFL", "Wicked Dancing", "No Boundaries", "Bold", "Catwalk Glam",
+        "Adidas Sports", "Amazon Unboxed"
     }, function(selected)
         animState.all = selected
         applyAnimations()
@@ -2897,7 +2962,9 @@ do
         "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
-        "Princess", "Cowboy", "Patrol", "Zombie FE"
+        "Princess", "Cowboy", "Patrol", "Zombie FE",
+        "NFL", "Wicked Dancing", "No Boundaries", "Bold", "Catwalk Glam",
+        "Adidas Sports", "Amazon Unboxed"
     }
     
     feAnimSection:AddDropdown("Idle Animation", animOptions, function(selected)
