@@ -2706,6 +2706,15 @@ do
             climb = "http://www.roblox.com/asset/?id=119377220967554",
             fall = "http://www.roblox.com/asset/?id=92294537340807"
         },
+        ["Amazon Unboxed"] = {
+            idle1 = "http://www.roblox.com/asset/?id=98281136301627",
+            idle2 = "http://www.roblox.com/asset/?id=98281136301627",
+            walk = "http://www.roblox.com/asset/?id=90478085024465",
+            run = "http://www.roblox.com/asset/?id=134824450619865",
+            jump = "http://www.roblox.com/asset/?id=121454505477205",
+            climb = "http://www.roblox.com/asset/?id=121145883950231",
+            fall = "http://www.roblox.com/asset/?id=94788218468396"
+        },
     }
     
     local function saveOriginalAnimations(character)
@@ -2896,7 +2905,7 @@ do
         "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam"
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed"
     }, function(selected)
         animState.all = selected
         applyAnimations()
@@ -2906,7 +2915,7 @@ do
         "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam"
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed"
     }
     
     feAnimSection:AddDropdown("Idle Animation", animOptions, function(selected)
