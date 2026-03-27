@@ -3532,7 +3532,8 @@ do
             if not efEnabled then return end
             for _, toolName in ipairs(EQUIP_TOOLS) do
                 if child.Name == toolName then
-                    task.wait(0.05)
+                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                    task.wait()
                     if humanoid and humanoid.Parent then
                         humanoid:ChangeState(Enum.HumanoidStateType.Running)
                     end
@@ -3573,7 +3574,7 @@ do
         StopEquipFix()
         efEnabled = false
     end)
-end 
+end
 
 end 
 
