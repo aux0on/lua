@@ -3614,10 +3614,13 @@ do
         end
     end
 
-    local function startNoclip()
+    local function startNoclip(track)
         if noclipConn then noclipConn:Disconnect() noclipConn = nil end
         noclipConn = Services.RunService.Stepped:Connect(function()
-            if not LocalPlayer.Character then stopNoclip() return end
+            if not LocalPlayer.Character or not track.IsPlaying then
+                stopNoclip()
+                return
+            end
             for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
@@ -3629,18 +3632,17 @@ do
         if not h then return end
 
         local track
-        local ok = pcall(function() track = h:PlayEmoteAndGetAnimTrackById(id) end)
-        if not ok or not track then
+        local ok, result = pcall(function() return h:PlayEmoteAndGetAnimTrackById(id) end)
+        if ok and result then
+            track = result
+        else
             local a = Instance.new("Animation")
             a.AnimationId = "rbxassetid://" .. id
             track = h:LoadAnimation(a)
             track:Play()
         end
 
-        startNoclip()
-        track.Stopped:Connect(function()
-            stopNoclip()
-        end)
+        startNoclip(track)
     end
 
     local function triggerEmote()
