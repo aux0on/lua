@@ -3655,10 +3655,10 @@ end
         loopThread = task.spawn(function()
             while atOn do
                 pcall(function()
-                    local throwBtn = LocalPlayer.PlayerGui.GameplayControlsUI.TouchControls.RightBar.Throw
-                    if throwBtn then
-                        throwBtn.Activated:Fire()
-                    end
+                    local events = LocalPlayer.Character.Knife.Events
+                    events.ThrowCharge:Fire()
+                    task.wait(0.1)
+                    events.ThrowHold:Fire()
                 end)
                 task.wait(throwSpeed)
             end
