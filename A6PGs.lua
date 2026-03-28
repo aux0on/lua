@@ -3598,6 +3598,7 @@ do
     local enSection = shared.AddSection("Emote Noclip")
     local btnSz = 50
     local selEmote = nil
+    local noclipDuration = 4
     local enGui, enBtn
     local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
 
@@ -3612,22 +3613,20 @@ do
     end
 
     local function playE(id)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local h = char:FindFirstChild("Humanoid")
-    if not h then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        local h = char:FindFirstChild("Humanoid")
+        if not h then return end
 
-    local ok, track = pcall(function()
-        return h:PlayEmoteAndGetAnimTrackById(id)
-    end)
+        pcall(function()
+            h:PlayEmoteAndGetAnimTrackById(id)
+        end)
 
-    if not ok or not track then return end
-
-    setNoclip(true)
-    track.Stopped:Connect(function()
-        setNoclip(false)
-    end)
-end
+        setNoclip(true)
+        task.delay(noclipDuration, function()
+            setNoclip(false)
+        end)
+    end
 
     local function triggerEmote()
         if not selEmote then return end
@@ -3690,6 +3689,9 @@ end
             enBtn.Size = UDim2.new(0, v, 0, v)
             enBtn.TextSize = v / 2.5
         end
+    end)
+    enSection:AddSlider("Noclip Duration (seconds)", 1, 10, noclipDuration, function(v)
+        noclipDuration = v
     end)
     enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
         if s ~= "Custom" then selEmote = emotes[s] else selEmote = nil end
