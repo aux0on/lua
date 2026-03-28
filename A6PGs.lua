@@ -3641,23 +3641,22 @@ end
     local loopThread = nil
     local atGui, atBtn
     local keybind = Enum.KeyCode.F
-    local throwSpeed = 0.1
+    local throwSpeed = 1
 
     local AutoThrowMaid = nil
     RootMaid:GiveTask(function() if AutoThrowMaid then AutoThrowMaid:DoCleaning() end end)
 
     local function stopLoop()
         if loopThread then task.cancel(loopThread) loopThread = nil end
-        pcall(mouse1release)
     end
 
     local function startLoop()
         stopLoop()
         loopThread = task.spawn(function()
             while atOn do
-                mouse1press()
-                task.wait(throwSpeed)
-                mouse1release()
+                pcall(function()
+                    mouse1click()
+                end)
                 task.wait(throwSpeed)
             end
         end)
@@ -3667,10 +3666,10 @@ end
         atOn = not atOn
         if atOn then
             startLoop()
-            if atBtn then atBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0) end
+            if atBtn then atBtn.TextColor3 = Color3.fromRGB(0, 180, 0) end
         else
             stopLoop()
-            if atBtn then atBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0) end
+            if atBtn then atBtn.TextColor3 = Color3.fromRGB(180, 0, 0) end
         end
     end
 
@@ -3687,28 +3686,45 @@ end
         atBtn.Name = "ATButton"
         atBtn.Text = "AT"
         atBtn.TextSize = btnSz / 2.5
-        atBtn.TextColor3 = Color3.new(1, 1, 1)
-        atBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+        atBtn.TextColor3 = Color3.fromRGB(180, 0, 0)
+        atBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         atBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
         atBtn.Position = UDim2.new(0.8, -btnSz / 2, 0.7, 0)
         Instance.new("UICorner", atBtn).CornerRadius = UDim.new(1, 0)
         ApplyCustomStyle(atBtn)
 
-        atBtn.MouseButton1Click:Connect(toggleAT)
+        local dragging = false
+        local dragStart, startPos
 
-        local d, s, p
         atBtn.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                d = true s = i.Position p = atBtn.Position
-                i.Changed:Connect(function()
-                    if i.UserInputState == Enum.UserInputState.End then d = false end
-                end)
+            if i.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+                dragStart = i.Position
+                startPos = atBtn.Position
             end
         end)
+
         atBtn.InputChanged:Connect(function(i)
-            if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-                local delta = i.Position - s
-                atBtn.Position = UDim2.new(p.X.Scale, p.X.Offset + delta.X, p.Y.Scale, p.Y.Offset + delta.Y)
+            if i.UserInputType == Enum.UserInputType.Touch and dragStart then
+                local delta = i.Position - dragStart
+                if delta.Magnitude > 10 then
+                    dragging = true
+                    atBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                end
+            end
+        end)
+
+        atBtn.InputEnded:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.Touch then
+                if not dragging then toggleAT() end
+                dragging = false
+                dragStart = nil
+            end
+        end)
+
+        atBtn.MouseButton1Click:Connect(function()
+            if not Services.UserInputService.TouchEnabled then
+                toggleAT()
             end
         end)
 
@@ -3736,8 +3752,8 @@ end
             atBtn.TextSize = v / 2.5
         end
     end)
-    atSection:AddSlider("Throw Speed (0.1 - 1)", 1, 10, 1, function(v)
-        throwSpeed = v / 10
+    atSection:AddSlider("Throw Cooldown (seconds)", 1, 10, throwSpeed, function(v)
+        throwSpeed = v
         if atOn then startLoop() end
     end)
     atSection:AddDropdown("Keybind", {"F", "G", "H", "J", "Z", "X", "C", "V"}, function(k)
