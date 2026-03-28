@@ -3584,7 +3584,7 @@ do
         enBtn.TextColor3 = Color3.new(1, 1, 1)
         enBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         enBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
-        enBtn.Position = UDim2.new(0.5, -btnSz / 43, 0.7, 0)
+        enBtn.Position = UDim2.new(0.8, -btnSz / 2, 0.7, 0)
         Instance.new("UICorner", enBtn).CornerRadius = UDim.new(1, 0)
         ApplyCustomStyle(enBtn)
 
