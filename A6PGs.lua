@@ -1885,7 +1885,7 @@ end
 do
     local perkSection = shared.AddSection("Perks")
     local hasteOn = false
-    local hasteSpd = 18
+    local hasteSpd = 19
     local PerkMaid = nil
     RootMaid:GiveTask(function() if PerkMaid then PerkMaid:DoCleaning() end end)
     
