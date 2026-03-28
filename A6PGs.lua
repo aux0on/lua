@@ -3633,7 +3633,7 @@ do
     end)
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
-
+    
  do
     local atSection = shared.AddSection("Auto Throw Knife")
     local btnSz = 50
@@ -3641,29 +3641,24 @@ end
     local loopThread = nil
     local atGui, atBtn
     local keybind = Enum.KeyCode.F
+    local throwSpeed = 0.1
 
     local AutoThrowMaid = nil
     RootMaid:GiveTask(function() if AutoThrowMaid then AutoThrowMaid:DoCleaning() end end)
 
     local function stopLoop()
         if loopThread then task.cancel(loopThread) loopThread = nil end
+        pcall(mouse1release)
     end
 
     local function startLoop()
         stopLoop()
         loopThread = task.spawn(function()
             while atOn do
-                local char = LocalPlayer.Character
-                if char then
-                    local tool = char:FindFirstChildWhichIsA("Tool")
-                    if tool then
-                        local throwEvent = tool:FindFirstChild("ThrowKnife") or tool:FindFirstChild("Throw") or tool:FindFirstChild("Ready")
-                        if throwEvent and throwEvent:IsA("RemoteEvent") then
-                            throwEvent:FireServer()
-                        end
-                    end
-                end
-                task.wait(0.1)
+                mouse1press()
+                task.wait(throwSpeed)
+                mouse1release()
+                task.wait(throwSpeed)
             end
         end)
     end
@@ -3672,10 +3667,10 @@ end
         atOn = not atOn
         if atOn then
             startLoop()
-            if atBtn then atBtn.Text = "AT\nON" end
+            if atBtn then atBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0) end
         else
             stopLoop()
-            if atBtn then atBtn.Text = "AT" end
+            if atBtn then atBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0) end
         end
     end
 
@@ -3693,7 +3688,7 @@ end
         atBtn.Text = "AT"
         atBtn.TextSize = btnSz / 2.5
         atBtn.TextColor3 = Color3.new(1, 1, 1)
-        atBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        atBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
         atBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
         atBtn.Position = UDim2.new(0.8, -btnSz / 2, 0.7, 0)
         Instance.new("UICorner", atBtn).CornerRadius = UDim.new(1, 0)
@@ -3740,6 +3735,10 @@ end
             atBtn.Size = UDim2.new(0, v, 0, v)
             atBtn.TextSize = v / 2.5
         end
+    end)
+    atSection:AddSlider("Throw Speed (0.1 - 1)", 1, 10, 1, function(v)
+        throwSpeed = v / 10
+        if atOn then startLoop() end
     end)
     atSection:AddDropdown("Keybind", {"F", "G", "H", "J", "Z", "X", "C", "V"}, function(k)
         keybind = Enum.KeyCode[k]
