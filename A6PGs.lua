@@ -3655,10 +3655,10 @@ end
         loopThread = task.spawn(function()
             while atOn do
                 pcall(function()
-                    local VIM = game:GetService("VirtualInputManager")
-                    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                    task.wait(0.1)
-                    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    local throwBtn = LocalPlayer.PlayerGui.GameplayControlsUI.TouchControls.RightBar.Throw
+                    if throwBtn then
+                        throwBtn.Activated:Fire()
+                    end
                 end)
                 task.wait(throwSpeed)
             end
