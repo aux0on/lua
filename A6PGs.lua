@@ -3599,110 +3599,31 @@ do
     local btnSz = 50
     local selEmote = nil
     local enGui, enBtn
-    local emotes = {
-        ["Moonwalk"] = "79127989560307",
-        ["Yungblud"] = "15610015346",
-        ["Bouncy Twirl"] = "14353423348",
-        ["Flex Walk"] = "15506506103",
-    }
+    local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
 
     local EmoteNoclipMaid = nil
-    RootMaid:GiveTask(function()
-        if EmoteNoclipMaid then
-            EmoteNoclipMaid:DoCleaning()
-        end
-    end)
+    RootMaid:GiveTask(function() if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() end end)
 
-    local noclipActive = false
-    local noclipConn = nil
-    local descAddedConn = nil
-    local trackStoppedConn = nil
-    local originalCollide = {}
-
-    local function setCharCollide(state)
-        local char = LocalPlayer.Character
-        if not char then return end
-
-        if state then
-            for part, old in pairs(originalCollide) do
-                if part and part.Parent and part:IsA("BasePart") then
-                    part.CanCollide = old
-                end
-            end
-            table.clear(originalCollide)
-            noclipActive = false
-            return
-        end
-
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") and originalCollide[part] == nil then
-                originalCollide[part] = part.CanCollide
-                part.CanCollide = false
-            end
-        end
-        noclipActive = true
-    end
-
-    local function stopNoclip()
-        if noclipConn then
-            noclipConn:Disconnect()
-            noclipConn = nil
-        end
-        if descAddedConn then
-            descAddedConn:Disconnect()
-            descAddedConn = nil
-        end
-        if trackStoppedConn then
-            trackStoppedConn:Disconnect()
-            trackStoppedConn = nil
-        end
-        setCharCollide(true)
-    end
-
-    local function startNoclip(track)
-        stopNoclip()
-
-        setCharCollide(false)
-
-        local char = LocalPlayer.Character
-        if char then
-            descAddedConn = char.DescendantAdded:Connect(function(inst)
-                if noclipActive and inst:IsA("BasePart") then
-                    if originalCollide[inst] == nil then
-                        originalCollide[inst] = inst.CanCollide
-                    end
-                    inst.CanCollide = false
-                end
-            end)
-        end
-
-        if track then
-            trackStoppedConn = track.Stopped:Connect(function()
-                stopNoclip()
-            end)
+    local function setNoclip(enabled)
+        if not LocalPlayer.Character then return end
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = not enabled end
         end
     end
 
     local function playE(id)
-        local char = LocalPlayer.Character
-        local h = char and char:FindFirstChildOfClass("Humanoid")
+        local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
         if not h then return end
 
-        local track
-        local ok, result = pcall(function()
-            return h:PlayEmoteAndGetAnimTrackById(id)
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://" .. id
+        local track = h:LoadAnimation(anim)
+        track:Play()
+
+        setNoclip(true)
+        track.Stopped:Connect(function()
+            setNoclip(false)
         end)
-
-        if ok and result then
-            track = result
-        else
-            local a = Instance.new("Animation")
-            a.AnimationId = "rbxassetid://" .. id
-            track = h:LoadAnimation(a)
-            track:Play()
-        end
-
-        startNoclip(track)
     end
 
     local function triggerEmote()
@@ -3711,32 +3632,66 @@ do
     end
 
     local function mkEnBtn()
-        if EmoteNoclipMaid then
-            EmoteNoclipMaid:DoCleaning()
-            EmoteNoclipMaid = nil
-        end
-
+        if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
         EmoteNoclipMaid = Maid.new()
 
-        enGui = Instance.new("ScreenGui")
+        enGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
         enGui.Name = "ENGui"
         enGui.ResetOnSpawn = false
-        enGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
         EmoteNoclipMaid:GiveTask(enGui)
 
-        enBtn = Instance.new("TextButton")
-        enBtn.Size = UDim2.fromOffset(160, 36)
-        enBtn.Position = UDim2.new(0, 20, 0, 220)
-        enBtn.Text = "Play Emote"
-        enBtn.Parent = enGui
-
-        EmoteNoclipMaid:GiveTask(enBtn)
+        enBtn = Instance.new("TextButton", enGui)
+        enBtn.Name = "ENButton"
+        enBtn.Text = "Emote"
+        enBtn.TextSize = btnSz / 2.5
+        enBtn.TextColor3 = Color3.new(1, 1, 1)
+        enBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        enBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
+        enBtn.Position = UDim2.new(0.5, -btnSz / 2, 0.7, 0)
+        Instance.new("UICorner", enBtn).CornerRadius = UDim.new(1, 0)
+        ApplyCustomStyle(enBtn)
 
         enBtn.MouseButton1Click:Connect(triggerEmote)
+
+        local d, s, p
+        enBtn.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                d = true s = i.Position p = enBtn.Position
+                i.Changed:Connect(function()
+                    if i.UserInputState == Enum.UserInputState.End then d = false end
+                end)
+            end
+        end)
+        enBtn.InputChanged:Connect(function(i)
+            if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                local delta = i.Position - s
+                enBtn.Position = UDim2.new(p.X.Scale, p.X.Offset + delta.X, p.Y.Scale, p.Y.Offset + delta.Y)
+            end
+        end)
+
+        EmoteNoclipMaid:GiveTask(function() setNoclip(false) end)
     end
 
-    mkEnBtn()
+    enSection:AddButton("Emote (Noclip)", triggerEmote)
+    enSection:AddToggle("Enable Bindable Button", function(e)
+        if e then
+            mkEnBtn()
+        else
+            if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
+            setNoclip(false)
+        end
+    end)
+    enSection:AddSlider("Button Size", 30, 150, btnSz, function(v)
+        btnSz = v
+        if enBtn then
+            enBtn.Size = UDim2.new(0, v, 0, v)
+            enBtn.TextSize = v / 2.5
+        end
+    end)
+    enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
+        if s ~= "Custom" then selEmote = emotes[s] else selEmote = nil end
+    end)
+    enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
     
 end 
