@@ -3615,13 +3615,13 @@ do
     local char = LocalPlayer.Character
     if not char then return end
     local h = char:FindFirstChild("Humanoid")
-    local animator = h and h:FindFirstChild("Animator")
-    if not h or not animator then return end
+    if not h then return end
 
-    local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://" .. id
-    local track = animator:LoadAnimation(anim)
-    track:Play()
+    local ok, track = pcall(function()
+        return h:PlayEmoteAndGetAnimTrackById(id)
+    end)
+
+    if not ok or not track then return end
 
     setNoclip(true)
     track.Stopped:Connect(function()
