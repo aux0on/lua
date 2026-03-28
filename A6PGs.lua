@@ -3633,6 +3633,118 @@ do
     end)
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
+
+ do
+    local atSection = shared.AddSection("Auto Throw Knife")
+    local btnSz = 50
+    local atOn = false
+    local loopThread = nil
+    local atGui, atBtn
+    local keybind = Enum.KeyCode.F
+
+    local AutoThrowMaid = nil
+    RootMaid:GiveTask(function() if AutoThrowMaid then AutoThrowMaid:DoCleaning() end end)
+
+    local function stopLoop()
+        if loopThread then task.cancel(loopThread) loopThread = nil end
+    end
+
+    local function startLoop()
+        stopLoop()
+        loopThread = task.spawn(function()
+            while atOn do
+                local char = LocalPlayer.Character
+                if char then
+                    local tool = char:FindFirstChildWhichIsA("Tool")
+                    if tool then
+                        local throwEvent = tool:FindFirstChild("ThrowKnife") or tool:FindFirstChild("Throw") or tool:FindFirstChild("Ready")
+                        if throwEvent and throwEvent:IsA("RemoteEvent") then
+                            throwEvent:FireServer()
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+
+    local function toggleAT()
+        atOn = not atOn
+        if atOn then
+            startLoop()
+            if atBtn then atBtn.Text = "AT\nON" end
+        else
+            stopLoop()
+            if atBtn then atBtn.Text = "AT" end
+        end
+    end
+
+    local function mkAtBtn()
+        if AutoThrowMaid then AutoThrowMaid:DoCleaning() AutoThrowMaid = nil end
+        AutoThrowMaid = Maid.new()
+
+        atGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+        atGui.Name = "ATGui"
+        atGui.ResetOnSpawn = false
+        AutoThrowMaid:GiveTask(atGui)
+
+        atBtn = Instance.new("TextButton", atGui)
+        atBtn.Name = "ATButton"
+        atBtn.Text = "AT"
+        atBtn.TextSize = btnSz / 2.5
+        atBtn.TextColor3 = Color3.new(1, 1, 1)
+        atBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        atBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
+        atBtn.Position = UDim2.new(0.8, -btnSz / 2, 0.7, 0)
+        Instance.new("UICorner", atBtn).CornerRadius = UDim.new(1, 0)
+        ApplyCustomStyle(atBtn)
+
+        atBtn.MouseButton1Click:Connect(toggleAT)
+
+        local d, s, p
+        atBtn.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                d = true s = i.Position p = atBtn.Position
+                i.Changed:Connect(function()
+                    if i.UserInputState == Enum.UserInputState.End then d = false end
+                end)
+            end
+        end)
+        atBtn.InputChanged:Connect(function(i)
+            if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                local delta = i.Position - s
+                atBtn.Position = UDim2.new(p.X.Scale, p.X.Offset + delta.X, p.Y.Scale, p.Y.Offset + delta.Y)
+            end
+        end)
+
+        AutoThrowMaid:GiveTask(Services.UserInputService.InputBegan:Connect(function(i, gp)
+            if gp then return end
+            if i.KeyCode == keybind then toggleAT() end
+        end))
+
+        AutoThrowMaid:GiveTask(function() atOn = false stopLoop() end)
+    end
+
+    atSection:AddToggle("Enable AT Button", function(e)
+        if e then
+            mkAtBtn()
+        else
+            if AutoThrowMaid then AutoThrowMaid:DoCleaning() AutoThrowMaid = nil end
+            atOn = false
+            stopLoop()
+        end
+    end)
+    atSection:AddSlider("Button Size", 30, 150, btnSz, function(v)
+        btnSz = v
+        if atBtn then
+            atBtn.Size = UDim2.new(0, v, 0, v)
+            atBtn.TextSize = v / 2.5
+        end
+    end)
+    atSection:AddDropdown("Keybind", {"F", "G", "H", "J", "Z", "X", "C", "V"}, function(k)
+        keybind = Enum.KeyCode[k]
+    end)
+end
     
 end 
 
