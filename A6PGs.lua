@@ -3604,13 +3604,24 @@ do
     local EmoteNoclipMaid = nil
     RootMaid:GiveTask(function() if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() end end)
 
-    local function setNoclip(enabled)
+    local noclipConn = nil
+
+    local function stopNoclip()
+        if noclipConn then noclipConn:Disconnect() noclipConn = nil end
         if not LocalPlayer.Character then return end
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not enabled
-            end
+            if part:IsA("BasePart") then part.CanCollide = true end
         end
+    end
+
+    local function startNoclip()
+        if noclipConn then noclipConn:Disconnect() noclipConn = nil end
+        noclipConn = Services.RunService.Stepped:Connect(function()
+            if not LocalPlayer.Character then stopNoclip() return end
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end)
     end
 
     local function playE(id)
@@ -3626,9 +3637,9 @@ do
             track:Play()
         end
 
-        setNoclip(true)
+        startNoclip()
         track.Stopped:Connect(function()
-            setNoclip(false)
+            stopNoclip()
         end)
     end
 
@@ -3650,6 +3661,7 @@ do
         enBtn.Name = "ENButton"
         enBtn.Text = "Emote"
         enBtn.TextSize = btnSz / 2.5
+        enBtn.TextColor3 = Color3.new(1, 1, 1)
         enBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         enBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
         enBtn.Position = UDim2.new(0.5, -btnSz / 2, 0.7, 0)
@@ -3674,7 +3686,7 @@ do
             end
         end)
 
-        EmoteNoclipMaid:GiveTask(function() setNoclip(false) end)
+        EmoteNoclipMaid:GiveTask(function() stopNoclip() end)
     end
 
     enSection:AddButton("Emote (Noclip)", triggerEmote)
@@ -3683,7 +3695,7 @@ do
             mkEnBtn()
         else
             if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
-            setNoclip(false)
+            stopNoclip()
         end
     end)
     enSection:AddSlider("Button Size", 30, 150, btnSz, function(v)
