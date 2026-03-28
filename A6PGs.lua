@@ -3594,6 +3594,111 @@ do
     end)
 end
 
+do
+    local enSection = shared.AddSection("Emote Noclip")
+    local btnSz = 50
+    local selEmote = nil
+    local enGui, enBtn
+    local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
+
+    local EmoteNoclipMaid = nil
+    RootMaid:GiveTask(function() if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() end end)
+
+    local function setNoclip(enabled)
+        if not LocalPlayer.Character then return end
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not enabled
+            end
+        end
+    end
+
+    local function playE(id)
+        local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+        if not h then return end
+
+        local track
+        local ok = pcall(function() track = h:PlayEmoteAndGetAnimTrackById(id) end)
+        if not ok or not track then
+            local a = Instance.new("Animation")
+            a.AnimationId = "rbxassetid://" .. id
+            track = h:LoadAnimation(a)
+            track:Play()
+        end
+
+        setNoclip(true)
+        track.Stopped:Connect(function()
+            setNoclip(false)
+        end)
+    end
+
+    local function triggerEmote()
+        if not selEmote then return end
+        playE(selEmote)
+    end
+
+    local function mkEnBtn()
+        if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
+        EmoteNoclipMaid = Maid.new()
+
+        enGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+        enGui.Name = "ENGui"
+        enGui.ResetOnSpawn = false
+        EmoteNoclipMaid:GiveTask(enGui)
+
+        enBtn = Instance.new("TextButton", enGui)
+        enBtn.Name = "ENButton"
+        enBtn.Text = "Emote"
+        enBtn.TextSize = btnSz / 2.5
+        enBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        enBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
+        enBtn.Position = UDim2.new(0.5, -btnSz / 2, 0.7, 0)
+        Instance.new("UICorner", enBtn).CornerRadius = UDim.new(1, 0)
+        ApplyCustomStyle(enBtn)
+
+        enBtn.MouseButton1Click:Connect(triggerEmote)
+
+        local d, s, p
+        enBtn.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                d = true s = i.Position p = enBtn.Position
+                i.Changed:Connect(function()
+                    if i.UserInputState == Enum.UserInputState.End then d = false end
+                end)
+            end
+        end)
+        enBtn.InputChanged:Connect(function(i)
+            if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                local delta = i.Position - s
+                enBtn.Position = UDim2.new(p.X.Scale, p.X.Offset + delta.X, p.Y.Scale, p.Y.Offset + delta.Y)
+            end
+        end)
+
+        EmoteNoclipMaid:GiveTask(function() setNoclip(false) end)
+    end
+
+    enSection:AddButton("Emote (Noclip)", triggerEmote)
+    enSection:AddToggle("Enable Bindable Button", function(e)
+        if e then
+            mkEnBtn()
+        else
+            if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
+            setNoclip(false)
+        end
+    end)
+    enSection:AddSlider("Button Size", 30, 150, btnSz, function(v)
+        btnSz = v
+        if enBtn then
+            enBtn.Size = UDim2.new(0, v, 0, v)
+            enBtn.TextSize = v / 2.5
+        end
+    end)
+    enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
+        if s ~= "Custom" then selEmote = emotes[s] else selEmote = nil end
+    end)
+    enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
+end
+    
 end 
 
 RootMaid:GiveTask(function()
