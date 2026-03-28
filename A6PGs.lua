@@ -3612,19 +3612,22 @@ do
     end
 
     local function playE(id)
-        local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-        if not h then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local h = char:FindFirstChild("Humanoid")
+    local animator = h and h:FindFirstChild("Animator")
+    if not h or not animator then return end
 
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://" .. id
-        local track = h:LoadAnimation(anim)
-        track:Play()
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://" .. id
+    local track = animator:LoadAnimation(anim)
+    track:Play()
 
-        setNoclip(true)
-        track.Stopped:Connect(function()
-            setNoclip(false)
-        end)
-    end
+    setNoclip(true)
+    track.Stopped:Connect(function()
+        setNoclip(false)
+    end)
+end
 
     local function triggerEmote()
         if not selEmote then return end
