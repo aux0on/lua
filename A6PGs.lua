@@ -3647,31 +3647,23 @@ end
     RootMaid:GiveTask(function() if AutoThrowMaid then AutoThrowMaid:DoCleaning() end end)
 
     local function stopLoop()
-        if loopThread then task.cancel(loopThread) loopThread = nil end
-    end
+    if loopThread then task.cancel(loopThread) loopThread = nil end
+end
 
-    local function startLoop()
-        stopLoop()
-        loopThread = task.spawn(function()
-            while atOn do
-                pcall(function()
-                    mouse1click()
-                end)
-                task.wait(throwSpeed)
-            end
-        end)
-    end
-
-    local function toggleAT()
-        atOn = not atOn
-        if atOn then
-            startLoop()
-            if atBtn then atBtn.TextColor3 = Color3.fromRGB(0, 180, 0) end
-        else
-            stopLoop()
-            if atBtn then atBtn.TextColor3 = Color3.fromRGB(180, 0, 0) end
+local function startLoop()
+    stopLoop()
+    loopThread = task.spawn(function()
+        while atOn do
+            pcall(function()
+                local VIM = game:GetService("VirtualInputManager")
+                VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                task.wait(0.1)
+                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            end)
+            task.wait(throwSpeed)
         end
-    end
+    end)
+end
 
     local function mkAtBtn()
         if AutoThrowMaid then AutoThrowMaid:DoCleaning() AutoThrowMaid = nil end
