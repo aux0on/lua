@@ -667,7 +667,7 @@ do
                 local args = {...}
                 if args[1] == "Murderer" then
                     Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer("Dual", "Effects")
-                    task.delay(18, function()
+                    task.delay(20, function()
                         if dualEnabled then
                             Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer(selectedDualEffect, "Effects")
                         end
