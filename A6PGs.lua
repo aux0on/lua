@@ -666,8 +666,9 @@ do
             DualEffectMaid:GiveTask(RoleSelect.OnClientEvent:Connect(function(...)
                 local args = {...}
                 if args[1] == "Murderer" then
+                    task.delay(7, function()
                     Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer("Dual", "Effects")
-                    task.delay(20, function()
+                    task.delay(5, function()
                         if dualEnabled then
                             Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer(selectedDualEffect, "Effects")
                         end
