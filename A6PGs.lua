@@ -651,6 +651,13 @@ do
     local DualEffectMaid = nil
     local selectedDualEffect = "Electric"
     
+    duelSection:AddDropdown("Select Second Effect", {
+        "Vampiric2024", "SynthEffect2025", "Sunbeams2024", "Snowstorm2024", "Retro2025", "Radioactive", "Musical",
+        "Heatwave2025", "Heartify", "Gifts2024", "Ghosts2024", "FlamingoEffect2025", "Burn", "Cursed2024",
+        "Starry2024", "Bats2024", "Aquatic2025", "Jellyfish2024", "Carrots2025", "BlueFire", "Rainbows2025",
+        "Elitify", "Electric", "Ghostify", "SweetEffect26"
+    }, function(s) selectedDualEffect = s end)
+    
     duelSection:AddToggle("Auto Equip Dual Effect", function(e)
         if DualEffectMaid then DualEffectMaid:DoCleaning() DualEffectMaid = nil end
         dualEnabled = e
