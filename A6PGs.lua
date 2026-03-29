@@ -655,7 +655,7 @@ do
         "Vampiric2024", "SynthEffect2025", "Sunbeams2024", "Snowstorm2024", "Retro2025", "Radioactive", "Musical",
         "Heatwave2025", "Heartify", "Gifts2024", "Ghosts2024", "FlamingoEffect2025", "Burn", "Cursed2024",
         "Starry2024", "Bats2024", "Aquatic2025", "Jellyfish2024", "Carrots2025", "BlueFire", "Rainbows2025",
-        "Elitify", "Electric", "Ghostify"
+        "Elitify", "Electric", "Ghostify", "SweetEffect26"
     }, function(s) selectedDualEffect = s end)
     
     duelSection:AddToggle("Auto Equip Dual Effect", function(e)
@@ -3632,136 +3632,6 @@ do
         if s ~= "Custom" then selEmote = emotes[s] else selEmote = nil end
     end)
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
-end
-    
- do
-    local atSection = shared.AddSection("Auto Throw Knife")
-    local btnSz = 50
-    local atOn = false
-    local loopThread = nil
-    local atGui, atBtn
-    local keybind = Enum.KeyCode.F
-    local throwSpeed = 1
-
-    local AutoThrowMaid = nil
-    RootMaid:GiveTask(function() if AutoThrowMaid then AutoThrowMaid:DoCleaning() end end)
-
-    local function stopLoop()
-        if loopThread then task.cancel(loopThread) loopThread = nil end
-    end
-
-    local function startLoop()
-        stopLoop()
-        loopThread = task.spawn(function()
-            while atOn do
-                pcall(function()
-                    local events = LocalPlayer.Character.Knife.Events
-                    events.ThrowCharge:Fire()
-                    task.wait(0.1)
-                    events.ThrowHold:Fire()
-                end)
-                task.wait(throwSpeed)
-            end
-        end)
-    end
-
-    local function toggleAT()
-        atOn = not atOn
-        if atOn then
-            startLoop()
-            if atBtn then atBtn.TextColor3 = Color3.fromRGB(0, 180, 0) end
-        else
-            stopLoop()
-            if atBtn then atBtn.TextColor3 = Color3.fromRGB(180, 0, 0) end
-        end
-    end
-
-    local function mkAtBtn()
-        if AutoThrowMaid then AutoThrowMaid:DoCleaning() AutoThrowMaid = nil end
-        AutoThrowMaid = Maid.new()
-
-        atGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-        atGui.Name = "ATGui"
-        atGui.ResetOnSpawn = false
-        AutoThrowMaid:GiveTask(atGui)
-
-        atBtn = Instance.new("TextButton", atGui)
-        atBtn.Name = "ATButton"
-        atBtn.Text = "AT"
-        atBtn.TextSize = btnSz / 2.5
-        atBtn.TextColor3 = Color3.fromRGB(180, 0, 0)
-        atBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        atBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
-        atBtn.Position = UDim2.new(0.8, -btnSz / 2, 0.7, 0)
-        Instance.new("UICorner", atBtn).CornerRadius = UDim.new(1, 0)
-        ApplyCustomStyle(atBtn)
-
-        local dragging = false
-        local dragStart, startPos
-
-        atBtn.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-                dragStart = i.Position
-                startPos = atBtn.Position
-            end
-        end)
-
-        atBtn.InputChanged:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.Touch and dragStart then
-                local delta = i.Position - dragStart
-                if delta.Magnitude > 10 then
-                    dragging = true
-                    atBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                end
-            end
-        end)
-
-        atBtn.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.Touch then
-                if not dragging then toggleAT() end
-                dragging = false
-                dragStart = nil
-            end
-        end)
-
-        atBtn.MouseButton1Click:Connect(function()
-            if not Services.UserInputService.TouchEnabled then
-                toggleAT()
-            end
-        end)
-
-        AutoThrowMaid:GiveTask(Services.UserInputService.InputBegan:Connect(function(i, gp)
-            if gp then return end
-            if i.KeyCode == keybind then toggleAT() end
-        end))
-
-        AutoThrowMaid:GiveTask(function() atOn = false stopLoop() end)
-    end
-
-    atSection:AddToggle("Enable AT Button", function(e)
-        if e then
-            mkAtBtn()
-        else
-            if AutoThrowMaid then AutoThrowMaid:DoCleaning() AutoThrowMaid = nil end
-            atOn = false
-            stopLoop()
-        end
-    end)
-    atSection:AddSlider("Button Size", 30, 150, btnSz, function(v)
-        btnSz = v
-        if atBtn then
-            atBtn.Size = UDim2.new(0, v, 0, v)
-            atBtn.TextSize = v / 2.5
-        end
-    end)
-    atSection:AddSlider("Throw Cooldown (seconds)", 1, 10, throwSpeed, function(v)
-        throwSpeed = v
-        if atOn then startLoop() end
-    end)
-    atSection:AddDropdown("Keybind", {"F", "G", "H", "J", "Z", "X", "C", "V"}, function(k)
-        keybind = Enum.KeyCode[k]
-    end)
 end
     
 end 
