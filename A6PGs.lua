@@ -3633,8 +3633,8 @@ do
     end)
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
-
-    local section = shared.AddSection("Firefly Jar Jump+")
+ 
+    local section = shared.AddSection("Firefly Jump+")
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -3655,145 +3655,47 @@ local timerGuiEnabled = false
 local debounce = false
 local fjSize = 40
 local timerSize = 40
-local autoGetJar = false
 local justRespawned = false
 
 local activeTouches = {}
 local TAP_MOVEMENT_THRESHOLD = 10
 local TAP_TIME_THRESHOLD = 0.3
 
-local JAR_NAMES = {"FireflyJar", "Firefly Jar", "FireFlyJar"}
+local JAR_NAME = "Fireflies"
+local HOLD_DURATION = 4
 
 local FireflyJumpMaid = nil
 local FireflyJumpGuiMaid = nil
 local FireflyJumpTimerMaid = nil
+local ClickFireflyJumpMaid = nil
 
-section:AddLabel("Different Firefly Jar Jump Options")
+local holdActive = false
 
-function CreateFJButton()
-    if FireflyJumpGuiMaid then FireflyJumpGuiMaid:DoCleaning() FireflyJumpGuiMaid = nil end
-    FireflyJumpGuiMaid = Maid.new()
-    
-    fjGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-    fjGui.Name = "FJGui"
-    fjGui.ResetOnSpawn = false
-    FireflyJumpGuiMaid:GiveTask(fjGui)
-    
-    fjBtn = Instance.new("TextButton", fjGui)
-    fjBtn.Name = "FJButton"
-    fjBtn.Text = "Ready"
-    fjBtn.TextSize = 14
-    fjBtn.Size = UDim2.new(0, fjSize, 0, fjSize)
-    fjBtn.Position = UDim2.new(0.5, -fjSize/2, 0.8, 0)
-    fjBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    fjBtn.TextColor3 = Color3.new(1, 1, 1)
-    fjBtn.Font = Enum.Font.SourceSansLight
-    fjBtn.BackgroundTransparency = 0.3
-    Instance.new("UICorner", fjBtn).CornerRadius = UDim.new(1, 0)
-    
-    local stroke = Instance.new("UIStroke", fjBtn)
-    stroke.Thickness = 2.5
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    
-    local gradient = Instance.new("UIGradient", stroke)
-    gradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 200, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-    }
-    gradient.Rotation = 45
-    
-    fjBtn.MouseButton1Click:Connect(function()
-        if not onCooldown and not debounce then
-            FastFireflyJump()
-        end
-    end)
-    
-    local dragging, dragStart, startPos
-    fjBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = fjBtn.Position
-            input.Changed:Connect(function() 
-                if input.UserInputState == Enum.UserInputState.End then 
-                    dragging = false 
-                end 
-            end)
-        end
-    end)
-    
-    fjBtn.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            fjBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
+section:AddLabel("Different Firefly Jump Options")
 
-function CreateTimerDisplay()
-    if FireflyJumpTimerMaid then FireflyJumpTimerMaid:DoCleaning() FireflyJumpTimerMaid = nil end
-    FireflyJumpTimerMaid = Maid.new()
-    
-    timerGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-    timerGui.Name = "FJTimerGui"
-    timerGui.ResetOnSpawn = false
-    FireflyJumpTimerMaid:GiveTask(timerGui)
-    
-    timerDisplay = Instance.new("TextLabel", timerGui)
-    timerDisplay.Name = "TimerDisplay"
-    timerDisplay.Text = "Ready"
-    timerDisplay.TextSize = 14
-    timerDisplay.Size = UDim2.new(0, timerSize, 0, timerSize)
-    timerDisplay.Position = UDim2.new(0.5, -timerSize/2 + 60, 0.8, 0)
-    timerDisplay.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    timerDisplay.TextColor3 = Color3.new(1, 1, 1)
-    timerDisplay.Font = Enum.Font.SourceSansLight
-    timerDisplay.BackgroundTransparency = 0.3
-    Instance.new("UICorner", timerDisplay).CornerRadius = UDim.new(1, 0)
-    
-    local stroke = Instance.new("UIStroke", timerDisplay)
-    stroke.Thickness = 2.5
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    
-    local gradient = Instance.new("UIGradient", stroke)
-    gradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 200, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-    }
-    gradient.Rotation = 45
-    
-    local dragging = false
-    local dragStart, startPos
-    
-    timerDisplay.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = timerDisplay.Position
-            input.Changed:Connect(function() 
-                if input.UserInputState == Enum.UserInputState.End then 
-                    dragging = false 
-                end 
-            end)
-        end
-    end)
-    
-    timerDisplay.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            timerDisplay.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
-function GetCenterPosition()
+function GetJarInHand()
     local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local camera = Workspace.CurrentCamera
-        local lookDir = camera.CFrame.LookVector
-        return character.HumanoidRootPart.Position + (lookDir * 5)
+    if not character then return nil end
+    return character:FindFirstChild(JAR_NAME)
+end
+
+function GetAnyJar()
+    local character = LocalPlayer.Character
+    if not character then return false, nil end
+
+    local jar = character:FindFirstChild(JAR_NAME)
+    if jar then return true, jar end
+
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        jar = backpack:FindFirstChild(JAR_NAME)
+        if jar then
+            jar.Parent = character
+            return true, jar
+        end
     end
-    return nil
+
+    return false, nil
 end
 
 function MakeCharacterJump()
@@ -3808,12 +3710,10 @@ end
 
 function ResetCooldown()
     onCooldown = false
-    
     if fjBtn and fjBtn.Parent then
         fjBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         fjBtn.Text = "Ready"
     end
-    
     if timerDisplay and timerDisplay.Parent then
         timerDisplay.Text = "Ready"
         timerDisplay.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -3823,92 +3723,25 @@ end
 function StartCooldown()
     onCooldown = true
     debounce = false
-    
+
     if fjBtn then
         fjBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         fjBtn.Text = "Wait"
     end
-    
     if timerDisplay then
         timerDisplay.Text = "Wait"
         timerDisplay.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     end
-    
+
     task.spawn(function()
         for i = 22, 1, -1 do
             if not onCooldown then break end
-            
-            if fjBtn and fjBtn.Parent then
-                fjBtn.Text = tostring(i)
-            end
-            
-            if timerDisplay then
-                timerDisplay.Text = tostring(i)
-            end
+            if fjBtn and fjBtn.Parent then fjBtn.Text = tostring(i) end
+            if timerDisplay and timerDisplay.Parent then timerDisplay.Text = tostring(i) end
             task.wait(1)
         end
-        
-        if onCooldown then
-            ResetCooldown()
-        end
+        if onCooldown then ResetCooldown() end
     end)
-end
-
-function GetJarInHand()
-    local character = LocalPlayer.Character
-    if not character then return nil end
-    
-    for _, jarName in ipairs(JAR_NAMES) do
-        local jar = character:FindFirstChild(jarName)
-        if jar then return jar end
-    end
-    
-    return nil
-end
-
-function GetAnyJar()
-    local character = LocalPlayer.Character
-    if not character then return false, nil end
-    
-    for _, jarName in ipairs(JAR_NAMES) do
-        local jar = character:FindFirstChild(jarName)
-        if jar then return true, jar end
-    end
-    
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if backpack then
-        for _, jarName in ipairs(JAR_NAMES) do
-            local jar = backpack:FindFirstChild(jarName)
-            if jar then
-                jar.Parent = character
-                return true, jar
-            end
-        end
-    end
-    
-    local success = pcall(function()
-        ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FireflyJar")
-    end)
-    
-    if success then
-        for _ = 1, 5 do
-            for _, jarName in ipairs(JAR_NAMES) do
-                local jar = character:FindFirstChild(jarName)
-                if jar then return true, jar end
-                
-                if backpack then
-                    jar = backpack:FindFirstChild(jarName)
-                    if jar then
-                        jar.Parent = character
-                        return true, jar
-                    end
-                end
-            end
-            task.wait(0.05)
-        end
-    end
-    
-    return false, nil
 end
 
 function FastFireflyJump()
@@ -3918,25 +3751,17 @@ function FastFireflyJump()
     local success, jar = GetAnyJar()
 
     if success and jar then
-        -- wait 4 seconds for the cap delay before firing
-        task.wait(4)
-
-        local position = GetCenterPosition()
-        if position then
-            local remote = jar:FindFirstChild("Remote")
-            if remote then
-                pcall(function()
-                    remote:FireServer(CFrame.new(position), 50)
-                end)
-            end
-
-            MakeCharacterJump()
-
-            task.spawn(function()
-                task.wait(0.1)
-                StartCooldown()
+        local remote = jar:FindFirstChild("Remote")
+        if remote then
+            pcall(function()
+                remote:InvokeServer("Button1Down")
             end)
         end
+        MakeCharacterJump()
+        task.spawn(function()
+            task.wait(0.1)
+            StartCooldown()
+        end)
     end
 
     task.spawn(function()
@@ -3945,26 +3770,160 @@ function FastFireflyJump()
     end)
 end
 
-local ClickFireflyJumpMaid = nil
+function StartHoldTimer()
+    if holdActive or onCooldown or debounce or justRespawned then return end
+
+    local jar = GetJarInHand()
+    if not jar then return end
+
+    holdActive = true
+
+    task.spawn(function()
+        for i = HOLD_DURATION, 1, -1 do
+            if not holdActive then return end
+            if fjBtn and fjBtn.Parent then
+                fjBtn.Text = tostring(i)
+                fjBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            end
+            if timerDisplay and timerDisplay.Parent then
+                timerDisplay.Text = tostring(i)
+                timerDisplay.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            end
+            task.wait(1)
+        end
+
+        if not holdActive then return end
+        holdActive = false
+        FastFireflyJump()
+    end)
+end
+
+function CreateFJButton()
+    if FireflyJumpGuiMaid then FireflyJumpGuiMaid:DoCleaning() FireflyJumpGuiMaid = nil end
+    FireflyJumpGuiMaid = Maid.new()
+
+    fjGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+    fjGui.Name = "FJGui"
+    fjGui.ResetOnSpawn = false
+    FireflyJumpGuiMaid:GiveTask(fjGui)
+
+    fjBtn = Instance.new("TextButton", fjGui)
+    fjBtn.Name = "FJButton"
+    fjBtn.Text = "Ready"
+    fjBtn.TextSize = 14
+    fjBtn.Size = UDim2.new(0, fjSize, 0, fjSize)
+    fjBtn.Position = UDim2.new(0.5, -fjSize/2, 0.8, 0)
+    fjBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    fjBtn.TextColor3 = Color3.new(1, 1, 1)
+    fjBtn.Font = Enum.Font.SourceSansLight
+    fjBtn.BackgroundTransparency = 0.3
+    Instance.new("UICorner", fjBtn).CornerRadius = UDim.new(1, 0)
+
+    local stroke = Instance.new("UIStroke", fjBtn)
+    stroke.Thickness = 2.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    local gradient = Instance.new("UIGradient", stroke)
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    }
+    gradient.Rotation = 45
+
+    fjBtn.MouseButton1Click:Connect(function()
+        if not onCooldown and not debounce then
+            StartHoldTimer()
+        end
+    end)
+
+    local dragging, dragStart, startPos
+    fjBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = fjBtn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    fjBtn.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            fjBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+function CreateTimerDisplay()
+    if FireflyJumpTimerMaid then FireflyJumpTimerMaid:DoCleaning() FireflyJumpTimerMaid = nil end
+    FireflyJumpTimerMaid = Maid.new()
+
+    timerGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+    timerGui.Name = "TimerGui"
+    timerGui.ResetOnSpawn = false
+    FireflyJumpTimerMaid:GiveTask(timerGui)
+
+    timerDisplay = Instance.new("TextLabel", timerGui)
+    timerDisplay.Name = "TimerDisplay"
+    timerDisplay.Text = "Ready"
+    timerDisplay.TextSize = 14
+    timerDisplay.Size = UDim2.new(0, timerSize, 0, timerSize)
+    timerDisplay.Position = UDim2.new(0.5, -timerSize/2 + 60, 0.8, 0)
+    timerDisplay.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    timerDisplay.TextColor3 = Color3.new(1, 1, 1)
+    timerDisplay.Font = Enum.Font.SourceSansLight
+    timerDisplay.BackgroundTransparency = 0.3
+    Instance.new("UICorner", timerDisplay).CornerRadius = UDim.new(1, 0)
+
+    local stroke = Instance.new("UIStroke", timerDisplay)
+    stroke.Thickness = 2.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    local gradient = Instance.new("UIGradient", stroke)
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 85, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    }
+    gradient.Rotation = 45
+
+    local dragging = false
+    local dragStart, startPos
+    timerDisplay.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = timerDisplay.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    timerDisplay.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            timerDisplay.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
 
 function SetupJarEquipDetection()
     if ClickFireflyJumpMaid then ClickFireflyJumpMaid:DoCleaning() ClickFireflyJumpMaid = nil end
     if not clickFireflyJumpEnabled then return end
-    
+
     local character = LocalPlayer.Character
     if not character then return end
-    
+
     ClickFireflyJumpMaid = Maid.new()
-    
+
     ClickFireflyJumpMaid:GiveTask(character.ChildAdded:Connect(function(child)
         if not clickFireflyJumpEnabled or justRespawned then return end
-        
-        for _, jarName in ipairs(JAR_NAMES) do
-            if child.Name == jarName then
-                if not onCooldown and not debounce then
-                    FastFireflyJump()
-                end
-                break
+        if child.Name == JAR_NAME then
+            if not onCooldown and not debounce then
+                StartHoldTimer()
             end
         end
     end))
@@ -3975,10 +3934,10 @@ RootMaid:GiveTask(FireflyJumpMaid)
 
 FireflyJumpMaid:GiveTask(UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    
-    if input.UserInputType == Enum.UserInputType.Touch or 
+
+    if input.UserInputType == Enum.UserInputType.Touch or
        input.UserInputType == Enum.UserInputType.MouseButton1 then
-        
+
         activeTouches[input] = {
             startPosition = input.Position,
             startTime = tick(),
@@ -3990,54 +3949,48 @@ end))
 FireflyJumpMaid:GiveTask(UserInputService.InputChanged:Connect(function(input)
     local touchData = activeTouches[input]
     if not touchData then return end
-    
+
     local delta = input.Position - touchData.startPosition
     local distance = math.sqrt(delta.X * delta.X + delta.Y * delta.Y)
-    
+
     if distance > TAP_MOVEMENT_THRESHOLD then
         touchData.moved = true
     end
 end))
 
 FireflyJumpMaid:GiveTask(UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if gameProcessed then 
+    if gameProcessed then
         activeTouches[input] = nil
-        return 
+        return
     end
-    
+
     local touchData = activeTouches[input]
     if not touchData then return end
-    
+
     local touchDuration = tick() - touchData.startTime
     local isRealTap = not touchData.moved and touchDuration <= TAP_TIME_THRESHOLD
-    
+
     if isRealTap and fireflyJumpEnabled and not onCooldown and not debounce then
-        local jarInHand = GetJarInHand()
-        if jarInHand then
-            FastFireflyJump()
+        local jar = GetJarInHand()
+        if jar then
+            StartHoldTimer()
         end
     end
-    
+
     activeTouches[input] = nil
 end))
 
 FireflyJumpMaid:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
     ResetCooldown()
+    holdActive = false
     activeTouches = {}
     justRespawned = true
-    
+
     task.spawn(function()
         task.wait(1)
         justRespawned = false
     end)
-    
-    if autoGetJar then
-        task.wait(1.2)
-        pcall(function()
-            ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FireflyJar")
-        end)
-    end
-    
+
     if clickFireflyJumpEnabled then
         task.wait(1.2)
         SetupJarEquipDetection()
@@ -4050,7 +4003,6 @@ end)
 
 section:AddToggle("Enable Equip Firefly Jump", function(bool)
     clickFireflyJumpEnabled = bool
-    
     if bool then
         SetupJarEquipDetection()
     else
@@ -4058,22 +4010,18 @@ section:AddToggle("Enable Equip Firefly Jump", function(bool)
     end
 end)
 
-section:AddToggle("Auto-Get Firefly Jar", function(bool)
-    autoGetJar = bool
-end)
-
 section:AddToggle("Enable FJ Button", function(e)
     guiEnabled = e
-    if e then 
-        CreateFJButton() 
-    else 
+    if e then
+        CreateFJButton()
+    else
         if FireflyJumpGuiMaid then FireflyJumpGuiMaid:DoCleaning() FireflyJumpGuiMaid = nil end
     end
 end)
 
 section:AddSlider("FJ Button Size", 30, 150, fjSize, function(s)
     fjSize = s
-    if fjBtn then 
+    if fjBtn then
         fjBtn.Size = UDim2.new(0, s, 0, s)
         fjBtn.Position = UDim2.new(0.5, -s/2, 0.8, 0)
     end
@@ -4081,16 +4029,16 @@ end)
 
 section:AddToggle("Enable Timer Display", function(e)
     timerGuiEnabled = e
-    if e then 
-        CreateTimerDisplay() 
-    else 
+    if e then
+        CreateTimerDisplay()
+    else
         if FireflyJumpTimerMaid then FireflyJumpTimerMaid:DoCleaning() FireflyJumpTimerMaid = nil end
     end
 end)
 
 section:AddSlider("Timer Display Size", 30, 150, timerSize, function(s)
     timerSize = s
-    if timerDisplay then 
+    if timerDisplay then
         timerDisplay.Size = UDim2.new(0, s, 0, s)
         timerDisplay.Position = UDim2.new(0.5, -s/2 + 60, 0.8, 0)
     end
@@ -4098,7 +4046,7 @@ end)
 
 section:AddKeybind("Manual Firefly Jump", "E", function()
     if not onCooldown and not debounce then
-        FastFireflyJump()
+        StartHoldTimer()
     end
 end)
 
@@ -4107,14 +4055,14 @@ RootMaid:GiveTask(function()
     if FireflyJumpTimerMaid then FireflyJumpTimerMaid:DoCleaning() end
     if ClickFireflyJumpMaid then ClickFireflyJumpMaid:DoCleaning() end
     if FireflyJumpMaid then FireflyJumpMaid:DoCleaning() end
-    
+
+    holdActive = false
     activeTouches = {}
     ResetCooldown()
     fireflyJumpEnabled = false
     clickFireflyJumpEnabled = false
     guiEnabled = false
     timerGuiEnabled = false
-    autoGetJar = false
 end)
     
 end 
