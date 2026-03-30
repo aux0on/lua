@@ -644,21 +644,21 @@ do
     RootMaid:GiveTask(function() if TrickshotMaid then TrickshotMaid:DoCleaning() end end)
 end
 
-do
-    local dualSection = shared.AddSection("Dual Effect")
-    dualSection:AddLabel("Must Own Dual Effect + Selected Effect")
+ do
+    local duelSection = shared.AddSection("Dual Effect")
+    duelSection:AddLabel("Must Own Dual Effect + Selected Effect")
     local dualEnabled = false
     local DualEffectMaid = nil
     local selectedDualEffect = "Electric"
     
-    dualSection:AddDropdown("Select Second Effect", {
+    duelSection:AddDropdown("Select Second Effect", {
         "Vampiric2024", "SynthEffect2025", "Sunbeams2024", "Snowstorm2024", "Retro2025", "Radioactive", "Musical",
         "Heatwave2025", "Heartify", "Gifts2024", "Ghosts2024", "FlamingoEffect2025", "Burn", "Cursed2024",
         "Starry2024", "Bats2024", "Aquatic2025", "Jellyfish2024", "Carrots2025", "BlueFire", "Rainbows2025",
         "Elitify", "Electric", "Ghostify", "SweetEffect26"
     }, function(s) selectedDualEffect = s end)
     
-    dualSection:AddToggle("Auto Equip Dual Effect", function(e)
+    duelSection:AddToggle("Auto Equip Dual Effect", function(e)
         if DualEffectMaid then DualEffectMaid:DoCleaning() DualEffectMaid = nil end
         dualEnabled = e
         if e then
@@ -666,12 +666,8 @@ do
             DualEffectMaid:GiveTask(RoleSelect.OnClientEvent:Connect(function(...)
                 local args = {...}
                 if args[1] == "Murderer" then
-                    task.delay(5, function()
-                        if dualEnabled then
-                            Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer("Dual", "Effects")
-                        end
-                    end)
-                    task.delay(17, function()
+                    Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer("Dual", "Effects")
+                    task.delay(18, function()
                         if dualEnabled then
                             Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer(selectedDualEffect, "Effects")
                         end
