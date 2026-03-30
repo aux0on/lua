@@ -3360,6 +3360,9 @@ do
     local ggButtonGui = nil
     local ggButton = nil
     local ggButtonSize = 60
+    local autoGrabEnabled = false
+    local autoGrabMaid = Maid.new()
+    RootMaid:GiveTask(autoGrabMaid)
 
     local function msg(t, txt, d)
         StarterGui:SetCore("SendNotification", {Title=t, Text=txt, Duration=d})
@@ -3413,6 +3416,26 @@ do
 
         root.CFrame = savedPos
         msg("Grab Gun", "Returned to original position!", 2)
+    end
+
+    local function setupAutoGrab()
+        autoGrabMaid:DoCleaning()
+        if not autoGrabEnabled then return end
+
+        -- Watch for any GunDrop added to workspace
+        autoGrabMaid:GiveTask(workspace.DescendantAdded:Connect(function(obj)
+            if not autoGrabEnabled then return end
+            if obj.Name == "GunDrop" then
+                task.wait(0.1) -- small wait for it to fully load
+                grabGun()
+            end
+        end))
+
+        -- Also immediately grab if one already exists
+        local existing = findNearestGunDrop()
+        if existing then
+            grabGun()
+        end
     end
 
     local function createDraggableButton(text, position, size, callback)
@@ -3507,11 +3530,19 @@ do
             end
         end
     end)
+
+    grabGunSection:AddToggle("Auto Grab Gun", function(enabled)
+        autoGrabEnabled = enabled
+        setupAutoGrab()
+    end)
+
     RootMaid:GiveTask(function()
         if ggButtonGui then
             ggButtonGui:Destroy()
             ggButtonGui = nil
         end
+        autoGrabEnabled = false
+        autoGrabMaid:DoCleaning()
     end)
 
     grabGunSection:AddSlider("GG Button Size", 30, 150, ggButtonSize, function(size)
