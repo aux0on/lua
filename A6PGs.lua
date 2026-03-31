@@ -1265,6 +1265,7 @@ do
     local HeadlessMaid1 = nil
     local HeadlessMaid2 = nil
     local HeadlessMaid3 = nil
+
     RootMaid:GiveTask(function() 
         if HeadlessMaid1 then HeadlessMaid1:DoCleaning() end 
         if HeadlessMaid2 then HeadlessMaid2:DoCleaning() end
@@ -1277,26 +1278,28 @@ do
         if not ani then return end
         
         local a = Instance.new("Animation")
-        a.AnimationId = "rbxassetid://"..id
+        a.AnimationId = "rbxassetid://" .. id
         local hlTrack = ani:LoadAnimation(a)
-        hlTrack.Priority = Enum.AnimationPriority.Action
+        hlTrack.Priority = Enum.AnimationPriority.Action4
         hlTrack.Looped = true
-        hlTrack:Play()
-        maid:GiveTask(function() hlTrack:Stop() hlTrack:Destroy() end)
-        
-        maid:GiveTask(hlTrack.Stopped:Connect(function()
-             if maid._destroyed then return end
-             if hum.Parent then task.wait(0.1) playHl(hum, id, maid) end
-        end))
+        hlTrack:Play(0.1)
+
+        maid:GiveTask(function()
+            pcall(function() hlTrack:Stop() hlTrack:Destroy() end)
+        end)
     end
     
     local function applyFreeze(hum, id, maid)
-        maid:GiveTask(hum.StateChanged:Connect(function()
+        local debounce = false
+        maid:GiveTask(hum.StateChanged:Connect(function(old, new)
+            if maid._destroyed then return end
+            if debounce then return end
+            debounce = true
+            task.wait(0.05)
+            debounce = false
             if maid._destroyed then return end
             if hum.Parent then
-                task.wait(0.05)
-                if maid._destroyed then return end
-                if hum.Parent then playHl(hum, id, maid) end
+                playHl(hum, id, maid)
             end
         end))
     end
