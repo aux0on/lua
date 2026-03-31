@@ -1256,126 +1256,195 @@ do
     lsSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 
-do
+ do
     local hlSection = shared.AddSection("FE Headless")
     local hlId = 78837807518622
     local hlId2 = 117080641351340
     local hlId3 = 136055001302601
+    local hlOn = false
+    local hlOn2 = false
+    local hlOn3 = false
+    local hlTrack
+    local hlTrack2
+    local hlTrack3
+    local freezeConnection
+    local freezeConnection2
+    local freezeConnection3
+    local stoppedConnection
+    local stoppedConnection2
+    local stoppedConnection3
     
-    local HeadlessMaid1 = nil
-    local HeadlessMaid2 = nil
-    local HeadlessMaid3 = nil
-
-    RootMaid:GiveTask(function() 
-        if HeadlessMaid1 then HeadlessMaid1:DoCleaning() end 
-        if HeadlessMaid2 then HeadlessMaid2:DoCleaning() end
-        if HeadlessMaid3 then HeadlessMaid3:DoCleaning() end
-    end)
+    local function stopHl()
+        if stoppedConnection then stoppedConnection:Disconnect() stoppedConnection = nil end
+        if hlTrack then hlTrack:Stop() hlTrack:Destroy() hlTrack = nil end
+    end
     
-    local function playHl(hum, id, maid)
+    local function stopHl2()
+        if stoppedConnection2 then stoppedConnection2:Disconnect() stoppedConnection2 = nil end
+        if hlTrack2 then hlTrack2:Stop() hlTrack2:Destroy() hlTrack2 = nil end
+    end
+    
+    local function stopHl3()
+        if stoppedConnection3 then stoppedConnection3:Disconnect() stoppedConnection3 = nil end
+        if hlTrack3 then hlTrack3:Stop() hlTrack3:Destroy() hlTrack3 = nil end
+    end
+    
+    local function cleanup()
+        stopHl()
+        stopHl2()
+        stopHl3()
+        if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
+        if freezeConnection2 then freezeConnection2:Disconnect() freezeConnection2 = nil end
+        if freezeConnection3 then freezeConnection3:Disconnect() freezeConnection3 = nil end
+    end
+    
+    local function playHl(hum)
         if not hum or not hum.Parent then return end
         local ani = hum:FindFirstChildOfClass("Animator")
         if not ani then return end
-
-        -- Stop and destroy previous track before making a new one
-        local prev = maid._hlTrack
-        if prev then
-            pcall(function() prev:Stop(0) prev:Destroy() end)
-            maid._hlTrack = nil
-        end
-
+        stopHl()
         local a = Instance.new("Animation")
-        a.AnimationId = "rbxassetid://" .. id
-        local hlTrack = ani:LoadAnimation(a)
-        hlTrack.Priority = Enum.AnimationPriority.Action4
+        a.AnimationId = "rbxassetid://"..hlId
+        hlTrack = ani:LoadAnimation(a)
+        hlTrack.Priority = Enum.AnimationPriority.Action
         hlTrack.Looped = true
-        hlTrack:Play(0.1)
-
-        maid._hlTrack = hlTrack
+        hlTrack:Play()
+        if stoppedConnection then stoppedConnection:Disconnect() end
+        stoppedConnection = hlTrack.Stopped:Connect(function()
+            if hlOn and hum.Parent then task.wait(0.1) playHl(hum) end
+        end)
     end
     
-    local function applyFreeze(hum, id, maid)
-        local debounce = false
+    local function playHl2(hum)
+        if not hum or not hum.Parent then return end
         local ani = hum:FindFirstChildOfClass("Animator")
         if not ani then return end
-
-        maid:GiveTask(ani.AnimationPlayed:Connect(function(track)
-            if maid._destroyed then return end
-            if debounce then return end
-            if track.Animation and string.find(track.Animation.AnimationId, tostring(id)) then return end
-            debounce = true
-            task.wait(0.3)
-            debounce = false
-            if maid._destroyed then return end
-            if hum.Parent then
-                playHl(hum, id, maid)
-            end
-        end))
-
-        maid:GiveTask(hum.StateChanged:Connect(function()
-            if maid._destroyed then return end
-            if debounce then return end
-            debounce = true
-            task.wait(0.05)
-            debounce = false
-            if maid._destroyed then return end
-            if hum.Parent then playHl(hum, id, maid) end
-        end))
+        stopHl2()
+        local a = Instance.new("Animation")
+        a.AnimationId = "rbxassetid://"..hlId2
+        hlTrack2 = ani:LoadAnimation(a)
+        hlTrack2.Priority = Enum.AnimationPriority.Action
+        hlTrack2.Looped = true
+        hlTrack2:Play()
+        if stoppedConnection2 then stoppedConnection2:Disconnect() end
+        stoppedConnection2 = hlTrack2.Stopped:Connect(function()
+            if hlOn2 and hum.Parent then task.wait(0.1) playHl2(hum) end
+        end)
     end
     
-    local function enableHl(id, maid)
+    local function playHl3(hum)
+        if not hum or not hum.Parent then return end
+        local ani = hum:FindFirstChildOfClass("Animator")
+        if not ani then return end
+        stopHl3()
+        local a = Instance.new("Animation")
+        a.AnimationId = "rbxassetid://"..hlId3
+        hlTrack3 = ani:LoadAnimation(a)
+        hlTrack3.Priority = Enum.AnimationPriority.Action
+        hlTrack3.Looped = true
+        hlTrack3:Play()
+        if stoppedConnection3 then stoppedConnection3:Disconnect() end
+        stoppedConnection3 = hlTrack3.Stopped:Connect(function()
+            if hlOn3 and hum.Parent then task.wait(0.1) playHl3(hum) end
+        end)
+    end
+    
+    local function applyFreeze(hum)
+        if freezeConnection then freezeConnection:Disconnect() end
+        freezeConnection = hum.StateChanged:Connect(function()
+            if hlOn and hum.Parent and (not hlTrack or not hlTrack.IsPlaying) then
+                task.wait(0.05)
+                if hlOn and hum.Parent then playHl(hum) end
+            end
+        end)
+    end
+    
+    local function applyFreeze2(hum)
+        if freezeConnection2 then freezeConnection2:Disconnect() end
+        freezeConnection2 = hum.StateChanged:Connect(function()
+            if hlOn2 and hum.Parent and (not hlTrack2 or not hlTrack2.IsPlaying) then
+                task.wait(0.05)
+                if hlOn2 and hum.Parent then playHl2(hum) end
+            end
+        end)
+    end
+    
+    local function applyFreeze3(hum)
+        if freezeConnection3 then freezeConnection3:Disconnect() end
+        freezeConnection3 = hum.StateChanged:Connect(function()
+            if hlOn3 and hum.Parent and (not hlTrack3 or not hlTrack3.IsPlaying) then
+                task.wait(0.05)
+                if hlOn3 and hum.Parent then playHl3(hum) end
+            end
+        end)
+    end
+    
+    local function enableHl()
         local c = LocalPlayer.Character
         if not c then return end
         local h = c:FindFirstChild("Humanoid")
         if not h then return end
-
-        -- Cleanup for the tracked headless track
-        maid:GiveTask(function()
-            local prev = maid._hlTrack
-            if prev then
-                pcall(function() prev:Stop(0) prev:Destroy() end)
-                maid._hlTrack = nil
-            end
-        end)
-
-        applyFreeze(h, id, maid)
-        playHl(h, id, maid)
+        applyFreeze(h)
+        playHl(h)
+    end
+    
+    local function enableHl2()
+        local c = LocalPlayer.Character
+        if not c then return end
+        local h = c:FindFirstChild("Humanoid")
+        if not h then return end
+        applyFreeze2(h)
+        playHl2(h)
+    end
+    
+    local function enableHl3()
+        local c = LocalPlayer.Character
+        if not c then return end
+        local h = c:FindFirstChild("Humanoid")
+        if not h then return end
+        applyFreeze3(h)
+        playHl3(h)
     end
     
     hlSection:AddToggle("Enable Headless", function(s)
-        if HeadlessMaid1 then HeadlessMaid1:DoCleaning() HeadlessMaid1 = nil end
+        hlOn = s
         if s then
-            HeadlessMaid1 = Maid.new()
-            enableHl(hlId, HeadlessMaid1)
-            HeadlessMaid1:GiveTask(LocalPlayer.CharacterAdded:Connect(function(c)
-                task.wait(0.5)
-                enableHl(hlId, HeadlessMaid1)
-            end))
+            enableHl()
+        else
+            stopHl()
+            if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
         end
     end)
     
     hlSection:AddToggle("Enable Headless V2", function(s)
-        if HeadlessMaid2 then HeadlessMaid2:DoCleaning() HeadlessMaid2 = nil end
+        hlOn2 = s
         if s then
-            HeadlessMaid2 = Maid.new()
-            enableHl(hlId2, HeadlessMaid2)
-            HeadlessMaid2:GiveTask(LocalPlayer.CharacterAdded:Connect(function(c)
-                task.wait(0.5)
-                enableHl(hlId2, HeadlessMaid2)
-            end))
+            enableHl2()
+        else
+            stopHl2()
+            if freezeConnection2 then freezeConnection2:Disconnect() freezeConnection2 = nil end
         end
     end)
     
     hlSection:AddToggle("Enable Headless V3", function(s)
-        if HeadlessMaid3 then HeadlessMaid3:DoCleaning() HeadlessMaid3 = nil end
+        hlOn3 = s
         if s then
-            HeadlessMaid3 = Maid.new()
-            enableHl(hlId3, HeadlessMaid3)
-            HeadlessMaid3:GiveTask(LocalPlayer.CharacterAdded:Connect(function(c)
-                task.wait(0.5)
-                enableHl(hlId3, HeadlessMaid3)
-            end))
+            enableHl3()
+        else
+            stopHl3()
+            if freezeConnection3 then freezeConnection3:Disconnect() freezeConnection3 = nil end
         end
+    end)
+    
+    LocalPlayer.CharacterRemoving:Connect(function()
+        cleanup()
+    end)
+    
+    LocalPlayer.CharacterAdded:Connect(function(c)
+        task.wait(0.5)
+        if hlOn then enableHl() end
+        if hlOn2 then enableHl2() end
+        if hlOn3 then enableHl3() end
     end)
 end
 
