@@ -1276,7 +1276,14 @@ do
         if not hum or not hum.Parent then return end
         local ani = hum:FindFirstChildOfClass("Animator")
         if not ani then return end
-        
+
+        -- Stop and destroy previous track before making a new one
+        local prev = maid._hlTrack
+        if prev then
+            pcall(function() prev:Stop(0) prev:Destroy() end)
+            maid._hlTrack = nil
+        end
+
         local a = Instance.new("Animation")
         a.AnimationId = "rbxassetid://" .. id
         local hlTrack = ani:LoadAnimation(a)
@@ -1284,9 +1291,7 @@ do
         hlTrack.Looped = true
         hlTrack:Play(0.1)
 
-        maid:GiveTask(function()
-            pcall(function() hlTrack:Stop() hlTrack:Destroy() end)
-        end)
+        maid._hlTrack = hlTrack
     end
     
     local function applyFreeze(hum, id, maid)
@@ -1294,14 +1299,11 @@ do
         local ani = hum:FindFirstChildOfClass("Animator")
         if not ani then return end
 
-        -- React to any new animation playing (e.g. FE anim script restarting)
         maid:GiveTask(ani.AnimationPlayed:Connect(function(track)
             if maid._destroyed then return end
             if debounce then return end
-            -- Ignore our own headless track replaying
             if track.Animation and string.find(track.Animation.AnimationId, tostring(id)) then return end
             debounce = true
-            -- Longer wait to survive Animate.Disabled = true -> wait(0.1) -> Disabled = false burst
             task.wait(0.3)
             debounce = false
             if maid._destroyed then return end
@@ -1310,7 +1312,6 @@ do
             end
         end))
 
-        -- Also react to movement state changes
         maid:GiveTask(hum.StateChanged:Connect(function()
             if maid._destroyed then return end
             if debounce then return end
@@ -1327,6 +1328,16 @@ do
         if not c then return end
         local h = c:FindFirstChild("Humanoid")
         if not h then return end
+
+        -- Cleanup for the tracked headless track
+        maid:GiveTask(function()
+            local prev = maid._hlTrack
+            if prev then
+                pcall(function() prev:Stop(0) prev:Destroy() end)
+                maid._hlTrack = nil
+            end
+        end)
+
         applyFreeze(h, id, maid)
         playHl(h, id, maid)
     end
