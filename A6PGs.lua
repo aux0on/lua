@@ -1291,16 +1291,34 @@ do
     
     local function applyFreeze(hum, id, maid)
         local debounce = false
-        maid:GiveTask(hum.StateChanged:Connect(function(old, new)
+        local ani = hum:FindFirstChildOfClass("Animator")
+        if not ani then return end
+
+        -- React to any new animation playing (e.g. FE anim script restarting)
+        maid:GiveTask(ani.AnimationPlayed:Connect(function(track)
+            if maid._destroyed then return end
+            if debounce then return end
+            -- Ignore our own headless track replaying
+            if track.Animation and string.find(track.Animation.AnimationId, tostring(id)) then return end
+            debounce = true
+            -- Longer wait to survive Animate.Disabled = true -> wait(0.1) -> Disabled = false burst
+            task.wait(0.3)
+            debounce = false
+            if maid._destroyed then return end
+            if hum.Parent then
+                playHl(hum, id, maid)
+            end
+        end))
+
+        -- Also react to movement state changes
+        maid:GiveTask(hum.StateChanged:Connect(function()
             if maid._destroyed then return end
             if debounce then return end
             debounce = true
             task.wait(0.05)
             debounce = false
             if maid._destroyed then return end
-            if hum.Parent then
-                playHl(hum, id, maid)
-            end
+            if hum.Parent then playHl(hum, id, maid) end
         end))
     end
     
