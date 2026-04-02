@@ -2230,20 +2230,16 @@ local TAP_TIME_THRESHOLD = 0.3
 
 local BOMB_NAMES = {"Bomb", "PrankBomb", "FakeBomb"}
 
-local BombJumpMaid = nil
-local BombJumpGuiMaid = nil
-local BombJumpTimerMaid = nil
+local bombEquipConnections = {}
 
 section:AddLabel("Different Bomb Jump Options")
 
 function CreateBJButton()
-    if BombJumpGuiMaid then BombJumpGuiMaid:DoCleaning() BombJumpGuiMaid = nil end
-    BombJumpGuiMaid = Maid.new()
+    if bjGui then bjGui:Destroy() end
     
     bjGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     bjGui.Name = "BJGui"
     bjGui.ResetOnSpawn = false
-    BombJumpGuiMaid:GiveTask(bjGui)
     
     bjBtn = Instance.new("TextButton", bjGui)
     bjBtn.Name = "BJButton"
@@ -2297,13 +2293,11 @@ function CreateBJButton()
 end
 
 function CreateTimerDisplay()
-    if BombJumpTimerMaid then BombJumpTimerMaid:DoCleaning() BombJumpTimerMaid = nil end
-    BombJumpTimerMaid = Maid.new()
+    if timerGui then timerGui:Destroy() end
     
     timerGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     timerGui.Name = "TimerGui"
     timerGui.ResetOnSpawn = false
-    BombJumpTimerMaid:GiveTask(timerGui)
     
     timerDisplay = Instance.new("TextLabel", timerGui)
     timerDisplay.Name = "TimerDisplay"
@@ -2527,18 +2521,18 @@ function FastBombJump()
     end)
 end
 
-local ClickBombJumpMaid = nil
-
 function SetupBombEquipDetection()
-    if ClickBombJumpMaid then ClickBombJumpMaid:DoCleaning() ClickBombJumpMaid = nil end
+    for _, connection in pairs(bombEquipConnections) do
+        connection:Disconnect()
+    end
+    bombEquipConnections = {}
+    
     if not clickBombJumpEnabled then return end
     
     local character = LocalPlayer.Character
     if not character then return end
     
-    ClickBombJumpMaid = Maid.new()
-    
-    ClickBombJumpMaid:GiveTask(character.ChildAdded:Connect(function(child)
+    local connection = character.ChildAdded:Connect(function(child)
         if not clickBombJumpEnabled or justRespawned then return end
         
         for _, bombName in ipairs(BOMB_NAMES) do
@@ -2549,13 +2543,12 @@ function SetupBombEquipDetection()
                 break
             end
         end
-    end))
+    end)
+    
+    table.insert(bombEquipConnections, connection)
 end
 
-BombJumpMaid = Maid.new()
-RootMaid:GiveTask(BombJumpMaid)
-
-BombJumpMaid:GiveTask(UserInputService.InputBegan:Connect(function(input, gameProcessed)
+local inputBeganConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
     if input.UserInputType == Enum.UserInputType.Touch or 
@@ -2567,9 +2560,9 @@ BombJumpMaid:GiveTask(UserInputService.InputBegan:Connect(function(input, gamePr
             moved = false
         }
     end
-end))
+end)
 
-BombJumpMaid:GiveTask(UserInputService.InputChanged:Connect(function(input)
+local inputChangedConnection = UserInputService.InputChanged:Connect(function(input)
     local touchData = activeTouches[input]
     if not touchData then return end
     
@@ -2579,9 +2572,9 @@ BombJumpMaid:GiveTask(UserInputService.InputChanged:Connect(function(input)
     if distance > TAP_MOVEMENT_THRESHOLD then
         touchData.moved = true
     end
-end))
+end)
 
-BombJumpMaid:GiveTask(UserInputService.InputEnded:Connect(function(input, gameProcessed)
+local inputEndedConnection = UserInputService.InputEnded:Connect(function(input, gameProcessed)
     if gameProcessed then 
         activeTouches[input] = nil
         return 
@@ -2601,9 +2594,9 @@ BombJumpMaid:GiveTask(UserInputService.InputEnded:Connect(function(input, gamePr
     end
     
     activeTouches[input] = nil
-end))
+end)
 
-BombJumpMaid:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
+local characterConnection = LocalPlayer.CharacterAdded:Connect(function()
     ResetCooldown()
     activeTouches = {}
     justRespawned = true
@@ -2624,7 +2617,7 @@ BombJumpMaid:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
         task.wait(1.2)
         SetupBombEquipDetection()
     end
-end))
+end)
 
 section:AddToggle("Enable Auto Bomb Jump", function(bool)
     bombJumpEnabled = bool
@@ -2636,7 +2629,10 @@ section:AddToggle("Enable Equip Bomb Jump", function(bool)
     if bool then
         SetupBombEquipDetection()
     else
-        if ClickBombJumpMaid then ClickBombJumpMaid:DoCleaning() ClickBombJumpMaid = nil end
+        for _, connection in pairs(bombEquipConnections) do
+            connection:Disconnect()
+        end
+        bombEquipConnections = {}
     end
 end)
 
@@ -2649,7 +2645,7 @@ section:AddToggle("Enable BJ Button", function(e)
     if e then 
         CreateBJButton() 
     else 
-        if BombJumpGuiMaid then BombJumpGuiMaid:DoCleaning() BombJumpGuiMaid = nil end
+        if bjGui then bjGui:Destroy() end 
     end
 end)
 
@@ -2666,7 +2662,7 @@ section:AddToggle("Enable Timer Display", function(e)
     if e then 
         CreateTimerDisplay() 
     else 
-        if BombJumpTimerMaid then BombJumpTimerMaid:DoCleaning() BombJumpTimerMaid = nil end
+        if timerGui then timerGui:Destroy() end 
     end
 end)
 
@@ -2684,20 +2680,28 @@ section:AddKeybind("Manual Bomb Jump", "E", function()
     end
 end)
 
-RootMaid:GiveTask(function()
-    if BombJumpGuiMaid then BombJumpGuiMaid:DoCleaning() end
-    if BombJumpTimerMaid then BombJumpTimerMaid:DoCleaning() end
-    if ClickBombJumpMaid then ClickBombJumpMaid:DoCleaning() end
-    if BombJumpMaid then BombJumpMaid:DoCleaning() end
+local function Cleanup()
+    if bjGui then bjGui:Destroy() end
+    if timerGui then timerGui:Destroy() end
+    
+    if inputBeganConnection then inputBeganConnection:Disconnect() end
+    if inputChangedConnection then inputChangedConnection:Disconnect() end
+    if inputEndedConnection then inputEndedConnection:Disconnect() end
+    if characterConnection then characterConnection:Disconnect() end
+    
+    for _, connection in pairs(bombEquipConnections) do
+        connection:Disconnect()
+    end
     
     activeTouches = {}
+    bombEquipConnections = {}
     ResetCooldown()
     bombJumpEnabled = false
     clickBombJumpEnabled = false
     guiEnabled = false
     timerGuiEnabled = false
     autoGetBomb = false
-end)
+end
 
 do
     local Players = game:GetService("Players")
