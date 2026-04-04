@@ -2822,7 +2822,7 @@ do
         local Animate = character:FindFirstChild("Animate")
         if not Animate then return end
         
-        if originalAnims.idle1 then return end
+        -- REMOVED the early-return guard so originals are always freshly captured
         
         if Animate:FindFirstChild("idle") then
             local anim1 = Animate.idle:FindFirstChild("Animation1")
@@ -2870,9 +2870,7 @@ do
     end
     
     local function shouldApplyAnimations()
-        if animState.all ~= "Default" then
-            return true
-        end
+        if animState.all ~= "Default" then return true end
         if animState.idle ~= "Default" then return true end
         if animState.walk ~= "Default" then return true end
         if animState.run ~= "Default" then return true end
@@ -2883,22 +2881,13 @@ do
     end
     
     local function applyAnimations()
-        if not plr or not plr.Character then 
-            return 
-        end
-        
-        if not shouldApplyAnimations() then
-            return
-        end
+        if not plr or not plr.Character then return end
+        if not shouldApplyAnimations() then return end
         
         local character = plr.Character
         local Animate = character:FindFirstChild("Animate")
+        if not Animate then return end
         
-        if not Animate then
-            return
-        end
-        
-        saveOriginalAnimations(character)
         stopAllAnimations()
         
         Animate.Disabled = true
@@ -2918,7 +2907,6 @@ do
         if Animate:FindFirstChild("idle") then
             local anim1 = Animate.idle:FindFirstChild("Animation1")
             local anim2 = Animate.idle:FindFirstChild("Animation2")
-            
             if idlePreset == "Default" then
                 if anim1 and originalAnims.idle1 then anim1.AnimationId = originalAnims.idle1 end
                 if anim2 and originalAnims.idle2 then anim2.AnimationId = originalAnims.idle2 end
@@ -2932,7 +2920,6 @@ do
         local walkPreset = getPresetForType("walk")
         if Animate:FindFirstChild("walk") then
             local walkAnim = Animate.walk:FindFirstChild("WalkAnim")
-            
             if walkPreset == "Default" then
                 if walkAnim and originalAnims.walk then walkAnim.AnimationId = originalAnims.walk end
             elseif animPresets[walkPreset] then
@@ -2944,7 +2931,6 @@ do
         local runPreset = getPresetForType("run")
         if Animate:FindFirstChild("run") then
             local runAnim = Animate.run:FindFirstChild("RunAnim")
-            
             if runPreset == "Default" then
                 if runAnim and originalAnims.run then runAnim.AnimationId = originalAnims.run end
             elseif animPresets[runPreset] then
@@ -2956,7 +2942,6 @@ do
         local jumpPreset = getPresetForType("jump")
         if Animate:FindFirstChild("jump") then
             local jumpAnim = Animate.jump:FindFirstChild("JumpAnim")
-            
             if jumpPreset == "Default" then
                 if jumpAnim and originalAnims.jump then jumpAnim.AnimationId = originalAnims.jump end
             elseif animPresets[jumpPreset] then
@@ -2968,7 +2953,6 @@ do
         local climbPreset = getPresetForType("climb")
         if Animate:FindFirstChild("climb") then
             local climbAnim = Animate.climb:FindFirstChild("ClimbAnim")
-            
             if climbPreset == "Default" then
                 if climbAnim and originalAnims.climb then climbAnim.AnimationId = originalAnims.climb end
             elseif animPresets[climbPreset] then
@@ -2980,7 +2964,6 @@ do
         local fallPreset = getPresetForType("fall")
         if Animate:FindFirstChild("fall") then
             local fallAnim = Animate.fall:FindFirstChild("FallAnim")
-            
             if fallPreset == "Default" then
                 if fallAnim and originalAnims.fall then fallAnim.AnimationId = originalAnims.fall end
             elseif animPresets[fallPreset] then
@@ -2992,9 +2975,12 @@ do
         Animate.Disabled = false
     end
     
+    -- FIX: clear stale originals on respawn, save fresh ones before applying
     FEAnimMaid:GiveTask(plr.CharacterAdded:Connect(function(character)
+        originalAnims = {}
         character:WaitForChild("Animate")
         task.wait(0.5)
+        saveOriginalAnimations(character)
         applyAnimations()
     end))
     
