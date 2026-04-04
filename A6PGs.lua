@@ -2590,11 +2590,11 @@ end)
 do
     local Players = game:GetService("Players")
     local plr = Players.LocalPlayer
-    
+
     local feAnimSection = shared.AddSection("FE Animations")
     local FEAnimMaid = Maid.new()
     RootMaid:GiveTask(FEAnimMaid)
-    
+
     local animState = {
         all = "Default",
         idle = "Default",
@@ -2604,378 +2604,305 @@ do
         climb = "Default",
         fall = "Default"
     }
-    
+
     local originalAnims = {}
-    
+
     local animPresets = {
         ["Default"] = nil,
         ["Vampire"] = {
             idle1 = "http://www.roblox.com/asset/?id=1083445855",
             idle2 = "http://www.roblox.com/asset/?id=1083450166",
-            walk = "http://www.roblox.com/asset/?id=1083473930",
-            run = "http://www.roblox.com/asset/?id=1083462077",
-            jump = "http://www.roblox.com/asset/?id=1083455352",
+            walk  = "http://www.roblox.com/asset/?id=1083473930",
+            run   = "http://www.roblox.com/asset/?id=1083462077",
+            jump  = "http://www.roblox.com/asset/?id=1083455352",
             climb = "http://www.roblox.com/asset/?id=1083439238",
-            fall = "http://www.roblox.com/asset/?id=1083443587"
+            fall  = "http://www.roblox.com/asset/?id=1083443587"
         },
         ["Hero"] = {
             idle1 = "http://www.roblox.com/asset/?id=616111295",
             idle2 = "http://www.roblox.com/asset/?id=616113536",
-            walk = "http://www.roblox.com/asset/?id=616122287",
-            run = "http://www.roblox.com/asset/?id=616117076",
-            jump = "http://www.roblox.com/asset/?id=616115533",
+            walk  = "http://www.roblox.com/asset/?id=616122287",
+            run   = "http://www.roblox.com/asset/?id=616117076",
+            jump  = "http://www.roblox.com/asset/?id=616115533",
             climb = "http://www.roblox.com/asset/?id=616104706",
-            fall = "http://www.roblox.com/asset/?id=616108001"
+            fall  = "http://www.roblox.com/asset/?id=616108001"
         },
         ["Zombie Classic"] = {
             idle1 = "http://www.roblox.com/asset/?id=616158929",
             idle2 = "http://www.roblox.com/asset/?id=616160636",
-            walk = "http://www.roblox.com/asset/?id=616168032",
-            run = "http://www.roblox.com/asset/?id=616163682",
-            jump = "http://www.roblox.com/asset/?id=616161997",
+            walk  = "http://www.roblox.com/asset/?id=616168032",
+            run   = "http://www.roblox.com/asset/?id=616163682",
+            jump  = "http://www.roblox.com/asset/?id=616161997",
             climb = "http://www.roblox.com/asset/?id=616156119",
-            fall = "http://www.roblox.com/asset/?id=616157476"
+            fall  = "http://www.roblox.com/asset/?id=616157476"
         },
         ["Mage"] = {
             idle1 = "http://www.roblox.com/asset/?id=707742142",
             idle2 = "http://www.roblox.com/asset/?id=707855907",
-            walk = "http://www.roblox.com/asset/?id=707897309",
-            run = "http://www.roblox.com/asset/?id=707861613",
-            jump = "http://www.roblox.com/asset/?id=707853694",
+            walk  = "http://www.roblox.com/asset/?id=707897309",
+            run   = "http://www.roblox.com/asset/?id=707861613",
+            jump  = "http://www.roblox.com/asset/?id=707853694",
             climb = "http://www.roblox.com/asset/?id=707826056",
-            fall = "http://www.roblox.com/asset/?id=707829716"
+            fall  = "http://www.roblox.com/asset/?id=707829716"
         },
         ["Ghost"] = {
             idle1 = "http://www.roblox.com/asset/?id=616006778",
             idle2 = "http://www.roblox.com/asset/?id=616008087",
-            walk = "http://www.roblox.com/asset/?id=616010382",
-            run = "http://www.roblox.com/asset/?id=616013216",
-            jump = "http://www.roblox.com/asset/?id=616008936",
+            walk  = "http://www.roblox.com/asset/?id=616010382",
+            run   = "http://www.roblox.com/asset/?id=616013216",
+            jump  = "http://www.roblox.com/asset/?id=616008936",
             climb = "http://www.roblox.com/asset/?id=616003713",
-            fall = "http://www.roblox.com/asset/?id=616005863"
+            fall  = "http://www.roblox.com/asset/?id=616005863"
         },
         ["Elder"] = {
             idle1 = "http://www.roblox.com/asset/?id=845397899",
             idle2 = "http://www.roblox.com/asset/?id=845400520",
-            walk = "http://www.roblox.com/asset/?id=845403856",
-            run = "http://www.roblox.com/asset/?id=845386501",
-            jump = "http://www.roblox.com/asset/?id=845398858",
+            walk  = "http://www.roblox.com/asset/?id=845403856",
+            run   = "http://www.roblox.com/asset/?id=845386501",
+            jump  = "http://www.roblox.com/asset/?id=845398858",
             climb = "http://www.roblox.com/asset/?id=845392038",
-            fall = "http://www.roblox.com/asset/?id=845396048"
+            fall  = "http://www.roblox.com/asset/?id=845396048"
         },
         ["Levitation"] = {
             idle1 = "http://www.roblox.com/asset/?id=616006778",
             idle2 = "http://www.roblox.com/asset/?id=616008087",
-            walk = "http://www.roblox.com/asset/?id=616013216",
-            run = "http://www.roblox.com/asset/?id=616010382",
-            jump = "http://www.roblox.com/asset/?id=616008936",
+            walk  = "http://www.roblox.com/asset/?id=616013216",
+            run   = "http://www.roblox.com/asset/?id=616010382",
+            jump  = "http://www.roblox.com/asset/?id=616008936",
             climb = "http://www.roblox.com/asset/?id=616003713",
-            fall = "http://www.roblox.com/asset/?id=616005863"
+            fall  = "http://www.roblox.com/asset/?id=616005863"
         },
         ["Astronaut"] = {
             idle1 = "http://www.roblox.com/asset/?id=891621366",
             idle2 = "http://www.roblox.com/asset/?id=891633237",
-            walk = "http://www.roblox.com/asset/?id=891667138",
-            run = "http://www.roblox.com/asset/?id=891636393",
-            jump = "http://www.roblox.com/asset/?id=891627522",
+            walk  = "http://www.roblox.com/asset/?id=891667138",
+            run   = "http://www.roblox.com/asset/?id=891636393",
+            jump  = "http://www.roblox.com/asset/?id=891627522",
             climb = "http://www.roblox.com/asset/?id=891609353",
-            fall = "http://www.roblox.com/asset/?id=891617961"
+            fall  = "http://www.roblox.com/asset/?id=891617961"
         },
         ["Ninja"] = {
             idle1 = "http://www.roblox.com/asset/?id=656117400",
             idle2 = "http://www.roblox.com/asset/?id=656118341",
-            walk = "http://www.roblox.com/asset/?id=656121766",
-            run = "http://www.roblox.com/asset/?id=656118852",
-            jump = "http://www.roblox.com/asset/?id=656117878",
+            walk  = "http://www.roblox.com/asset/?id=656121766",
+            run   = "http://www.roblox.com/asset/?id=656118852",
+            jump  = "http://www.roblox.com/asset/?id=656117878",
             climb = "http://www.roblox.com/asset/?id=656114359",
-            fall = "http://www.roblox.com/asset/?id=656115606"
+            fall  = "http://www.roblox.com/asset/?id=656115606"
         },
         ["Werewolf"] = {
             idle1 = "http://www.roblox.com/asset/?id=1083195517",
             idle2 = "http://www.roblox.com/asset/?id=1083214717",
-            walk = "http://www.roblox.com/asset/?id=1083178339",
-            run = "http://www.roblox.com/asset/?id=1083216690",
-            jump = "http://www.roblox.com/asset/?id=1083218792",
+            walk  = "http://www.roblox.com/asset/?id=1083178339",
+            run   = "http://www.roblox.com/asset/?id=1083216690",
+            jump  = "http://www.roblox.com/asset/?id=1083218792",
             climb = "http://www.roblox.com/asset/?id=1083182000",
-            fall = "http://www.roblox.com/asset/?id=1083189019"
+            fall  = "http://www.roblox.com/asset/?id=1083189019"
         },
         ["Cartoon"] = {
             idle1 = "http://www.roblox.com/asset/?id=742637544",
             idle2 = "http://www.roblox.com/asset/?id=742638445",
-            walk = "http://www.roblox.com/asset/?id=742640026",
-            run = "http://www.roblox.com/asset/?id=742638842",
-            jump = "http://www.roblox.com/asset/?id=742637942",
+            walk  = "http://www.roblox.com/asset/?id=742640026",
+            run   = "http://www.roblox.com/asset/?id=742638842",
+            jump  = "http://www.roblox.com/asset/?id=742637942",
             climb = "http://www.roblox.com/asset/?id=742636889",
-            fall = "http://www.roblox.com/asset/?id=742637151"
+            fall  = "http://www.roblox.com/asset/?id=742637151"
         },
         ["Pirate"] = {
             idle1 = "http://www.roblox.com/asset/?id=750781874",
             idle2 = "http://www.roblox.com/asset/?id=750782770",
-            walk = "http://www.roblox.com/asset/?id=750785693",
-            run = "http://www.roblox.com/asset/?id=750783738",
-            jump = "http://www.roblox.com/asset/?id=750782230",
+            walk  = "http://www.roblox.com/asset/?id=750785693",
+            run   = "http://www.roblox.com/asset/?id=750783738",
+            jump  = "http://www.roblox.com/asset/?id=750782230",
             climb = "http://www.roblox.com/asset/?id=750779899",
-            fall = "http://www.roblox.com/asset/?id=750780242"
+            fall  = "http://www.roblox.com/asset/?id=750780242"
         },
         ["Sneaky"] = {
             idle1 = "http://www.roblox.com/asset/?id=1132473842",
             idle2 = "http://www.roblox.com/asset/?id=1132477671",
-            walk = "http://www.roblox.com/asset/?id=1132510133",
-            run = "http://www.roblox.com/asset/?id=1132494274",
-            jump = "http://www.roblox.com/asset/?id=1132489853",
+            walk  = "http://www.roblox.com/asset/?id=1132510133",
+            run   = "http://www.roblox.com/asset/?id=1132494274",
+            jump  = "http://www.roblox.com/asset/?id=1132489853",
             climb = "http://www.roblox.com/asset/?id=1132461372",
-            fall = "http://www.roblox.com/asset/?id=1132469004"
+            fall  = "http://www.roblox.com/asset/?id=1132469004"
         },
         ["Toy"] = {
             idle1 = "http://www.roblox.com/asset/?id=782841498",
             idle2 = "http://www.roblox.com/asset/?id=782845736",
-            walk = "http://www.roblox.com/asset/?id=782843345",
-            run = "http://www.roblox.com/asset/?id=782842708",
-            jump = "http://www.roblox.com/asset/?id=782847020",
+            walk  = "http://www.roblox.com/asset/?id=782843345",
+            run   = "http://www.roblox.com/asset/?id=782842708",
+            jump  = "http://www.roblox.com/asset/?id=782847020",
             climb = "http://www.roblox.com/asset/?id=782843869",
-            fall = "http://www.roblox.com/asset/?id=782846423"
+            fall  = "http://www.roblox.com/asset/?id=782846423"
         },
         ["Knight"] = {
             idle1 = "http://www.roblox.com/asset/?id=657595757",
             idle2 = "http://www.roblox.com/asset/?id=657568135",
-            walk = "http://www.roblox.com/asset/?id=657552124",
-            run = "http://www.roblox.com/asset/?id=657564596",
-            jump = "http://www.roblox.com/asset/?id=658409194",
+            walk  = "http://www.roblox.com/asset/?id=657552124",
+            run   = "http://www.roblox.com/asset/?id=657564596",
+            jump  = "http://www.roblox.com/asset/?id=658409194",
             climb = "http://www.roblox.com/asset/?id=658360781",
-            fall = "http://www.roblox.com/asset/?id=657600338"
+            fall  = "http://www.roblox.com/asset/?id=657600338"
         },
         ["Confident"] = {
             idle1 = "http://www.roblox.com/asset/?id=1069977950",
             idle2 = "http://www.roblox.com/asset/?id=1069987858",
-            walk = "http://www.roblox.com/asset/?id=1070017263",
-            run = "http://www.roblox.com/asset/?id=1070001516",
-            jump = "http://www.roblox.com/asset/?id=1069984524",
+            walk  = "http://www.roblox.com/asset/?id=1070017263",
+            run   = "http://www.roblox.com/asset/?id=1070001516",
+            jump  = "http://www.roblox.com/asset/?id=1069984524",
             climb = "http://www.roblox.com/asset/?id=1069946257",
-            fall = "http://www.roblox.com/asset/?id=1069973677"
+            fall  = "http://www.roblox.com/asset/?id=1069973677"
         },
         ["Popstar"] = {
             idle1 = "http://www.roblox.com/asset/?id=1212900985",
             idle2 = "http://www.roblox.com/asset/?id=1212900985",
-            walk = "http://www.roblox.com/asset/?id=1212980338",
-            run = "http://www.roblox.com/asset/?id=1212980348",
-            jump = "http://www.roblox.com/asset/?id=1212954642",
+            walk  = "http://www.roblox.com/asset/?id=1212980338",
+            run   = "http://www.roblox.com/asset/?id=1212980348",
+            jump  = "http://www.roblox.com/asset/?id=1212954642",
             climb = "http://www.roblox.com/asset/?id=1213044953",
-            fall = "http://www.roblox.com/asset/?id=1212900995"
+            fall  = "http://www.roblox.com/asset/?id=1212900995"
         },
         ["Princess"] = {
             idle1 = "http://www.roblox.com/asset/?id=941003647",
             idle2 = "http://www.roblox.com/asset/?id=941013098",
-            walk = "http://www.roblox.com/asset/?id=941028902",
-            run = "http://www.roblox.com/asset/?id=941015281",
-            jump = "http://www.roblox.com/asset/?id=941008832",
+            walk  = "http://www.roblox.com/asset/?id=941028902",
+            run   = "http://www.roblox.com/asset/?id=941015281",
+            jump  = "http://www.roblox.com/asset/?id=941008832",
             climb = "http://www.roblox.com/asset/?id=940996062",
-            fall = "http://www.roblox.com/asset/?id=941000007"
+            fall  = "http://www.roblox.com/asset/?id=941000007"
         },
         ["Cowboy"] = {
             idle1 = "http://www.roblox.com/asset/?id=1014390418",
             idle2 = "http://www.roblox.com/asset/?id=1014398616",
-            walk = "http://www.roblox.com/asset/?id=1014421541",
-            run = "http://www.roblox.com/asset/?id=1014401683",
-            jump = "http://www.roblox.com/asset/?id=1014394726",
+            walk  = "http://www.roblox.com/asset/?id=1014421541",
+            run   = "http://www.roblox.com/asset/?id=1014401683",
+            jump  = "http://www.roblox.com/asset/?id=1014394726",
             climb = "http://www.roblox.com/asset/?id=1014380606",
-            fall = "http://www.roblox.com/asset/?id=1014384571"
+            fall  = "http://www.roblox.com/asset/?id=1014384571"
         },
         ["Patrol"] = {
             idle1 = "http://www.roblox.com/asset/?id=1149612882",
             idle2 = "http://www.roblox.com/asset/?id=1150842221",
-            walk = "http://www.roblox.com/asset/?id=1151231493",
-            run = "http://www.roblox.com/asset/?id=1150967949",
-            jump = "http://www.roblox.com/asset/?id=1150944216",
+            walk  = "http://www.roblox.com/asset/?id=1151231493",
+            run   = "http://www.roblox.com/asset/?id=1150967949",
+            jump  = "http://www.roblox.com/asset/?id=1150944216",
             climb = "http://www.roblox.com/asset/?id=1148811837",
-            fall = "http://www.roblox.com/asset/?id=1148863382"
+            fall  = "http://www.roblox.com/asset/?id=1148863382"
         },
         ["Zombie FE"] = {
             idle1 = "http://www.roblox.com/asset/?id=3489171152",
             idle2 = "http://www.roblox.com/asset/?id=3489171152",
-            walk = "http://www.roblox.com/asset/?id=3489174223",
-            run = "http://www.roblox.com/asset/?id=3489173414",
-            jump = "http://www.roblox.com/asset/?id=616161997",
+            walk  = "http://www.roblox.com/asset/?id=3489174223",
+            run   = "http://www.roblox.com/asset/?id=3489173414",
+            jump  = "http://www.roblox.com/asset/?id=616161997",
             climb = "http://www.roblox.com/asset/?id=616156119",
-            fall = "http://www.roblox.com/asset/?id=616157476"
+            fall  = "http://www.roblox.com/asset/?id=616157476"
         },
         ["Catwalk Glam"] = {
             idle1 = "http://www.roblox.com/asset/?id=133806214992291",
             idle2 = "http://www.roblox.com/asset/?id=133806214992291",
-            walk = "http://www.roblox.com/asset/?id=109168724482748",
-            run = "http://www.roblox.com/asset/?id=81024476153754",
-            jump = "http://www.roblox.com/asset/?id=116936326516985",
+            walk  = "http://www.roblox.com/asset/?id=109168724482748",
+            run   = "http://www.roblox.com/asset/?id=81024476153754",
+            jump  = "http://www.roblox.com/asset/?id=116936326516985",
             climb = "http://www.roblox.com/asset/?id=119377220967554",
-            fall = "http://www.roblox.com/asset/?id=92294537340807"
+            fall  = "http://www.roblox.com/asset/?id=92294537340807"
         },
         ["Amazon Unboxed"] = {
             idle1 = "http://www.roblox.com/asset/?id=98281136301627",
             idle2 = "http://www.roblox.com/asset/?id=98281136301627",
-            walk = "http://www.roblox.com/asset/?id=90478085024465",
-            run = "http://www.roblox.com/asset/?id=134824450619865",
-            jump = "http://www.roblox.com/asset/?id=121454505477205",
+            walk  = "http://www.roblox.com/asset/?id=90478085024465",
+            run   = "http://www.roblox.com/asset/?id=134824450619865",
+            jump  = "http://www.roblox.com/asset/?id=121454505477205",
             climb = "http://www.roblox.com/asset/?id=121145883950231",
-            fall = "http://www.roblox.com/asset/?id=94788218468396"
+            fall  = "http://www.roblox.com/asset/?id=94788218468396"
         },
     }
-    
+
+    -- Maps each anim type to its Animate child name, slot name, and original keys
+    local animMap = {
+        idle  = { folder = "idle",  slots = { { child = "Animation1", origKey = "idle1" }, { child = "Animation2", origKey = "idle2" } } },
+        walk  = { folder = "walk",  slots = { { child = "WalkAnim",   origKey = "walk"  } } },
+        run   = { folder = "run",   slots = { { child = "RunAnim",    origKey = "run"   } } },
+        jump  = { folder = "jump",  slots = { { child = "JumpAnim",   origKey = "jump"  } } },
+        climb = { folder = "climb", slots = { { child = "ClimbAnim",  origKey = "climb" } } },
+        fall  = { folder = "fall",  slots = { { child = "FallAnim",   origKey = "fall"  } } },
+    }
+
+    -- Preset key each slot reads from (idle uses idle1/idle2, others match their type name)
+    local slotPresetKey = {
+        idle1 = "idle1", idle2 = "idle2",
+        walk = "walk", run = "run", jump = "jump", climb = "climb", fall = "fall"
+    }
+
     local function saveOriginalAnimations(character)
         local Animate = character:FindFirstChild("Animate")
         if not Animate then return end
-        
-        -- REMOVED the early-return guard so originals are always freshly captured
-        
-        if Animate:FindFirstChild("idle") then
-            local anim1 = Animate.idle:FindFirstChild("Animation1")
-            local anim2 = Animate.idle:FindFirstChild("Animation2")
-            if anim1 then originalAnims.idle1 = anim1.AnimationId end
-            if anim2 then originalAnims.idle2 = anim2.AnimationId end
-        end
-        
-        if Animate:FindFirstChild("walk") then
-            local walkAnim = Animate.walk:FindFirstChild("WalkAnim")
-            if walkAnim then originalAnims.walk = walkAnim.AnimationId end
-        end
-        
-        if Animate:FindFirstChild("run") then
-            local runAnim = Animate.run:FindFirstChild("RunAnim")
-            if runAnim then originalAnims.run = runAnim.AnimationId end
-        end
-        
-        if Animate:FindFirstChild("jump") then
-            local jumpAnim = Animate.jump:FindFirstChild("JumpAnim")
-            if jumpAnim then originalAnims.jump = jumpAnim.AnimationId end
-        end
-        
-        if Animate:FindFirstChild("climb") then
-            local climbAnim = Animate.climb:FindFirstChild("ClimbAnim")
-            if climbAnim then originalAnims.climb = climbAnim.AnimationId end
-        end
-        
-        if Animate:FindFirstChild("fall") then
-            local fallAnim = Animate.fall:FindFirstChild("FallAnim")
-            if fallAnim then originalAnims.fall = fallAnim.AnimationId end
+
+        for _, info in pairs(animMap) do
+            local folder = Animate:FindFirstChild(info.folder)
+            if folder then
+                for _, slot in ipairs(info.slots) do
+                    local anim = folder:FindFirstChild(slot.child)
+                    if anim then
+                        originalAnims[slot.origKey] = anim.AnimationId
+                    end
+                end
+            end
         end
     end
-    
+
     local function stopAllAnimations()
         local character = plr.Character
         if not character then return end
-        
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid then return end
-        
         for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
             track:Stop(0)
         end
     end
-    
-    local function shouldApplyAnimations()
-        if animState.all ~= "Default" then return true end
-        if animState.idle ~= "Default" then return true end
-        if animState.walk ~= "Default" then return true end
-        if animState.run ~= "Default" then return true end
-        if animState.jump ~= "Default" then return true end
-        if animState.climb ~= "Default" then return true end
-        if animState.fall ~= "Default" then return true end
-        return false
+
+    local function getPresetForType(animType)
+        if animState[animType] ~= "Default" then return animState[animType] end
+        if animState.all ~= "Default" then return animState.all end
+        return "Default"
     end
-    
+
     local function applyAnimations()
         if not plr or not plr.Character then return end
-        if not shouldApplyAnimations() then return end
-        
+
         local character = plr.Character
         local Animate = character:FindFirstChild("Animate")
         if not Animate then return end
-        
+
         stopAllAnimations()
-        
         Animate.Disabled = true
         task.wait(0.1)
-        
-        local function getPresetForType(animType)
-            if animState[animType] ~= "Default" then
-                return animState[animType]
-            end
-            if animState.all ~= "Default" then
-                return animState.all
-            end
-            return "Default"
-        end
-        
-        local idlePreset = getPresetForType("idle")
-        if Animate:FindFirstChild("idle") then
-            local anim1 = Animate.idle:FindFirstChild("Animation1")
-            local anim2 = Animate.idle:FindFirstChild("Animation2")
-            if idlePreset == "Default" then
-                if anim1 and originalAnims.idle1 then anim1.AnimationId = originalAnims.idle1 end
-                if anim2 and originalAnims.idle2 then anim2.AnimationId = originalAnims.idle2 end
-            elseif animPresets[idlePreset] then
-                local preset = animPresets[idlePreset]
-                if anim1 and preset.idle1 then anim1.AnimationId = preset.idle1 end
-                if anim2 and preset.idle2 then anim2.AnimationId = preset.idle2 end
+
+        for animType, info in pairs(animMap) do
+            local presetName = getPresetForType(animType)
+            local preset = animPresets[presetName]
+            local folder = Animate:FindFirstChild(info.folder)
+
+            if folder then
+                for _, slot in ipairs(info.slots) do
+                    local anim = folder:FindFirstChild(slot.child)
+                    if anim then
+                        if presetName == "Default" then
+                            -- restore original
+                            if originalAnims[slot.origKey] then
+                                anim.AnimationId = originalAnims[slot.origKey]
+                            end
+                        elseif preset and preset[slot.origKey] then
+                            anim.AnimationId = preset[slot.origKey]
+                        end
+                    end
+                end
             end
         end
-        
-        local walkPreset = getPresetForType("walk")
-        if Animate:FindFirstChild("walk") then
-            local walkAnim = Animate.walk:FindFirstChild("WalkAnim")
-            if walkPreset == "Default" then
-                if walkAnim and originalAnims.walk then walkAnim.AnimationId = originalAnims.walk end
-            elseif animPresets[walkPreset] then
-                local preset = animPresets[walkPreset]
-                if walkAnim and preset.walk then walkAnim.AnimationId = preset.walk end
-            end
-        end
-        
-        local runPreset = getPresetForType("run")
-        if Animate:FindFirstChild("run") then
-            local runAnim = Animate.run:FindFirstChild("RunAnim")
-            if runPreset == "Default" then
-                if runAnim and originalAnims.run then runAnim.AnimationId = originalAnims.run end
-            elseif animPresets[runPreset] then
-                local preset = animPresets[runPreset]
-                if runAnim and preset.run then runAnim.AnimationId = preset.run end
-            end
-        end
-        
-        local jumpPreset = getPresetForType("jump")
-        if Animate:FindFirstChild("jump") then
-            local jumpAnim = Animate.jump:FindFirstChild("JumpAnim")
-            if jumpPreset == "Default" then
-                if jumpAnim and originalAnims.jump then jumpAnim.AnimationId = originalAnims.jump end
-            elseif animPresets[jumpPreset] then
-                local preset = animPresets[jumpPreset]
-                if jumpAnim and preset.jump then jumpAnim.AnimationId = preset.jump end
-            end
-        end
-        
-        local climbPreset = getPresetForType("climb")
-        if Animate:FindFirstChild("climb") then
-            local climbAnim = Animate.climb:FindFirstChild("ClimbAnim")
-            if climbPreset == "Default" then
-                if climbAnim and originalAnims.climb then climbAnim.AnimationId = originalAnims.climb end
-            elseif animPresets[climbPreset] then
-                local preset = animPresets[climbPreset]
-                if climbAnim and preset.climb then climbAnim.AnimationId = preset.climb end
-            end
-        end
-        
-        local fallPreset = getPresetForType("fall")
-        if Animate:FindFirstChild("fall") then
-            local fallAnim = Animate.fall:FindFirstChild("FallAnim")
-            if fallPreset == "Default" then
-                if fallAnim and originalAnims.fall then fallAnim.AnimationId = originalAnims.fall end
-            elseif animPresets[fallPreset] then
-                local preset = animPresets[fallPreset]
-                if fallAnim and preset.fall then fallAnim.AnimationId = preset.fall end
-            end
-        end
-        
+
         Animate.Disabled = false
     end
-    
-    -- FIX: clear stale originals on respawn, save fresh ones before applying
+
     FEAnimMaid:GiveTask(plr.CharacterAdded:Connect(function(character)
         originalAnims = {}
         character:WaitForChild("Animate")
@@ -2983,57 +2910,38 @@ do
         saveOriginalAnimations(character)
         applyAnimations()
     end))
-    
+
     if plr.Character then
         saveOriginalAnimations(plr.Character)
     end
-    
-    feAnimSection:AddDropdown("All Animations", {
-        "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
-        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
-        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
+
+    local animOptions = {
+        "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
+        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
+        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
         "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed"
-    }, function(selected)
+    }
+
+    feAnimSection:AddDropdown("All Animations", animOptions, function(selected)
         animState.all = selected
         applyAnimations()
     end)
-    
-    local animOptions = {
-        "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost", 
-        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon", 
-        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar", 
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed"
+
+    local dropdowns = {
+        { label = "Idle Animation",  key = "idle"  },
+        { label = "Walk Animation",  key = "walk"  },
+        { label = "Run Animation",   key = "run"   },
+        { label = "Jump Animation",  key = "jump"  },
+        { label = "Climb Animation", key = "climb" },
+        { label = "Fall Animation",  key = "fall"  },
     }
-    
-    feAnimSection:AddDropdown("Idle Animation", animOptions, function(selected)
-        animState.idle = selected
-        applyAnimations()
-    end)
-    
-    feAnimSection:AddDropdown("Walk Animation", animOptions, function(selected)
-        animState.walk = selected
-        applyAnimations()
-    end)
-    
-    feAnimSection:AddDropdown("Run Animation", animOptions, function(selected)
-        animState.run = selected
-        applyAnimations()
-    end)
-    
-    feAnimSection:AddDropdown("Jump Animation", animOptions, function(selected)
-        animState.jump = selected
-        applyAnimations()
-    end)
-    
-    feAnimSection:AddDropdown("Climb Animation", animOptions, function(selected)
-        animState.climb = selected
-        applyAnimations()
-    end)
-    
-    feAnimSection:AddDropdown("Fall Animation", animOptions, function(selected)
-        animState.fall = selected
-        applyAnimations()
-    end)
+
+    for _, dd in ipairs(dropdowns) do
+        feAnimSection:AddDropdown(dd.label, animOptions, function(selected)
+            animState[dd.key] = selected
+            applyAnimations()
+        end)
+    end
 end
 
 do
