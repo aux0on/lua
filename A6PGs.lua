@@ -1261,18 +1261,23 @@ end
     local hlId = 78837807518622
     local hlId2 = 117080641351340
     local hlId3 = 136055001302601
+    local hlId4 = 97391997488948
     local hlOn = false
     local hlOn2 = false
     local hlOn3 = false
+    local hlOn4 = false
     local hlTrack
     local hlTrack2
     local hlTrack3
+    local hlTrack4
     local freezeConnection
     local freezeConnection2
     local freezeConnection3
+    local freezeConnection4
     local stoppedConnection
     local stoppedConnection2
     local stoppedConnection3
+    local stoppedConnection4
     
     local function stopHl()
         if stoppedConnection then stoppedConnection:Disconnect() stoppedConnection = nil end
@@ -1289,13 +1294,20 @@ end
         if hlTrack3 then hlTrack3:Stop() hlTrack3:Destroy() hlTrack3 = nil end
     end
     
+    local function stopHl4()
+        if stoppedConnection4 then stoppedConnection4:Disconnect() stoppedConnection4 = nil end
+        if hlTrack4 then hlTrack4:Stop() hlTrack4:Destroy() hlTrack4 = nil end
+    end
+    
     local function cleanup()
         stopHl()
         stopHl2()
         stopHl3()
+        stopHl4()
         if freezeConnection then freezeConnection:Disconnect() freezeConnection = nil end
         if freezeConnection2 then freezeConnection2:Disconnect() freezeConnection2 = nil end
         if freezeConnection3 then freezeConnection3:Disconnect() freezeConnection3 = nil end
+        if freezeConnection4 then freezeConnection4:Disconnect() freezeConnection4 = nil end
     end
     
     local function playHl(hum)
@@ -1349,6 +1361,23 @@ end
         end)
     end
     
+    local function playHl4(hum)
+        if not hum or not hum.Parent then return end
+        local ani = hum:FindFirstChildOfClass("Animator")
+        if not ani then return end
+        stopHl4()
+        local a = Instance.new("Animation")
+        a.AnimationId = "rbxassetid://"..hlId4
+        hlTrack4 = ani:LoadAnimation(a)
+        hlTrack4.Priority = Enum.AnimationPriority.Action
+        hlTrack4.Looped = true
+        hlTrack4:Play()
+        if stoppedConnection4 then stoppedConnection4:Disconnect() end
+        stoppedConnection4 = hlTrack4.Stopped:Connect(function()
+            if hlOn4 and hum.Parent then task.wait(0.1) playHl4(hum) end
+        end)
+    end
+    
     local function applyFreeze(hum)
         if freezeConnection then freezeConnection:Disconnect() end
         freezeConnection = hum.StateChanged:Connect(function()
@@ -1379,6 +1408,16 @@ end
         end)
     end
     
+    local function applyFreeze4(hum)
+        if freezeConnection4 then freezeConnection4:Disconnect() end
+        freezeConnection4 = hum.StateChanged:Connect(function()
+            if hlOn4 and hum.Parent and (not hlTrack4 or not hlTrack4.IsPlaying) then
+                task.wait(0.05)
+                if hlOn4 and hum.Parent then playHl4(hum) end
+            end
+        end)
+    end
+    
     local function enableHl()
         local c = LocalPlayer.Character
         if not c then return end
@@ -1404,6 +1443,15 @@ end
         if not h then return end
         applyFreeze3(h)
         playHl3(h)
+    end
+    
+    local function enableHl4()
+        local c = LocalPlayer.Character
+        if not c then return end
+        local h = c:FindFirstChild("Humanoid")
+        if not h then return end
+        applyFreeze4(h)
+        playHl4(h)
     end
     
     hlSection:AddToggle("Enable Headless", function(s)
@@ -1436,6 +1484,16 @@ end
         end
     end)
     
+    hlSection:AddToggle("H&K", function(s)
+        hlOn4 = s
+        if s then
+            enableHl4()
+        else
+            stopHl4()
+            if freezeConnection4 then freezeConnection4:Disconnect() freezeConnection4 = nil end
+        end
+    end)
+    
     LocalPlayer.CharacterRemoving:Connect(function()
         cleanup()
     end)
@@ -1445,6 +1503,7 @@ end
         if hlOn then enableHl() end
         if hlOn2 then enableHl2() end
         if hlOn3 then enableHl3() end
+        if hlOn4 then enableHl4() end
     end)
 end
 
