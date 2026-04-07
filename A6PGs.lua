@@ -3660,6 +3660,8 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 
+end
+
 RootMaid:GiveTask(function()
     
 end)
