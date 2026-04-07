@@ -3660,7 +3660,7 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 
-do
+   do
     local plr = Services.Players.LocalPlayer
     local dropkickSection = shared.AddSection("Dropkick")
     local DropkickMaid = nil
@@ -3674,6 +3674,46 @@ do
             guiBtn.Active = true
         end
     end)
+
+    local function TouchFling(target)
+        local targetChar = target.Character
+        if not targetChar then return end
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+        if not targetRoot or not targetHum then return end
+
+        local myRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+
+        targetRoot.Anchored = false
+
+        local direction = (targetRoot.Position - myRoot.Position).Unit
+
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "DropkickFling"
+        bv.Velocity = Vector3.new(
+            direction.X * 250,
+            120,
+            direction.Z * 250
+        )
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.P = math.huge
+        bv.Parent = targetRoot
+
+        local ba = Instance.new("BodyAngularVelocity")
+        ba.Name = "DropkickSpin"
+        ba.AngularVelocity = Vector3.new(
+            math.random(-20, 20),
+            math.random(-20, 20),
+            math.random(-20, 20)
+        )
+        ba.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        ba.P = math.huge
+        ba.Parent = targetRoot
+
+        game:GetService("Debris"):AddItem(bv, 0.2)
+        game:GetService("Debris"):AddItem(ba, 0.2)
+    end
 
     local function playDropkick()
         if playing then return end
@@ -3700,25 +3740,37 @@ do
             track.Priority = Enum.AnimationPriority.Action4
             track:Play()
 
-            -- ✅ Fling loop runs for 3 seconds then stops itself
+            local flung = {}
+            local touchConnections = {}
             local flingActive = true
-            task.spawn(function()
-                local root = GetRoot(plr)
-                if not root then return end
-                local RVelocity = nil
-                while flingActive do
-                    pcall(function()
-                        RVelocity = root.Velocity
-                        root.Velocity = Vector3.new(math.random(-150, 150), -25000, math.random(-150, 150))
-                        RunService.RenderStepped:Wait()
-                        root.Velocity = RVelocity
+
+            for _, part in pairs(c:GetChildren()) do
+                if part:IsA("BasePart") then
+                    local conn = part.Touched:Connect(function(hit)
+                        if not flingActive then return end
+                        local hitChar = hit.Parent
+                        local hitPlr = Services.Players:GetPlayerFromCharacter(hitChar)
+                        if not hitPlr or hitPlr == plr then return end
+                        if flung[hitPlr] then return end
+                        flung[hitPlr] = true
+
+                        TouchFling(hitPlr)
+
+                        task.delay(2, function()
+                            flung[hitPlr] = nil
+                        end)
                     end)
-                    RunService.Heartbeat:Wait()
+                    table.insert(touchConnections, conn)
                 end
-            end)
+            end
 
             task.wait(3)
-            flingActive = false -- ✅ cleanly stops the fling
+            flingActive = false
+
+            for _, conn in pairs(touchConnections) do
+                conn:Disconnect()
+            end
+
             track:Stop()
         end)
 
