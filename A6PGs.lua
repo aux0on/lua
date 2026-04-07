@@ -3660,7 +3660,7 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 
- do
+do
     local plr = Services.Players.LocalPlayer
     local dropkickSection = shared.AddSection("Dropkick")
     local DropkickMaid = nil
@@ -3700,33 +3700,31 @@ end
             track.Priority = Enum.AnimationPriority.Action4
             track:Play()
 
-            ToggleFling(true)
-
+            -- ✅ Fling loop runs for 3 seconds then stops itself
+            local flingActive = true
             task.spawn(function()
                 local root = GetRoot(plr)
-                for i = 1, 60 do
-                    if not plr.Character or plr.Character ~= c then break end
-                    if root then
-                        for _, v in pairs(Services.Players:GetPlayers()) do
-                            if v ~= plr and v.Character then
-                                local vRoot = GetRoot(v)
-                                if vRoot then Touch(vRoot, root) end
-                            end
-                        end
-                    end
-                    task.wait(0.05)
+                if not root then return end
+                local RVelocity = nil
+                while flingActive do
+                    pcall(function()
+                        RVelocity = root.Velocity
+                        root.Velocity = Vector3.new(math.random(-150, 150), -25000, math.random(-150, 150))
+                        RunService.RenderStepped:Wait()
+                        root.Velocity = RVelocity
+                    end)
+                    RunService.Heartbeat:Wait()
                 end
             end)
 
             task.wait(3)
-            ToggleFling(false)
+            flingActive = false -- ✅ cleanly stops the fling
             track:Stop()
         end)
 
         if err then warn("[DK] Error:", err) end
 
         if ani and ani.Parent then ani.Disabled = false end
-
         local freshChar = plr.Character
         local freshAni = freshChar and freshChar:FindFirstChild("Animate")
         if freshAni then freshAni.Disabled = false end
