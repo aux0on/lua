@@ -3660,7 +3660,9 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 
-do
+  do
+    local plr = Services.Players.LocalPlayer
+
     local dropkickSection = shared.AddSection("Dropkick")
     local DropkickMaid = nil
     local guiBtn = nil
@@ -3695,7 +3697,7 @@ do
             local root = GetRoot(plr)
             for i = 1, 60 do
                 if root then
-                    for _, v in pairs(game:GetService("Players"):GetPlayers()) do
+                    for _, v in pairs(Services.Players:GetPlayers()) do
                         if v ~= plr and v.Character then
                             local vRoot = GetRoot(v)
                             if vRoot then Touch(vRoot, root) end
@@ -3753,7 +3755,7 @@ do
             end
         end)
 
-        game:GetService("UserInputService").InputChanged:Connect(function(i)
+        Services.UserInputService.InputChanged:Connect(function(i)
             if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
             or i.UserInputType == Enum.UserInputType.Touch) then
                 local delta = i.Position - dragStart
@@ -3764,7 +3766,7 @@ do
             end
         end)
 
-        game:GetService("UserInputService").InputEnded:Connect(function(i)
+        Services.UserInputService.InputEnded:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1
             or i.UserInputType == Enum.UserInputType.Touch then
                 dragging = false
