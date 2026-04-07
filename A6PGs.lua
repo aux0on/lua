@@ -3660,59 +3660,77 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 
-  do
+ do
     local plr = Services.Players.LocalPlayer
-
     local dropkickSection = shared.AddSection("Dropkick")
     local DropkickMaid = nil
     local guiBtn = nil
     local gSize = 40
     local playing = false
 
+    plr.CharacterAdded:Connect(function()
+        playing = false
+        if guiBtn then
+            guiBtn.Active = true
+        end
+    end)
+
     local function playDropkick()
         if playing then return end
         playing = true
-        local c = plr.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
+
+        local c = plr.Character or plr.CharacterAdded:Wait()
+        local h = c:FindFirstChildOfClass("Humanoid")
+        local ani = c:FindFirstChild("Animate")
+
         if not h then playing = false return end
 
-        for _, t in pairs(h:GetPlayingAnimationTracks()) do t:Stop() end
-        local ani = c:FindFirstChild("Animate")
-        if ani then ani.Disabled = true end
+        local ok, err = pcall(function()
+            for _, t in pairs(h:GetPlayingAnimationTracks()) do t:Stop() end
+            if ani then ani.Disabled = true end
 
-        task.wait(0.1)
+            task.wait(0.1)
 
-        local a = Instance.new("Animation")
-        a.AnimationId = "rbxassetid://133566007754001"
-        local track = h:LoadAnimation(a)
+            local a = Instance.new("Animation")
+            a.AnimationId = "rbxassetid://133566007754001"
+            local track = h:LoadAnimation(a)
 
-        warn("[DK] Length:", track.Length, "| Playing:", track.IsPlaying)
+            warn("[DK] Length:", track.Length, "| Playing:", track.IsPlaying)
 
-        track.Priority = Enum.AnimationPriority.Action4
-        track:Play()
+            track.Priority = Enum.AnimationPriority.Action4
+            track:Play()
 
-        ToggleFling(true)
+            ToggleFling(true)
 
-        task.spawn(function()
-            local root = GetRoot(plr)
-            for i = 1, 60 do
-                if root then
-                    for _, v in pairs(Services.Players:GetPlayers()) do
-                        if v ~= plr and v.Character then
-                            local vRoot = GetRoot(v)
-                            if vRoot then Touch(vRoot, root) end
+            task.spawn(function()
+                local root = GetRoot(plr)
+                for i = 1, 60 do
+                    if not plr.Character or plr.Character ~= c then break end
+                    if root then
+                        for _, v in pairs(Services.Players:GetPlayers()) do
+                            if v ~= plr and v.Character then
+                                local vRoot = GetRoot(v)
+                                if vRoot then Touch(vRoot, root) end
+                            end
                         end
                     end
+                    task.wait(0.05)
                 end
-                task.wait(0.05)
-            end
+            end)
+
+            task.wait(3)
+            ToggleFling(false)
+            track:Stop()
         end)
 
-        task.wait(3)
-        ToggleFling(false)
+        if err then warn("[DK] Error:", err) end
 
-        if track then track:Stop() end
-        if ani then ani.Disabled = false end
+        if ani and ani.Parent then ani.Disabled = false end
+
+        local freshChar = plr.Character
+        local freshAni = freshChar and freshChar:FindFirstChild("Animate")
+        if freshAni then freshAni.Disabled = false end
+
         playing = false
     end
 
