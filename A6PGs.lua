@@ -3935,58 +3935,52 @@ old = hook(invokeServer, hookFunc)
 
 do
     local dropkickSection = shared.AddSection("Dropkick")
-
     local DropkickMaid = nil
-    local guiBtn
+    local guiBtn = nil
     local gSize = 40
     local playing = false
 
     local function playDropkick()
         if playing then return end
         playing = true
-
         local c = plr.Character
-        local h = c and c:FindFirstChild("Humanoid")
+        local h = c and c:FindFirstChildOfClass("Humanoid")
         if not h then playing = false return end
 
-        -- Disable default animations
         local ani = c:FindFirstChild("Animate")
         if ani then ani.Disabled = true end
         for _, t in pairs(h:GetPlayingAnimationTracks()) do t:Stop() end
 
-        -- Play your emote
         local a = Instance.new("Animation")
-        a.AnimationId = "rbxassetid://133566007754001"
+        a.AnimationId = "rbxassetid://13356600775" -- ✅ Fix your actual asset ID here
         local track = h:LoadAnimation(a)
         track.Priority = Enum.AnimationPriority.Action
         track:Play()
 
-        -- 🔥 ENABLE FLING
         ToggleFling(true)
 
-        -- OPTIONAL: small touch loop to ensure hits
         task.spawn(function()
             local root = GetRoot(plr)
-            for i = 1,60 do -- ~3 seconds
-                for _, v in pairs(game:GetService("Players"):GetPlayers()) do
-                    if v ~= plr and v.Character and GetRoot(v) then
-                        Touch(GetRoot(v), root)
+            for i = 1, 60 do
+                if root then
+                    for _, v in pairs(game:GetService("Players"):GetPlayers()) do
+                        if v ~= plr and v.Character then
+                            local vRoot = GetRoot(v)
+                            if vRoot then
+                                Touch(vRoot, root)
+                            end
+                        end
                     end
                 end
                 task.wait(0.05)
             end
         end)
 
-        -- ⏳ Wait 3 seconds
         task.wait(3)
-
-        -- ❌ DISABLE FLING
         ToggleFling(false)
 
-        -- Restore animations
         if ani then ani.Disabled = false end
         if track then track:Stop() end
-
         playing = false
     end
 
@@ -3994,52 +3988,70 @@ do
         if DropkickMaid then DropkickMaid:DoCleaning() DropkickMaid = nil end
         DropkickMaid = Maid.new()
 
-        local sg = plr.PlayerGui:FindFirstChild("DropkickGUI") or Instance.new("ScreenGui", plr.PlayerGui)
+        -- ✅ Always create a fresh ScreenGui instead of reusing
+        local sg = Instance.new("ScreenGui")
         sg.Name = "DropkickGUI"
         sg.ResetOnSpawn = false
+        sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- ✅ Ensures it renders on top
+        sg.Parent = plr.PlayerGui
         DropkickMaid:GiveTask(sg)
 
-        guiBtn = Instance.new("TextButton", sg)
+        guiBtn = Instance.new("TextButton")
         guiBtn.Size = UDim2.new(0, gSize, 0, gSize)
         guiBtn.Position = UDim2.new(0.5, 0, 0.8, 0)
-        guiBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-        guiBtn.TextColor3 = Color3.new(1,1,1)
+        guiBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        guiBtn.TextColor3 = Color3.new(1, 1, 1)
         guiBtn.Text = "DK"
-        guiBtn.TextSize = gSize/2
-        Instance.new("UICorner", guiBtn).CornerRadius = UDim.new(1,0)
+        guiBtn.TextSize = gSize / 2
+        guiBtn.ZIndex = 10 -- ✅ Render above other UI
+        guiBtn.Parent = sg -- ✅ Parent AFTER setting properties
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = guiBtn
+
         ApplyCustomStyle(guiBtn)
 
         -- Dragging
-        local drag, start, pos
+        local dragging = false
+        local dragStart, startPos
+
         guiBtn.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                drag = true
-                start = i.Position
-                pos = guiBtn.Position
-                i.Changed:Connect(function()
-                    if i.UserInputState == Enum.UserInputState.End then
-                        drag = false
-                    end
-                end)
+            if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = i.Position
+                startPos = guiBtn.Position
             end
         end)
 
-        guiBtn.InputChanged:Connect(function(i)
-            if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-                local d = i.Position - start
-                guiBtn.Position = UDim2.new(pos.X.Scale, pos.X.Offset + d.X, pos.Y.Scale, pos.Y.Offset + d.Y)
+        game:GetService("UserInputService").InputChanged:Connect(function(i) -- ✅ More reliable drag
+            if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
+            or i.UserInputType == Enum.UserInputType.Touch) then
+                local delta = i.Position - dragStart
+                guiBtn.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+
+        game:GetService("UserInputService").InputEnded:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
             end
         end)
 
         guiBtn.MouseButton1Click:Connect(playDropkick)
     end
 
-    -- Toggle (like your others)
     dropkickSection:AddToggle("Enable Dropkick Button", function(e)
         if e then
             makeGui()
         else
             if DropkickMaid then DropkickMaid:DoCleaning() DropkickMaid = nil end
+            guiBtn = nil
         end
     end)
 
@@ -4047,16 +4059,14 @@ do
         if DropkickMaid then DropkickMaid:DoCleaning() end
     end)
 
-    -- Size slider
     dropkickSection:AddSlider("Dropkick Button Size", 30, 150, gSize, function(s)
         gSize = s
         if guiBtn then
             guiBtn.Size = UDim2.new(0, s, 0, s)
-            guiBtn.TextSize = s/2
+            guiBtn.TextSize = s / 2
         end
     end)
 
-    -- Manual trigger button
     dropkickSection:AddButton("Use Dropkick", playDropkick)
 end
 	
