@@ -3674,14 +3674,19 @@ do
         local h = c and c:FindFirstChildOfClass("Humanoid")
         if not h then playing = false return end
 
+        for _, t in pairs(h:GetPlayingAnimationTracks()) do t:Stop() end
         local ani = c:FindFirstChild("Animate")
         if ani then ani.Disabled = true end
-        for _, t in pairs(h:GetPlayingAnimationTracks()) do t:Stop() end
+
+        task.wait(0.1)
 
         local a = Instance.new("Animation")
-        a.AnimationId = "rbxassetid://127764273000599" -- ✅ Fix your actual asset ID here
+        a.AnimationId = "rbxassetid://133566007754001"
         local track = h:LoadAnimation(a)
-        track.Priority = Enum.AnimationPriority.Action
+
+        warn("[DK] Length:", track.Length, "| Playing:", track.IsPlaying)
+
+        track.Priority = Enum.AnimationPriority.Action4
         track:Play()
 
         ToggleFling(true)
@@ -3693,9 +3698,7 @@ do
                     for _, v in pairs(game:GetService("Players"):GetPlayers()) do
                         if v ~= plr and v.Character then
                             local vRoot = GetRoot(v)
-                            if vRoot then
-                                Touch(vRoot, root)
-                            end
+                            if vRoot then Touch(vRoot, root) end
                         end
                     end
                 end
@@ -3706,8 +3709,8 @@ do
         task.wait(3)
         ToggleFling(false)
 
-        if ani then ani.Disabled = false end
         if track then track:Stop() end
+        if ani then ani.Disabled = false end
         playing = false
     end
 
@@ -3715,11 +3718,10 @@ do
         if DropkickMaid then DropkickMaid:DoCleaning() DropkickMaid = nil end
         DropkickMaid = Maid.new()
 
-        -- ✅ Always create a fresh ScreenGui instead of reusing
         local sg = Instance.new("ScreenGui")
         sg.Name = "DropkickGUI"
         sg.ResetOnSpawn = false
-        sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- ✅ Ensures it renders on top
+        sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         sg.Parent = plr.PlayerGui
         DropkickMaid:GiveTask(sg)
 
@@ -3730,8 +3732,8 @@ do
         guiBtn.TextColor3 = Color3.new(1, 1, 1)
         guiBtn.Text = "DK"
         guiBtn.TextSize = gSize / 2
-        guiBtn.ZIndex = 10 -- ✅ Render above other UI
-        guiBtn.Parent = sg -- ✅ Parent AFTER setting properties
+        guiBtn.ZIndex = 10
+        guiBtn.Parent = sg
 
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(1, 0)
@@ -3739,7 +3741,6 @@ do
 
         ApplyCustomStyle(guiBtn)
 
-        -- Dragging
         local dragging = false
         local dragStart, startPos
 
@@ -3752,7 +3753,7 @@ do
             end
         end)
 
-        game:GetService("UserInputService").InputChanged:Connect(function(i) -- ✅ More reliable drag
+        game:GetService("UserInputService").InputChanged:Connect(function(i)
             if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
             or i.UserInputType == Enum.UserInputType.Touch) then
                 local delta = i.Position - dragStart
