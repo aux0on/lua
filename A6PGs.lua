@@ -3341,7 +3341,7 @@ end
 
 end
 
-do
+    do
     local Players = game:GetService("Players")
     local StarterGui = game:GetService("StarterGui")
     local CoreGui = game:GetService("CoreGui")
@@ -3349,26 +3349,26 @@ do
     local LocalPlayer = Players.LocalPlayer
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-    local grabGunSection = shared.AddSection("Grab Gun (TL)")
+    local GGTLSection = shared.AddSection("Grab Gun (TL)")
 
     local ggButtonEnabled = false
     local ggButtonGui = nil
     local ggButton = nil
     local ggButtonSize = 60
-    local autoGrabEnabled = false
-    local autoGrabMaid = Maid.new()
-    RootMaid:GiveTask(autoGrabMaid)
+    local autoGGEnabled = false
+    local autoGGMaid = Maid.new()
+    RootMaid:GiveTask(autoGGMaid)
 
-    local function msg(t, txt, d)
+    local function ggNotify(t, txt, d)
         StarterGui:SetCore("SendNotification", {Title=t, Text=txt, Duration=d})
     end
 
-    local function findNearestGunDrop()
+    local function findNearestGG()
         local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not root then return nil end
 
-        local nearest = nil
-        local nearestDist = math.huge
+        local nearestGG = nil
+        local nearestGGDist = math.huge
 
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj.Name == "GunDrop" then
@@ -3377,146 +3377,144 @@ do
 
                 if part then
                     local dist = (root.Position - part.Position).Magnitude
-                    if dist < nearestDist then
-                        nearestDist = dist
-                        nearest = part
+                    if dist < nearestGGDist then
+                        nearestGGDist = dist
+                        nearestGG = part
                     end
                 end
             end
         end
 
-        return nearest
+        return nearestGG
     end
 
-    local function grabGun()
+    local function grabGG()
         local char = LocalPlayer.Character
         local root = char and char:FindFirstChild("HumanoidRootPart")
         if not root then
-            msg("Grab Gun", "Character not found!", 3)
+            ggNotify("Grab Gun", "Character not found!", 3)
             return
         end
 
-        local gunDrop = findNearestGunDrop()
-        if not gunDrop then
-            msg("Grab Gun", "No gun drop found!", 3)
+        local ggDrop = findNearestGG()
+        if not ggDrop then
+            ggNotify("Grab Gun", "No gun drop found!", 3)
             return
         end
 
-        local savedPos = root.CFrame
+        local ggSavedPos = root.CFrame
 
-        msg("Grab Gun", "Grabbing gun...", 2)
-        root.CFrame = CFrame.new(gunDrop.Position + Vector3.new(0, 2, 0))
+        ggNotify("Grab Gun", "Grabbing gun...", 2)
+        root.CFrame = CFrame.new(ggDrop.Position + Vector3.new(0, 2, 0))
 
         task.wait(0.5)
 
-        root.CFrame = savedPos
-        msg("Grab Gun", "Returned to original position!", 2)
+        root.CFrame = ggSavedPos
+        ggNotify("Grab Gun", "Returned to original position!", 2)
     end
 
-    local function setupAutoGrab()
-        autoGrabMaid:DoCleaning()
-        if not autoGrabEnabled then return end
+    local function setupAutoGG()
+        autoGGMaid:DoCleaning()
+        if not autoGGEnabled then return end
 
-        -- Watch for any GunDrop added to workspace
-        autoGrabMaid:GiveTask(workspace.DescendantAdded:Connect(function(obj)
-            if not autoGrabEnabled then return end
+        autoGGMaid:GiveTask(workspace.DescendantAdded:Connect(function(obj)
+            if not autoGGEnabled then return end
             if obj.Name == "GunDrop" then
-                task.wait(0.1) -- small wait for it to fully load
-                grabGun()
+                task.wait(0.1)
+                grabGG()
             end
         end))
 
-        -- Also immediately grab if one already exists
-        local existing = findNearestGunDrop()
-        if existing then
-            grabGun()
+        local existingGG = findNearestGG()
+        if existingGG then
+            grabGG()
         end
     end
 
-    local function createDraggableButton(text, position, size, callback)
-        local ScreenGui = Instance.new("ScreenGui")
-        ScreenGui.Name = "GGButton_" .. text
-        ScreenGui.ResetOnSpawn = false
-        ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    local function createGGButton(text, position, size, callback)
+        local ggScreenGui = Instance.new("ScreenGui")
+        ggScreenGui.Name = "GGButton_" .. text
+        ggScreenGui.ResetOnSpawn = false
+        ggScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-        local Button = Instance.new("TextButton")
-        Button.Name = "DragButton"
-        Button.Parent = ScreenGui
-        Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        Button.Size = UDim2.new(0, size, 0, size)
-        Button.Position = UDim2.new(0, position.X, 0, position.Y)
-        Button.Font = Enum.Font.SourceSansLight
-        Button.Text = text
-        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Button.TextSize = 18
-        Button.TextWrapped = true
-        Button.BackgroundTransparency = 0.3
+        local ggBtn = Instance.new("TextButton")
+        ggBtn.Name = "GGDragButton"
+        ggBtn.Parent = ggScreenGui
+        ggBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        ggBtn.Size = UDim2.new(0, size, 0, size)
+        ggBtn.Position = UDim2.new(0, position.X, 0, position.Y)
+        ggBtn.Font = Enum.Font.SourceSansLight
+        ggBtn.Text = text
+        ggBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ggBtn.TextSize = 18
+        ggBtn.TextWrapped = true
+        ggBtn.BackgroundTransparency = 0.3
 
-        local Corner = Instance.new("UICorner")
-        Corner.CornerRadius = UDim.new(1, 0)
-        Corner.Parent = Button
+        local ggCorner = Instance.new("UICorner")
+        ggCorner.CornerRadius = UDim.new(1, 0)
+        ggCorner.Parent = ggBtn
 
-        local stroke = Instance.new("UIStroke", Button)
-        stroke.Thickness = 2.5
-        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        local ggStroke = Instance.new("UIStroke", ggBtn)
+        ggStroke.Thickness = 2.5
+        ggStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
-        local gradient = Instance.new("UIGradient", stroke)
-        gradient.Color = ColorSequence.new{
+        local ggGradient = Instance.new("UIGradient", ggStroke)
+        ggGradient.Color = ColorSequence.new{
             ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 100)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
         }
-        gradient.Rotation = 45
+        ggGradient.Rotation = 45
 
-        local dragging = false
-        local dragStart, startPos
+        local ggDragging = false
+        local ggDragStart, ggStartPos
 
-        Button.InputBegan:Connect(function(input)
+        ggBtn.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                dragStart = input.Position
-                startPos = Button.Position
+                ggDragging = true
+                ggDragStart = input.Position
+                ggStartPos = ggBtn.Position
 
                 input.Changed:Connect(function()
                     if input.UserInputState == Enum.UserInputState.End then
-                        dragging = false
+                        ggDragging = false
                     end
                 end)
             end
         end)
 
-        Button.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                local delta = input.Position - dragStart
-                Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        ggBtn.InputChanged:Connect(function(input)
+            if ggDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local ggDelta = input.Position - ggDragStart
+                ggBtn.Position = UDim2.new(ggStartPos.X.Scale, ggStartPos.X.Offset + ggDelta.X, ggStartPos.Y.Scale, ggStartPos.Y.Offset + ggDelta.Y)
             end
         end)
 
-        Button.MouseButton1Click:Connect(callback)
+        ggBtn.MouseButton1Click:Connect(callback)
 
-        local success = pcall(function()
-            ScreenGui.Parent = CoreGui
+        local ggSuccess = pcall(function()
+            ggScreenGui.Parent = CoreGui
         end)
-        if not success then
-            ScreenGui.Parent = PlayerGui
+        if not ggSuccess then
+            ggScreenGui.Parent = PlayerGui
         end
 
-        return ScreenGui, Button
+        return ggScreenGui, ggBtn
     end
 
-    local keybindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    local ggKeybind = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         if input.KeyCode == Enum.KeyCode.G then
-            grabGun()
+            grabGG()
         end
     end)
-    RootMaid:GiveTask(keybindConnection)
+    RootMaid:GiveTask(ggKeybind)
 
-    grabGunSection:AddToggle("Enable GG Button", function(enabled)
+    GGTLSection:AddToggle("Enable GG Button", function(enabled)
         ggButtonEnabled = enabled
 
         if enabled then
-            ggButtonGui, ggButton = createDraggableButton("GG", {X = 310, Y = 180}, ggButtonSize, function()
-                grabGun()
+            ggButtonGui, ggButton = createGGButton("GG", {X = 310, Y = 180}, ggButtonSize, function()
+                grabGG()
             end)
         else
             if ggButtonGui then
@@ -3526,9 +3524,9 @@ do
         end
     end)
 
-    grabGunSection:AddToggle("Auto Grab Gun", function(enabled)
-        autoGrabEnabled = enabled
-        setupAutoGrab()
+    GGTLSection:AddToggle("Enable Auto GG", function(enabled)
+        autoGGEnabled = enabled
+        setupAutoGG()
     end)
 
     RootMaid:GiveTask(function()
@@ -3536,22 +3534,22 @@ do
             ggButtonGui:Destroy()
             ggButtonGui = nil
         end
-        autoGrabEnabled = false
-        autoGrabMaid:DoCleaning()
+        autoGGEnabled = false
+        autoGGMaid:DoCleaning()
     end)
 
-    grabGunSection:AddSlider("GG Button Size", 30, 150, ggButtonSize, function(size)
+    GGTLSection:AddSlider("GG Button Size", 30, 150, ggButtonSize, function(size)
         ggButtonSize = size
         if ggButtonGui then
-            local button = ggButtonGui:FindFirstChild("DragButton")
-            if button then
-                button.Size = UDim2.new(0, size, 0, size)
+            local ggSizeBtn = ggButtonGui:FindFirstChild("GGDragButton")
+            if ggSizeBtn then
+                ggSizeBtn.Size = UDim2.new(0, size, 0, size)
             end
         end
     end)
 
-    grabGunSection:AddButton("Grab Gun", function()
-        grabGun()
+    GGTLSection:AddButton("Grab Gun", function()
+        grabGG()
     end)
 end
 
