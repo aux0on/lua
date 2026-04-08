@@ -2586,7 +2586,7 @@ RootMaid:GiveTask(function()
     timerGuiEnabled = false
     autoGetBomb = false
 end)
-
+	
 do
     local Players = game:GetService("Players")
     local plr = Players.LocalPlayer
@@ -2594,6 +2594,8 @@ do
     local feAnimSection = shared.AddSection("FE Animations")
     local FEAnimMaid = Maid.new()
     RootMaid:GiveTask(FEAnimMaid)
+
+    local feAnimEnabled = false
 
     local animState = {
         all = "Default",
@@ -2818,7 +2820,6 @@ do
         },
     }
 
-    -- Maps each anim type to its Animate child name, slot name, and original keys
     local animMap = {
         idle  = { folder = "idle",  slots = { { child = "Animation1", origKey = "idle1" }, { child = "Animation2", origKey = "idle2" } } },
         walk  = { folder = "walk",  slots = { { child = "WalkAnim",   origKey = "walk"  } } },
@@ -2826,12 +2827,6 @@ do
         jump  = { folder = "jump",  slots = { { child = "JumpAnim",   origKey = "jump"  } } },
         climb = { folder = "climb", slots = { { child = "ClimbAnim",  origKey = "climb" } } },
         fall  = { folder = "fall",  slots = { { child = "FallAnim",   origKey = "fall"  } } },
-    }
-
-    -- Preset key each slot reads from (idle uses idle1/idle2, others match their type name)
-    local slotPresetKey = {
-        idle1 = "idle1", idle2 = "idle2",
-        walk = "walk", run = "run", jump = "jump", climb = "climb", fall = "fall"
     }
 
     local function saveOriginalAnimations(character)
@@ -2861,6 +2856,31 @@ do
         end
     end
 
+    local function restoreDefaultAnimations()
+        if not plr or not plr.Character then return end
+        local character = plr.Character
+        local Animate = character:FindFirstChild("Animate")
+        if not Animate then return end
+
+        stopAllAnimations()
+        Animate.Disabled = true
+        task.wait(0.1)
+
+        for _, info in pairs(animMap) do
+            local folder = Animate:FindFirstChild(info.folder)
+            if folder then
+                for _, slot in ipairs(info.slots) do
+                    local anim = folder:FindFirstChild(slot.child)
+                    if anim and originalAnims[slot.origKey] then
+                        anim.AnimationId = originalAnims[slot.origKey]
+                    end
+                end
+            end
+        end
+
+        Animate.Disabled = false
+    end
+
     local function getPresetForType(animType)
         if animState[animType] ~= "Default" then return animState[animType] end
         if animState.all ~= "Default" then return animState.all end
@@ -2868,6 +2888,7 @@ do
     end
 
     local function applyAnimations()
+        if not feAnimEnabled then return end
         if not plr or not plr.Character then return end
 
         local character = plr.Character
@@ -2888,7 +2909,6 @@ do
                     local anim = folder:FindFirstChild(slot.child)
                     if anim then
                         if presetName == "Default" then
-                            -- restore original
                             if originalAnims[slot.origKey] then
                                 anim.AnimationId = originalAnims[slot.origKey]
                             end
@@ -2903,16 +2923,45 @@ do
         Animate.Disabled = false
     end
 
-    FEAnimMaid:GiveTask(plr.CharacterAdded:Connect(function(character)
-        originalAnims = {}
-        character:WaitForChild("Animate")
-        task.wait(0.5)
-        saveOriginalAnimations(character)
-        applyAnimations()
-    end))
+    -- CharacterAdded only hooks in when enabled
+    local feAnimCharConn = nil
 
-    if plr.Character then
-        saveOriginalAnimations(plr.Character)
+    local function enableFEAnims()
+        if plr.Character then
+            saveOriginalAnimations(plr.Character)
+            applyAnimations()
+        end
+
+        feAnimCharConn = plr.CharacterAdded:Connect(function(character)
+            if not feAnimEnabled then return end
+            originalAnims = {}
+            character:WaitForChild("Animate")
+            task.wait(0.5)
+            saveOriginalAnimations(character)
+            applyAnimations()
+        end)
+        FEAnimMaid:GiveTask(feAnimCharConn)
+    end
+
+    local function disableFEAnims()
+        -- Disconnect character listener
+        if feAnimCharConn then
+            feAnimCharConn:Disconnect()
+            feAnimCharConn = nil
+        end
+        FEAnimMaid:DoCleaning()
+
+        -- Reset all dropdowns state
+        animState.all   = "Default"
+        animState.idle  = "Default"
+        animState.walk  = "Default"
+        animState.run   = "Default"
+        animState.jump  = "Default"
+        animState.climb = "Default"
+        animState.fall  = "Default"
+
+        -- Restore original animations on character
+        restoreDefaultAnimations()
     end
 
     local animOptions = {
@@ -2922,7 +2971,18 @@ do
         "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed"
     }
 
+    -- Master toggle — sits at the top of the section
+    feAnimSection:AddToggle("Enable FE Anims", function(enabled)
+        feAnimEnabled = enabled
+        if enabled then
+            enableFEAnims()
+        else
+            disableFEAnims()
+        end
+    end)
+
     feAnimSection:AddDropdown("All Animations", animOptions, function(selected)
+        if not feAnimEnabled then return end
         animState.all = selected
         applyAnimations()
     end)
@@ -2938,10 +2998,16 @@ do
 
     for _, dd in ipairs(dropdowns) do
         feAnimSection:AddDropdown(dd.label, animOptions, function(selected)
+            if not feAnimEnabled then return end
             animState[dd.key] = selected
             applyAnimations()
         end)
     end
+
+    RootMaid:GiveTask(function()
+        feAnimEnabled = false
+        disableFEAnims()
+    end)
 end
 
 do
@@ -3341,7 +3407,7 @@ end
 
 end
 
-    do
+do
     local Players = game:GetService("Players")
     local StarterGui = game:GetService("StarterGui")
     local CoreGui = game:GetService("CoreGui")
