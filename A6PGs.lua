@@ -2612,7 +2612,7 @@ do
     local animPresets = {
         ["Default"] = nil,
 
-        ["og rthro"] = {
+        ["OG Rthro Run"] = {
             run = "http://www.roblox.com/asset/?id=9801814462"
         },
 
@@ -2832,6 +2832,15 @@ do
             climb = "http://www.roblox.com/asset/?id=108236155509584",
             fall  = "https://www.roblox.com/asset/?id=98070939608691"
         },
+		["Bubbly"] = {
+            idle1 = "https://www.roblox.com/asset/?id=10921054344",
+            idle2 = "https://www.roblox.com/asset/?id=10921054344",
+            walk  = "http://www.roblox.com/asset/?id=10980888364",
+            run   = "http://www.roblox.com/asset/?id=10921057244",
+            jump  = "http://www.roblox.com/asset/?id=10921062673",
+            climb = "http://www.roblox.com/asset/?id=10921053544",
+            fall  = "https://www.roblox.com/asset/?id=10921061530"
+        },
     }
 
     local animMap = {
@@ -2983,7 +2992,7 @@ end
         "Default", "og rthro", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed","Glow Motion"
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed","Glow Motion","Bubbly"
     }
 
     feAnimSection:AddToggle("Enable FE Anims", function(enabled)
