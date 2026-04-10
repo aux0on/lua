@@ -2989,7 +2989,7 @@ end
     end
 
     local animOptions = {
-        "Default", "og rthro", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
+        "Default", "OG Rthro Run", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
         "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed","Glow Motion","Bubbly"
