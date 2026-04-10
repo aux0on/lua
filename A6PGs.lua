@@ -3731,6 +3731,7 @@ end
     local guiBtn = nil
     local gSize = 40
     local playing = false
+    local flingPower = 10000  -- shared variable controlled by slider
 
     plr.CharacterAdded:Connect(function()
         playing = false
@@ -3751,7 +3752,7 @@ end
                 end
                 if not root then continue end
                 local vel = root.Velocity
-                root.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
+                root.Velocity = vel * flingPower + Vector3.new(0, flingPower, 0)
                 RunService.RenderStepped:Wait()
                 if character and character.Parent and root and root.Parent then
                     root.Velocity = vel
@@ -3792,10 +3793,10 @@ end
             track:Play()
 
             local root = c:FindFirstChild("HumanoidRootPart")
-            local stopFling = StartWalkFling(c, root) -- ✅ start fling
+            local stopFling = StartWalkFling(c, root)
 
             task.wait(3)
-            stopFling() -- ✅ stop fling after 3 seconds
+            stopFling()
             track:Stop()
         end)
 
@@ -3888,6 +3889,11 @@ end
             guiBtn.Size = UDim2.new(0, s, 0, s)
             guiBtn.TextSize = s / 2
         end
+    end)
+
+    -- fling power slider
+    dropkickSection:AddSlider("Fling Power", 1, 10000, flingPower, function(s)
+        flingPower = s
     end)
 
     dropkickSection:AddButton("Use Dropkick", playDropkick)
