@@ -2612,7 +2612,7 @@ do
     local animPresets = {
         ["Default"] = nil,
 
-        ["OG Rthro Run Only"] = {
+        ["og rthro"] = {
             run = "http://www.roblox.com/asset/?id=9801814462"
         },
 
