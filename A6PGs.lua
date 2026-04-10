@@ -2611,6 +2611,11 @@ do
 
     local animPresets = {
         ["Default"] = nil,
+
+        ["og rthro"] = {
+            run = "http://www.roblox.com/asset/?id=9801814462"
+        },
+
         ["Vampire"] = {
             idle1 = "http://www.roblox.com/asset/?id=1083445855",
             idle2 = "http://www.roblox.com/asset/?id=1083450166",
@@ -2923,7 +2928,6 @@ do
         Animate.Disabled = false
     end
 
-    -- CharacterAdded only hooks in when enabled
     local feAnimCharConn = nil
 
     local function enableFEAnims()
@@ -2944,14 +2948,12 @@ do
     end
 
     local function disableFEAnims()
-        -- Disconnect character listener
         if feAnimCharConn then
             feAnimCharConn:Disconnect()
             feAnimCharConn = nil
         end
         FEAnimMaid:DoCleaning()
 
-        -- Reset all dropdowns state
         animState.all   = "Default"
         animState.idle  = "Default"
         animState.walk  = "Default"
@@ -2960,18 +2962,16 @@ do
         animState.climb = "Default"
         animState.fall  = "Default"
 
-        -- Restore original animations on character
         restoreDefaultAnimations()
     end
 
     local animOptions = {
-        "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
+        "Default", "og rthro", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
         "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed"
     }
 
-    -- Master toggle — sits at the top of the section
     feAnimSection:AddToggle("Enable FE Anims", function(enabled)
         feAnimEnabled = enabled
         if enabled then
@@ -3009,7 +3009,7 @@ do
         disableFEAnims()
     end)
 end
-
+	
 do
     local wallhopSection = shared.AddSection("Wallhop")
     
