@@ -2940,21 +2940,26 @@ do
     local feAnimCharConn = nil
 
     local function enableFEAnims()
-        if plr.Character then
-            saveOriginalAnimations(plr.Character)
-            applyAnimations()
-        end
-
-        feAnimCharConn = plr.CharacterAdded:Connect(function(character)
-            if not feAnimEnabled then return end
-            originalAnims = {}
-            character:WaitForChild("Animate")
-            task.wait(0.5)
-            saveOriginalAnimations(character)
-            applyAnimations()
-        end)
-        FEAnimMaid:GiveTask(feAnimCharConn)
+    if feAnimCharConn then
+        feAnimCharConn:Disconnect()
+        feAnimCharConn = nil
     end
+
+    if plr.Character then
+        saveOriginalAnimations(plr.Character)
+        applyAnimations()
+    end
+
+    feAnimCharConn = plr.CharacterAdded:Connect(function(character)
+    if not feAnimEnabled then return end
+    originalAnims = {}
+    character:WaitForChild("Animate", 10)  -- wait up to 10s instead of yielding blindly
+    task.wait(1)  -- give Animate scripts time to fully initialize
+    saveOriginalAnimations(character)
+    applyAnimations()
+end)
+    FEAnimMaid:GiveTask(feAnimCharConn)
+end
 
     local function disableFEAnims()
         if feAnimCharConn then
