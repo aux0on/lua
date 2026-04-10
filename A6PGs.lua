@@ -3731,7 +3731,7 @@ end
     local guiBtn = nil
     local gSize = 40
     local playing = false
-    local flingPower = 10000  -- shared variable controlled by slider
+    local flingPower = 10000
 
     plr.CharacterAdded:Connect(function()
         playing = false
@@ -3741,32 +3741,32 @@ end
     end)
 
     local function StartWalkFling(character, root)
-    local walkflinging = true
-    task.spawn(function()
-        local movel = 0.1
-        repeat
-            RunService.Heartbeat:Wait()
-            if not (character and character.Parent and root and root.Parent) then
-                character = plr.Character
-                root = character and character:FindFirstChild("HumanoidRootPart")
-            end
-            if not root then continue end
+        local walkflinging = true
+        task.spawn(function()
+            local movel = 0.1
+            repeat
+                RunService.Heartbeat:Wait()
+                if not (character and character.Parent and root and root.Parent) then
+                    character = plr.Character
+                    root = character and character:FindFirstChild("HumanoidRootPart")
+                end
+                if not root then continue end
 
-            local vel = root.AssemblyLinearVelocity
-            root.AssemblyLinearVelocity = vel * flingPower + Vector3.new(0, flingPower, 0)
-            RunService.RenderStepped:Wait()
-            if character and character.Parent and root and root.Parent then
-                root.AssemblyLinearVelocity = vel
-            end
-            RunService.Stepped:Wait()
-            if character and character.Parent and root and root.Parent then
-                root.AssemblyLinearVelocity = vel + Vector3.new(0, movel, 0)
-                movel = movel * -1
-            end
-        until walkflinging == false
-    end)
-    return function() walkflinging = false end
-end
+                local vel = root.AssemblyLinearVelocity
+                root.AssemblyLinearVelocity = Vector3.new(0, flingPower, 0)
+                RunService.RenderStepped:Wait()
+                if character and character.Parent and root and root.Parent then
+                    root.AssemblyLinearVelocity = vel
+                end
+                RunService.Stepped:Wait()
+                if character and character.Parent and root and root.Parent then
+                    root.AssemblyLinearVelocity = vel + Vector3.new(0, movel, 0)
+                    movel = movel * -1
+                end
+            until walkflinging == false
+        end)
+        return function() walkflinging = false end
+    end
 
     local function playDropkick()
         if playing then return end
@@ -3892,7 +3892,6 @@ end
         end
     end)
 
-    -- fling power slider
     dropkickSection:AddSlider("Fling Power", 1, 10000, flingPower, function(s)
         flingPower = s
     end)
