@@ -3741,31 +3741,33 @@ end
     end)
 
     local function StartWalkFling(character, root)
-        local walkflinging = true
-        task.spawn(function()
-            local movel = 0.1
-            repeat
-                RunService.Heartbeat:Wait()
-                if not (character and character.Parent and root and root.Parent) then
-                    character = plr.Character
-                    root = character and character:FindFirstChild("HumanoidRootPart")
-                end
-                if not root then continue end
-                local vel = root.Velocity
-                root.Velocity = vel * flingPower + Vector3.new(0, flingPower, 0)
-                RunService.RenderStepped:Wait()
-                if character and character.Parent and root and root.Parent then
-                    root.Velocity = vel
-                end
-                RunService.Stepped:Wait()
-                if character and character.Parent and root and root.Parent then
-                    root.Velocity = vel + Vector3.new(0, movel, 0)
-                    movel = movel * -1
-                end
-            until walkflinging == false
-        end)
-        return function() walkflinging = false end
-    end
+    local walkflinging = true
+    task.spawn(function()
+        repeat
+            RunService.Heartbeat:Wait()
+            if not (character and character.Parent and root and root.Parent) then
+                character = plr.Character
+                root = character and character:FindFirstChild("HumanoidRootPart")
+            end
+            if not root then continue end
+
+            local bv = Instance.new("BodyVelocity")
+            bv.Velocity = Vector3.new(
+                root.AssemblyLinearVelocity.X * flingPower,
+                flingPower,
+                root.AssemblyLinearVelocity.Z * flingPower
+            )
+            bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+            bv.P = 1e9
+            bv.Parent = root
+
+            RunService.RenderStepped:Wait()
+            bv:Destroy()
+
+        until walkflinging == false
+    end)
+    return function() walkflinging = false end
+end
 
     local function playDropkick()
         if playing then return end
