@@ -3224,6 +3224,10 @@ lagVCSection:AddToggle("Enable Lag VC", function(state)
     end
 end)
 
+local shared = odh_shared_plugins
+local _game = shared.game_name
+if _game == "Murder Mystery 2" or _game == "Murder Mystery Modded" then
+
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
 
@@ -3760,7 +3764,7 @@ do
     end)
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
-
+	
 end 
 
 RootMaid:GiveTask(function()
