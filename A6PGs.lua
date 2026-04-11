@@ -3761,67 +3761,6 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 
-do
-    local trapSection = shared.AddSection("Trap Perk")
-
-    local Players = game:GetService("Players")
-    local Workspace = game:GetService("Workspace")
-    local UserInputService = game:GetService("UserInputService")
-
-    local player = Players.LocalPlayer
-    local selectedTarget = nil
-
-    local function trapSelectedPlayer()
-        if not selectedTarget then
-            shared.Notify("No player selected.", 2)
-            return
-        end
-
-        local target = selectedTarget
-        local character = target.Character
-        if not character then
-            shared.Notify("Target has no character.", 2)
-            return
-        end
-
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not rootPart then
-            shared.Notify("Target has no HumanoidRootPart.", 2)
-            return
-        end
-
-        local targetCFrame = rootPart.CFrame
-
-        local myTrap = Workspace[player.Name] and Workspace[player.Name]:FindFirstChild("Trap")
-        if not myTrap then
-            shared.Notify("Your trap was not found.", 2)
-            return
-        end
-
-        local activateRemote = myTrap:FindFirstChild("Activate")
-        if not activateRemote then
-            shared.Notify("Activate remote not found.", 2)
-            return
-        end
-
-        activateRemote:FireServer(targetCFrame)
-        shared.Notify("Trapped " .. target.Name, 2)
-    end
-
-    trapSection:AddPlayerDropdown("Select Player", function(p)
-        selectedTarget = p
-        shared.Notify("Selected: " .. p.Name, 1)
-    end)
-
-    trapSection:AddButton("Trap Player", function()
-        trapSelectedPlayer()
-    end)
-
-    trapSection:AddKeybind("Trap Selected Player", "T", function()
-        trapSelectedPlayer()
-    end)
-end
-
 end 
 
 RootMaid:GiveTask(function()
