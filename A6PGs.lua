@@ -3765,9 +3765,7 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 	
-local my_own_section = shared.AddSection("FPS & PING MONITOR")
-
-local isEnabled = false
+local my_own_section = shared.AddSection("FPS & PING MONITOR"
 
 my_own_section:AddToggle("Enable Monitor UI", function(bool)
     isEnabled = bool
