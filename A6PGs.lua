@@ -3765,6 +3765,102 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 	
+local my_own_section = shared.AddSection("FPS & PING MONITOR")
+
+local isEnabled = false
+
+my_own_section:AddToggle("Enable Monitor UI", function(bool)
+    isEnabled = bool
+    
+    if isEnabled then
+        createFpsPingGui()
+        shared.Notify("FPS & Ping Monitor enabled", 2)
+    else
+        if _G.FpsPingGui then
+            _G.FpsPingGui:Destroy()
+            _G.FpsPingGui = nil
+        end
+        shared.Notify("FPS & Ping Monitor disabled", 2)
+    end
+end)
+
+my_own_section:AddParagraph("Skidded & Improved By:", "@lzzzx")
+
+function createFpsPingGui()
+    if _G.FpsPingGui then
+        _G.FpsPingGui:Destroy()
+    end
+    
+    repeat task.wait() until game:IsLoaded()
+    task.wait(0.25)
+
+    local ScreenGui = Instance.new("ScreenGui")
+    local Fps = Instance.new("TextLabel")
+    local Ping = Instance.new("TextLabel")
+
+    ScreenGui.Name = "FpsPingMonitor"
+    ScreenGui.Parent = game.CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    _G.FpsPingGui = ScreenGui
+
+    Fps.Parent = ScreenGui
+    Fps.BackgroundTransparency = 1
+    Fps.Position = UDim2.new(0.80, 0, 0, 15)
+    Fps.Size = UDim2.new(0, 120, 0, 25)
+    Fps.Font = Enum.Font.SourceSans
+    Fps.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Fps.TextScaled = true
+    Fps.Text = "0"
+
+    Ping.Parent = ScreenGui
+    Ping.BackgroundTransparency = 1
+    Ping.Position = UDim2.new(0.80, 0, 0, 35)
+    Ping.Size = UDim2.new(0, 120, 0, 25)
+    Ping.Font = Enum.Font.SourceSans
+    Ping.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Ping.TextScaled = true
+    Ping.Text = "0"
+
+    local RunService = game:GetService("RunService")
+    local Stats = game:GetService("Stats")
+
+    local lastFPS = -1
+    local lastPing = -1
+    local lastPingUpdate = 0
+
+    local pingInterval = 0.5
+
+    local connection
+    connection = RunService.RenderStepped:Connect(function(frame)
+        if not _G.FpsPingGui or not _G.FpsPingGui.Parent then
+            if connection then
+                connection:Disconnect()
+            end
+            return
+        end
+
+        local fps = math.floor(1 / frame + 0.5)
+        if fps ~= lastFPS then
+            lastFPS = fps
+            Fps.Text = tostring(fps)
+        end
+
+        local now = os.clock()
+        if now - lastPingUpdate >= pingInterval then
+            lastPingUpdate = now
+
+            local pingValue = Stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+            local rawPing = tonumber(pingValue:match("%-?%d+")) or 0
+
+            if rawPing ~= lastPing then
+                lastPing = rawPing
+                Ping.Text = tostring(rawPing)
+            end
+        end
+    end)
+end
+
 end 
 
 RootMaid:GiveTask(function()
