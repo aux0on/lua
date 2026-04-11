@@ -2960,13 +2960,22 @@ do
     end
 
     feAnimCharConn = plr.CharacterAdded:Connect(function(character)
-    if not feAnimEnabled then return end
-    originalAnims = {}
-    character:WaitForChild("Animate", 10)  -- wait up to 10s instead of yielding blindly
-    task.wait(1)  -- give Animate scripts time to fully initialize
-    saveOriginalAnimations(character)
-    applyAnimations()
-end)
+        if not feAnimEnabled then return end
+        originalAnims = {}
+
+        local Animate = character:WaitForChild("Animate", 10)
+        if not Animate then return end
+
+        repeat task.wait() until Animate:FindFirstChild("idle") and
+            Animate.idle:FindFirstChild("Animation1") and
+            Animate.idle.Animation1.AnimationId ~= ""
+
+        task.wait(0.2)
+
+        saveOriginalAnimations(character)
+        applyAnimations()
+    end)
+
     FEAnimMaid:GiveTask(feAnimCharConn)
 end
 
