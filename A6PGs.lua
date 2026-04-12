@@ -3861,6 +3861,163 @@ function createFpsPingGui()
     end)
 end
 
+do
+    local dkSection = shared.AddSection("Dodge Knife (Beta)")
+    
+    local TRIGGER_DISTANCE = 55
+    local PUSH_DURATION = 0.5
+    local dodgeStuds = 10
+    local dodgeEnabled = false
+    local isMurderer = false
+    local handledKnives = {}
+    
+    local DodgeMaid = Maid.new()
+    local RoleMaid = Maid.new()
+    RootMaid:GiveTask(function() DodgeMaid:DoCleaning() end)
+    RootMaid:GiveTask(function() RoleMaid:DoCleaning() end)
+
+    local PlayerModule = require(LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+    local Controls = PlayerModule:GetControls()
+
+    local function getKnifeInfo(obj)
+        local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+        if part then
+            local velocity = part.AssemblyLinearVelocity
+            local direction = (velocity.Magnitude > 1) and velocity.Unit or part.CFrame.LookVector
+            return part.Position, direction
+        end
+        return nil, nil
+    end
+
+    local function isPathClear(root, direction)
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+        local castResult = workspace:Spherecast(root.Position, 2, direction * 10, raycastParams)
+        return castResult == nil
+    end
+
+    local function getBestDodgeDir(root, knifeDir)
+        local flatKnifeDir = Vector3.new(knifeDir.X, 0, knifeDir.Z).Unit
+        local rightVec = Vector3.new(-flatKnifeDir.Z, 0, flatKnifeDir.X)
+        local leftVec = -rightVec
+
+        local possibleDirs = {
+            rightVec,
+            leftVec,
+            -flatKnifeDir,
+            (rightVec - flatKnifeDir).Unit,
+            (leftVec - flatKnifeDir).Unit,
+        }
+
+        for _, dir in ipairs(possibleDirs) do
+            if isPathClear(root, dir) then
+                return dir
+            end
+        end
+        return nil
+    end
+
+    local function forceMovePlayer(root, direction)
+        local oldAtt = root:FindFirstChild("DodgeAttachment")
+        if oldAtt then oldAtt:Destroy() end
+        local oldVel = root:FindFirstChild("DodgeVelocity")
+        if oldVel then oldVel:Destroy() end
+
+        local attachment = Instance.new("Attachment")
+        attachment.Name = "DodgeAttachment"
+        attachment.Parent = root
+
+        local linearVelocity = Instance.new("LinearVelocity")
+        linearVelocity.Name = "DodgeVelocity"
+        linearVelocity.Attachment0 = attachment
+        linearVelocity.MaxForce = 2000000
+        linearVelocity.VectorVelocity = direction * (dodgeStuds / PUSH_DURATION)
+        linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+        linearVelocity.Parent = root
+
+        task.delay(PUSH_DURATION, function()
+            if linearVelocity and linearVelocity.Parent then linearVelocity:Destroy() end
+            if attachment and attachment.Parent then attachment:Destroy() end
+        end)
+    end
+
+    local heartbeatConn = nil
+
+    local function startDodge()
+        if heartbeatConn then return end
+        handledKnives = {}
+        heartbeatConn = Services.RunService.Heartbeat:Connect(function()
+            local character = LocalPlayer.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+
+            for _, obj in ipairs(workspace:GetChildren()) do
+                if obj.Name:lower() == "throwingknife" and not handledKnives[obj] then
+                    local knifePos, knifeDir = getKnifeInfo(obj)
+                    if not knifePos then continue end
+
+                    local toPlayer = root.Position - knifePos
+                    if toPlayer.Magnitude <= TRIGGER_DISTANCE then
+                        local chosenDir = getBestDodgeDir(root, knifeDir)
+                        if chosenDir then
+                            forceMovePlayer(root, chosenDir)
+                            handledKnives[obj] = true
+                        end
+                    end
+                end
+            end
+
+            for knife in pairs(handledKnives) do
+                if not knife or not knife.Parent then
+                    handledKnives[knife] = nil
+                end
+            end
+        end)
+        DodgeMaid:GiveTask(heartbeatConn)
+    end
+
+    local function stopDodge()
+        if heartbeatConn then
+            heartbeatConn:Disconnect()
+            heartbeatConn = nil
+        end
+        handledKnives = {}
+        local character = LocalPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local att = root:FindFirstChild("DodgeAttachment")
+            if att then att:Destroy() end
+            local vel = root:FindFirstChild("DodgeVelocity")
+            if vel then vel:Destroy() end
+        end
+    end
+
+    RoleMaid:GiveTask(RoleSelect.OnClientEvent:Connect(function(...)
+        local args = {...}
+        if args[1] == "Murderer" then
+            isMurderer = true
+            if dodgeEnabled then stopDodge() end
+        else
+            isMurderer = false
+            if dodgeEnabled then startDodge() end
+        end
+    end))
+
+    dkSection:AddSlider("Dodge Distance (studs)", 1, 50, dodgeStuds, function(v)
+        dodgeStuds = v
+    end)
+
+    dkSection:AddToggle("Enable Dodge Knife", function(enabled)
+        dodgeEnabled = enabled
+        if enabled and not isMurderer then
+            startDodge()
+        else
+            stopDodge()
+        end
+    end)
+end
+	
 end 
 
 RootMaid:GiveTask(function()
