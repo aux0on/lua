@@ -3765,24 +3765,7 @@ do
     enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 	
-local fps_ping_section = shared.AddSection("FPS & PING MONITOR")
-
-fps_ping_section:AddToggle("Enable Monitor UI", function(bool)
-    if bool then
-        createFpsPingGui()
-        shared.Notify("FPS & Ping Monitor enabled", 2)
-    else
-        if _G.FpsPingGui then
-            _G.FpsPingGui:Destroy()
-            _G.FpsPingGui = nil
-        end
-        shared.Notify("FPS & Ping Monitor disabled", 2)
-    end
-end)
-
-fps_ping_section:AddParagraph("Skidded & Improved By:", "@lzzzx")
-
-function createFpsPingGui()
+local function createFpsPingGui()
     if _G.FpsPingGui then
         _G.FpsPingGui:Destroy()
     end
@@ -3849,6 +3832,23 @@ function createFpsPingGui()
         end
     end)
 end
+
+local fps_ping_section = shared.AddSection("FPS & PING MONITOR")
+
+fps_ping_section:AddToggle("Enable Monitor UI", function(bool)
+    if bool then
+        createFpsPingGui()
+        shared.Notify("FPS & Ping Monitor enabled", 2)
+    else
+        if _G.FpsPingGui then
+            _G.FpsPingGui:Destroy()
+            _G.FpsPingGui = nil
+        end
+        shared.Notify("FPS & Ping Monitor disabled", 2)
+    end
+end)
+
+fps_ping_section:AddParagraph("Skidded & Improved By:", "@lzzzx")
 
 local creditsSection = shared.AddSection("Credits")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.") end
