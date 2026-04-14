@@ -1176,6 +1176,7 @@ do
     local lsHori = false
     local lsAir = false
     local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
+    local lsSelectedEmoteName = nil
     
     local LegitSpeedMaid = nil
     RootMaid:GiveTask(function() if LegitSpeedMaid then LegitSpeedMaid:DoCleaning() end end)
@@ -1188,6 +1189,15 @@ do
             local a = Instance.new("Animation")
             a.AnimationId = "rbxassetid://"..id
             h:LoadAnimation(a):Play()
+        end
+    end
+
+    local function setEmoteFromDropdown(s)
+        lsSelectedEmoteName = s
+        if s == "Custom" then
+            selEmote = nil
+        else
+            selEmote = emotes[s] or nil
         end
     end
     
@@ -1246,14 +1256,20 @@ do
             mkLsBtn() 
         else 
             if LegitSpeedMaid then LegitSpeedMaid:DoCleaning() LegitSpeedMaid = nil end 
-            emOn=false 
+            emOn = false 
         end 
     end)
-    lsSection:AddSlider("Speed (0Ã¢â‚¬â€œ255)", 0, 255, sideSpd, function(v) sideSpd = v end)
+    lsSection:AddSlider("Speed (0-255)", 0, 255, sideSpd, function(v) sideSpd = v end)
     lsSection:AddSlider("Button Size", 30, 150, btnSz, function(v) btnSz = v if lsBtn then lsBtn.Size = UDim2.new(0, v, 0, v) lsBtn.TextSize = v/2 end end)
     lsSection:AddToggle("Sideways Only", function(e) lsHori = e end)
-    lsSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s) if s ~= "Custom" then selEmote = emotes[s] else selEmote = nil end end)
-    lsSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
+    lsSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
+        setEmoteFromDropdown(s)
+    end)
+    lsSection:AddTextBox("Custom Emote ID", function(t)
+        if lsSelectedEmoteName == "Custom" and t ~= "" then
+            selEmote = t
+        end
+    end)
 end
 
  do
