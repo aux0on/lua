@@ -3054,16 +3054,13 @@ end
 do
     local wallhopSection = shared.AddSection("Wallhop")
     
-    -- Services
     local UserInputService = game:GetService("UserInputService")
     local Players = game:GetService("Players")
     local Workspace = game:GetService("Workspace")
     local RunService = game:GetService("RunService")
     
-    -- Player specific
     local player = Players.LocalPlayer
     
-    -- Variables for Wallhop Functionality
     local wallhopToggle = false
     local InfiniteJumpEnabled = true
     local raycastParams = RaycastParams.new()
@@ -3071,7 +3068,6 @@ do
     local WallhopMaid = nil
     RootMaid:GiveTask(function() if WallhopMaid then WallhopMaid:DoCleaning() end end)
     
-    -- Precise wall detection function
     local function getWallRaycastResult()
         local character = player.Character
         if not character then return nil end
@@ -3102,14 +3098,13 @@ do
         local blockResult = Workspace:Blockcast(blockCastOriginCF, blockCastSize, blockCastDirection * blockCastDistance, raycastParams)
     
         if blockResult and blockResult.Instance and blockResult.Distance < minDistance then
-             minDistance = blockResult.Distance
-             closestHit = blockResult
+            minDistance = blockResult.Distance
+            closestHit = blockResult
         end
     
         return closestHit
     end
     
-    -- Core Wall Jump Execution Function
     local function executeWallJump(wallRayResult)
         if not InfiniteJumpEnabled then return end
     
@@ -3123,70 +3118,15 @@ do
         end
     
         InfiniteJumpEnabled = false
-    
-        local maxInfluenceAngleRight = math.rad(20)
-        local maxInfluenceAngleLeft  = math.rad(-100)
-    
-        local wallNormal = wallRayResult.Normal
-        local baseDirectionAwayFromWall = Vector3.new(wallNormal.X, 0, wallNormal.Z).Unit
-        if baseDirectionAwayFromWall.Magnitude < 0.1 then
-             local dirToHit = (wallRayResult.Position - rootPart.Position) * Vector3.new(1,0,1)
-             baseDirectionAwayFromWall = -dirToHit.Unit
-             if baseDirectionAwayFromWall.Magnitude < 0.1 then
-                 baseDirectionAwayFromWall = -rootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
-                 if baseDirectionAwayFromWall.Magnitude > 0.1 then baseDirectionAwayFromWall = baseDirectionAwayFromWall.Unit end
-                 if baseDirectionAwayFromWall.Magnitude < 0.1 then baseDirectionAwayFromWall = Vector3.new(0,0,1) end
-             end
-        end
-        baseDirectionAwayFromWall = Vector3.new(baseDirectionAwayFromWall.X, 0, baseDirectionAwayFromWall.Z).Unit
-        if baseDirectionAwayFromWall.Magnitude < 0.1 then baseDirectionAwayFromWall = Vector3.new(0,0,1) end
-    
-        local cameraLook = camera.CFrame.LookVector
-        local horizontalCameraLook = Vector3.new(cameraLook.X, 0, cameraLook.Z).Unit
-        if horizontalCameraLook.Magnitude < 0.1 then horizontalCameraLook = baseDirectionAwayFromWall end
-    
-        local dot = math.clamp(baseDirectionAwayFromWall:Dot(horizontalCameraLook), -1, 1)
-        local angleBetween = math.acos(dot)
-        local cross = baseDirectionAwayFromWall:Cross(horizontalCameraLook)
-        local rotationSign = -math.sign(cross.Y)
-        if rotationSign == 0 then angleBetween = 0 end
-    
-        local actualInfluenceAngle
-        if rotationSign == 1 then
-            actualInfluenceAngle = math.min(angleBetween, maxInfluenceAngleRight)
-        elseif rotationSign == -1 then
-            actualInfluenceAngle = math.min(angleBetween, maxInfluenceAngleLeft)
-        else
-            actualInfluenceAngle = 0
-        end
-    
-        local adjustmentRotation = CFrame.Angles(0, actualInfluenceAngle * rotationSign, 0)
-        local initialTargetLookDirection = adjustmentRotation * baseDirectionAwayFromWall
-    
-        rootPart.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + initialTargetLookDirection)
-        RunService.Heartbeat:Wait()
-    
-        local didJump = false
+
         if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
-             humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-             didJump = true
-    
-             rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, -1, 0)
-             task.wait(0.15)
-             rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, 1, 0)
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         end
-    
-        if didJump then
-             local directionTowardsWall = -baseDirectionAwayFromWall
-             task.wait(0.05)
-             rootPart.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + directionTowardsWall)
-        end
-    
+
         task.wait(0.1)
         InfiniteJumpEnabled = true
     end
     
-    -- Main Wallhop Toggle
     wallhopSection:AddToggle("Enable Wallhop", function(enabled)
         if WallhopMaid then WallhopMaid:DoCleaning() WallhopMaid = nil end
         wallhopToggle = enabled
@@ -3223,10 +3163,6 @@ lagVCSection:AddToggle("Enable Lag VC", function(state)
         end))
     end
 end)
-
-local shared = odh_shared_plugins
-local _game = shared.game_name
-if _game == "Murder Mystery 2" or _game == "Murder Mystery Modded" then
 
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
