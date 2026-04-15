@@ -3824,13 +3824,25 @@ local function getPingColor(ping)
     end
 end
 
+-- UPDATED POSITION FUNCTION
 local function applyPosition(Fps, Ping, preset, isHorizontal)
     local base = positionPresets[preset] or positionPresets["Top Right"]
-    Fps.Position = base
+
+    local xOffset = base.X.Offset
+    local yOffset = base.Y.Offset
+
+    -- Move left if Bottom Right + Horizontal (avoid jump button)
+    if isHorizontal and preset == "Bottom Right" then
+        xOffset = xOffset - 140 -- tweak if needed
+    end
+
+    Fps.Position = UDim2.new(base.X.Scale, xOffset, base.Y.Scale, yOffset)
+
     if isHorizontal then
-        Ping.Position = UDim2.new(base.X.Scale, base.X.Offset + 130, base.Y.Scale, base.Y.Offset)
+        -- tighter spacing
+        Ping.Position = UDim2.new(base.X.Scale, xOffset + 105, base.Y.Scale, yOffset)
     else
-        Ping.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
+        Ping.Position = UDim2.new(base.X.Scale, xOffset, base.Y.Scale, yOffset + 28)
     end
 end
 
