@@ -2129,12 +2129,15 @@ local bjSize = 40
 local timerSize = 40
 local autoGetBomb = false
 local justRespawned = false
+local doubleTapEnabled = false
 
 local activeTouches = {}
 local TAP_MOVEMENT_THRESHOLD = 10
 local TAP_TIME_THRESHOLD = 0.3
+local DOUBLE_TAP_THRESHOLD = 0.4
+local lastTapTime = 0
 
-local BOMB_NAMES = {"Bomb", "PrankBomb", "FakeBomb"}
+local BOMB_NAMES = {"FakeBomb"}
 
 local BombJumpMaid = nil
 local BombJumpGuiMaid = nil
@@ -2502,7 +2505,17 @@ BombJumpMaid:GiveTask(UserInputService.InputEnded:Connect(function(input, gamePr
     if isRealTap and bombJumpEnabled and not onCooldown and not debounce then
         local bombInHand = GetBombInHand()
         if bombInHand then
-            FastBombJump()
+            if doubleTapEnabled then
+                local now = tick()
+                if now - lastTapTime <= DOUBLE_TAP_THRESHOLD then
+                    lastTapTime = 0
+                    FastBombJump()
+                else
+                    lastTapTime = now
+                end
+            else
+                FastBombJump()
+            end
         end
     end
     
@@ -2512,6 +2525,7 @@ end))
 BombJumpMaid:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
     ResetCooldown()
     activeTouches = {}
+    lastTapTime = 0
     justRespawned = true
     
     task.spawn(function()
@@ -2534,6 +2548,11 @@ end))
 
 section:AddToggle("Enable Auto Bomb Jump", function(bool)
     bombJumpEnabled = bool
+end)
+
+section:AddToggle("ABJ Double Tap", function(bool)
+    doubleTapEnabled = bool
+    lastTapTime = 0
 end)
 
 section:AddToggle("Enable Equip Bomb Jump", function(bool)
@@ -2597,12 +2616,14 @@ RootMaid:GiveTask(function()
     if BombJumpMaid then BombJumpMaid:DoCleaning() end
     
     activeTouches = {}
+    lastTapTime = 0
     ResetCooldown()
     bombJumpEnabled = false
     clickBombJumpEnabled = false
     guiEnabled = false
     timerGuiEnabled = false
     autoGetBomb = false
+    doubleTapEnabled = false
 end)
 	
 do
