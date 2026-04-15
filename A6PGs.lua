@@ -3078,6 +3078,7 @@ do
     local player = Players.LocalPlayer
     
     local wallhopToggle = false
+    local flickEnabled = false
     local InfiniteJumpEnabled = true
     local raycastParams = RaycastParams.new()
     raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -3135,8 +3136,64 @@ do
     
         InfiniteJumpEnabled = false
 
-        if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        if flickEnabled then
+            local maxInfluenceAngleRight = math.rad(20)
+            local maxInfluenceAngleLeft  = math.rad(-100)
+
+            local wallNormal = wallRayResult.Normal
+            local baseDirectionAwayFromWall = Vector3.new(wallNormal.X, 0, wallNormal.Z).Unit
+            if baseDirectionAwayFromWall.Magnitude < 0.1 then
+                local dirToHit = (wallRayResult.Position - rootPart.Position) * Vector3.new(1,0,1)
+                baseDirectionAwayFromWall = -dirToHit.Unit
+                if baseDirectionAwayFromWall.Magnitude < 0.1 then
+                    baseDirectionAwayFromWall = -rootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+                    if baseDirectionAwayFromWall.Magnitude > 0.1 then baseDirectionAwayFromWall = baseDirectionAwayFromWall.Unit end
+                    if baseDirectionAwayFromWall.Magnitude < 0.1 then baseDirectionAwayFromWall = Vector3.new(0,0,1) end
+                end
+            end
+            baseDirectionAwayFromWall = Vector3.new(baseDirectionAwayFromWall.X, 0, baseDirectionAwayFromWall.Z).Unit
+            if baseDirectionAwayFromWall.Magnitude < 0.1 then baseDirectionAwayFromWall = Vector3.new(0,0,1) end
+
+            local cameraLook = camera.CFrame.LookVector
+            local horizontalCameraLook = Vector3.new(cameraLook.X, 0, cameraLook.Z).Unit
+            if horizontalCameraLook.Magnitude < 0.1 then horizontalCameraLook = baseDirectionAwayFromWall end
+
+            local dot = math.clamp(baseDirectionAwayFromWall:Dot(horizontalCameraLook), -1, 1)
+            local angleBetween = math.acos(dot)
+            local cross = baseDirectionAwayFromWall:Cross(horizontalCameraLook)
+            local rotationSign = -math.sign(cross.Y)
+            if rotationSign == 0 then angleBetween = 0 end
+
+            local actualInfluenceAngle
+            if rotationSign == 1 then
+                actualInfluenceAngle = math.min(angleBetween, maxInfluenceAngleRight)
+            elseif rotationSign == -1 then
+                actualInfluenceAngle = math.min(angleBetween, maxInfluenceAngleLeft)
+            else
+                actualInfluenceAngle = 0
+            end
+
+            local adjustmentRotation = CFrame.Angles(0, actualInfluenceAngle * rotationSign, 0)
+            local initialTargetLookDirection = adjustmentRotation * baseDirectionAwayFromWall
+
+            rootPart.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + initialTargetLookDirection)
+            RunService.Heartbeat:Wait()
+
+            if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+
+                rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, -1, 0)
+                task.wait(0.15)
+                rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, 1, 0)
+            end
+
+            local directionTowardsWall = -baseDirectionAwayFromWall
+            task.wait(0.05)
+            rootPart.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + directionTowardsWall)
+        else
+            if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
         end
 
         task.wait(0.1)
@@ -3158,6 +3215,10 @@ do
                 end
             end))
         end
+    end)
+
+    wallhopSection:AddToggle("Enable Wallhop Flick", function(enabled)
+        flickEnabled = enabled
     end)
 end
 
