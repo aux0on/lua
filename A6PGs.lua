@@ -3786,11 +3786,55 @@ enSection:AddTextBox("EN Custom Emote ID", function(t)
 end)
 end
 	
+local statColorsEnabled = false
+local uiPosition = "Top Right"
+
+local positionPresets = {
+    ["Top Right"]    = UDim2.new(0.80, 0, 0, 15),
+    ["Top Left"]     = UDim2.new(0.02, 0, 0, 15),
+    ["Top Center"]   = UDim2.new(0.44, 0, 0, 15),
+    ["Bottom Right"] = UDim2.new(0.80, 0, 0.92, 0),
+    ["Bottom Left"]  = UDim2.new(0.02, 0, 0.92, 0),
+    ["Bottom Center"]= UDim2.new(0.44, 0, 0.92, 0),
+}
+
+local function getFpsCap()
+    local cap = workspace:GetAttribute("FPSCap") or 60
+    return cap
+end
+
+local function getFpsColor(fps)
+    local cap = getFpsCap()
+    if fps >= cap * 0.85 then
+        return Color3.fromRGB(0, 255, 0)
+    elseif fps >= cap * 0.5 then
+        return Color3.fromRGB(255, 200, 0)
+    else
+        return Color3.fromRGB(255, 0, 0)
+    end
+end
+
+local function getPingColor(ping)
+    if ping <= 80 then
+        return Color3.fromRGB(0, 255, 0)
+    elseif ping <= 150 then
+        return Color3.fromRGB(255, 200, 0)
+    else
+        return Color3.fromRGB(255, 0, 0)
+    end
+end
+
+local function applyPosition(Fps, Ping, preset)
+    local base = positionPresets[preset] or positionPresets["Top Right"]
+    Fps.Position = base
+    Ping.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 20)
+end
+
 local function createFpsPingGui()
     if _G.FpsPingGui then
         _G.FpsPingGui:Destroy()
     end
-    
+
     repeat task.wait() until game:IsLoaded()
     task.wait(0.25)
 
@@ -3802,10 +3846,11 @@ local function createFpsPingGui()
     ScreenGui.Parent = game.CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     _G.FpsPingGui = ScreenGui
+    _G.FpsLabel = Fps
+    _G.PingLabel = Ping
 
     Fps.Parent = ScreenGui
     Fps.BackgroundTransparency = 1
-    Fps.Position = UDim2.new(0.80, 0, 0, 15)
     Fps.Size = UDim2.new(0, 120, 0, 25)
     Fps.Font = Enum.Font.SourceSans
     Fps.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -3814,12 +3859,13 @@ local function createFpsPingGui()
 
     Ping.Parent = ScreenGui
     Ping.BackgroundTransparency = 1
-    Ping.Position = UDim2.new(0.80, 0, 0, 35)
     Ping.Size = UDim2.new(0, 120, 0, 25)
     Ping.Font = Enum.Font.SourceSans
     Ping.TextColor3 = Color3.fromRGB(255, 255, 255)
     Ping.TextScaled = true
     Ping.Text = "0"
+
+    applyPosition(Fps, Ping, uiPosition)
 
     local RunService = game:GetService("RunService")
     local Stats = game:GetService("Stats")
@@ -3839,6 +3885,11 @@ local function createFpsPingGui()
         if fps ~= lastFPS then
             lastFPS = fps
             Fps.Text = tostring(fps)
+            if statColorsEnabled then
+                Fps.TextColor3 = getFpsColor(fps)
+            else
+                Fps.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
         end
 
         local now = os.clock()
@@ -3849,6 +3900,11 @@ local function createFpsPingGui()
             if rawPing ~= lastPing then
                 lastPing = rawPing
                 Ping.Text = tostring(rawPing)
+                if statColorsEnabled then
+                    Ping.TextColor3 = getPingColor(rawPing)
+                else
+                    Ping.TextColor3 = Color3.fromRGB(255, 255, 255)
+                end
             end
         end
     end)
@@ -3863,7 +3919,23 @@ fps_ping_section:AddToggle("Enable Monitor UI", function(bool)
         if _G.FpsPingGui then
             _G.FpsPingGui:Destroy()
             _G.FpsPingGui = nil
+            _G.FpsLabel = nil
+            _G.PingLabel = nil
         end
+    end
+end)
+
+fps_ping_section:AddToggle("Enable Statistic Colors", function(bool)
+    statColorsEnabled = bool
+end)
+
+fps_ping_section:AddDropdown("UI Position", {
+    "Top Right", "Top Left", "Top Center",
+    "Bottom Right", "Bottom Left", "Bottom Center"
+}, function(s)
+    uiPosition = s
+    if _G.FpsLabel and _G.PingLabel then
+        applyPosition(_G.FpsLabel, _G.PingLabel, s)
     end
 end)
 
