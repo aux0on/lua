@@ -3788,6 +3788,7 @@ end
 	
 local statColorsEnabled = false
 local uiPosition = "Top Right"
+local horizontalDisplay = false
 
 local positionPresets = {
     ["Top Right"]    = UDim2.new(0.80, 0, 0, 15),
@@ -3823,10 +3824,14 @@ local function getPingColor(ping)
     end
 end
 
-local function applyPosition(Fps, Ping, preset)
+local function applyPosition(Fps, Ping, preset, isHorizontal)
     local base = positionPresets[preset] or positionPresets["Top Right"]
     Fps.Position = base
-    Ping.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
+    if isHorizontal then
+        Ping.Position = UDim2.new(base.X.Scale, base.X.Offset + 130, base.Y.Scale, base.Y.Offset)
+    else
+        Ping.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
+    end
 end
 
 local function createFpsPingGui()
@@ -3864,7 +3869,7 @@ local function createFpsPingGui()
     Ping.TextScaled = true
     Ping.Text = "0"
 
-    applyPosition(Fps, Ping, uiPosition)
+    applyPosition(Fps, Ping, uiPosition, horizontalDisplay)
 
     local RunService = game:GetService("RunService")
     local Stats = game:GetService("Stats")
@@ -3928,13 +3933,20 @@ fps_ping_section:AddToggle("Enable Statistic Colors", function(bool)
     statColorsEnabled = bool
 end)
 
+fps_ping_section:AddToggle("Enable Horizontal Display", function(bool)
+    horizontalDisplay = bool
+    if _G.FpsLabel and _G.PingLabel then
+        applyPosition(_G.FpsLabel, _G.PingLabel, uiPosition, bool)
+    end
+end)
+
 fps_ping_section:AddDropdown("UI Position", {
     "Top Right", "Top Left", "Top Center",
     "Bottom Right", "Bottom Left"
 }, function(s)
     uiPosition = s
     if _G.FpsLabel and _G.PingLabel then
-        applyPosition(_G.FpsLabel, _G.PingLabel, s)
+        applyPosition(_G.FpsLabel, _G.PingLabel, s, horizontalDisplay)
     end
 end)
 
