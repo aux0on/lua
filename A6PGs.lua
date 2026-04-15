@@ -3788,18 +3788,18 @@ end
 	
 local statColorsEnabled = false
 local uiPosition = "Top Right"
-local horizontalDisplay = false
 
 local positionPresets = {
     ["Top Right"]    = UDim2.new(0.80, 0, 0, 15),
     ["Top Left"]     = UDim2.new(0.02, 0, 0, 15),
     ["Top Center"]   = UDim2.new(0.44, 0, 0, 15),
-    ["Bottom Right"] = UDim2.new(0.80, 0, 0.85, 0),
-    ["Bottom Left"]  = UDim2.new(0.02, 0, 0.85, 0),
+    ["Bottom Right"] = UDim2.new(0.80, 0, 0.88, 0),
+    ["Bottom Left"]  = UDim2.new(0.02, 0, 0.88, 0),
 }
 
 local function getFpsCap()
-    return workspace:GetAttribute("FPSCap") or 60
+    local cap = workspace:GetAttribute("FPSCap") or 60
+    return cap
 end
 
 local function getFpsColor(fps)
@@ -3823,39 +3823,10 @@ local function getPingColor(ping)
     end
 end
 
--- 🔥 FIXED POSITIONING
-local function applyPosition(Fps, Ping, preset, isHorizontal)
+local function applyPosition(Fps, Ping, preset)
     local base = positionPresets[preset] or positionPresets["Top Right"]
-
-    local xOffset = base.X.Offset
-    local yOffset = base.Y.Offset
-
-    -- shift left when bottom right + horizontal (mobile safe)
-    if isHorizontal and preset == "Bottom Right" then
-        xOffset = xOffset - 160
-    end
-
-    Fps.Position = UDim2.new(base.X.Scale, xOffset, base.Y.Scale, yOffset)
-
-    if isHorizontal then
-        -- PERFECT tight spacing (based on actual width)
-        local gap = 0 -- tiny gap between numbers
-        local width = Fps.Size.X.Offset
-
-        Ping.Position = UDim2.new(
-            base.X.Scale,
-            xOffset + width + gap,
-            base.Y.Scale,
-            yOffset
-        )
-    else
-        Ping.Position = UDim2.new(
-            base.X.Scale,
-            xOffset,
-            base.Y.Scale,
-            yOffset + 28
-        )
-    end
+    Fps.Position = base
+    Ping.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
 end
 
 local function createFpsPingGui()
@@ -3873,14 +3844,13 @@ local function createFpsPingGui()
     ScreenGui.Name = "FpsPingMonitor"
     ScreenGui.Parent = game.CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
     _G.FpsPingGui = ScreenGui
     _G.FpsLabel = Fps
     _G.PingLabel = Ping
 
     Fps.Parent = ScreenGui
     Fps.BackgroundTransparency = 1
-    Fps.Size = UDim2.new(0, 60, 0, 25) -- smaller = tighter
+    Fps.Size = UDim2.new(0, 120, 0, 25)
     Fps.Font = Enum.Font.SourceSans
     Fps.TextColor3 = Color3.fromRGB(255, 255, 255)
     Fps.TextScaled = true
@@ -3888,23 +3858,22 @@ local function createFpsPingGui()
 
     Ping.Parent = ScreenGui
     Ping.BackgroundTransparency = 1
-    Ping.Size = UDim2.new(0, 60, 0, 25) -- match FPS width
+    Ping.Size = UDim2.new(0, 120, 0, 25)
     Ping.Font = Enum.Font.SourceSans
     Ping.TextColor3 = Color3.fromRGB(255, 255, 255)
     Ping.TextScaled = true
     Ping.Text = "0"
 
-    applyPosition(Fps, Ping, uiPosition, horizontalDisplay)
+    applyPosition(Fps, Ping, uiPosition)
 
     local RunService = game:GetService("RunService")
     local Stats = game:GetService("Stats")
-
     local lastFPS = -1
     local lastPing = -1
     local lastPingUpdate = 0
     local pingInterval = 0.5
-
     local connection
+
     connection = RunService.RenderStepped:Connect(function(frame)
         if not _G.FpsPingGui or not _G.FpsPingGui.Parent then
             if connection then connection:Disconnect() end
@@ -3915,20 +3884,26 @@ local function createFpsPingGui()
         if fps ~= lastFPS then
             lastFPS = fps
             Fps.Text = tostring(fps)
-            Fps.TextColor3 = statColorsEnabled and getFpsColor(fps) or Color3.fromRGB(255,255,255)
+            if statColorsEnabled then
+                Fps.TextColor3 = getFpsColor(fps)
+            else
+                Fps.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
         end
 
         local now = os.clock()
         if now - lastPingUpdate >= pingInterval then
             lastPingUpdate = now
-
             local pingValue = Stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
             local rawPing = tonumber(pingValue:match("%-?%d+")) or 0
-
             if rawPing ~= lastPing then
                 lastPing = rawPing
                 Ping.Text = tostring(rawPing)
-                Ping.TextColor3 = statColorsEnabled and getPingColor(rawPing) or Color3.fromRGB(255,255,255)
+                if statColorsEnabled then
+                    Ping.TextColor3 = getPingColor(rawPing)
+                else
+                    Ping.TextColor3 = Color3.fromRGB(255, 255, 255)
+                end
             end
         end
     end)
@@ -3953,20 +3928,13 @@ fps_ping_section:AddToggle("Enable Statistic Colors", function(bool)
     statColorsEnabled = bool
 end)
 
-fps_ping_section:AddToggle("Enable Horizontal Display", function(bool)
-    horizontalDisplay = bool
-    if _G.FpsLabel and _G.PingLabel then
-        applyPosition(_G.FpsLabel, _G.PingLabel, uiPosition, bool)
-    end
-end)
-
 fps_ping_section:AddDropdown("UI Position", {
     "Top Right", "Top Left", "Top Center",
     "Bottom Right", "Bottom Left"
 }, function(s)
     uiPosition = s
     if _G.FpsLabel and _G.PingLabel then
-        applyPosition(_G.FpsLabel, _G.PingLabel, s, horizontalDisplay)
+        applyPosition(_G.FpsLabel, _G.PingLabel, s)
     end
 end)
 
