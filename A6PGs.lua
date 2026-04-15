@@ -1177,7 +1177,8 @@ do
     local lsAir = false
     local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
     local lsSelectedEmoteName = nil
-    
+    local lsDropdownTouched = false
+
     local LegitSpeedMaid = nil
     RootMaid:GiveTask(function() if LegitSpeedMaid then LegitSpeedMaid:DoCleaning() end end)
 
@@ -1193,6 +1194,7 @@ do
     end
 
     local function setEmoteFromDropdown(s)
+        lsDropdownTouched = true
         lsSelectedEmoteName = s
         if s == "Custom" then
             selEmote = nil
@@ -1200,7 +1202,7 @@ do
             selEmote = emotes[s] or nil
         end
     end
-    
+
     local function mkLsBtn()
         if LegitSpeedMaid then LegitSpeedMaid:DoCleaning() LegitSpeedMaid = nil end
         LegitSpeedMaid = Maid.new()
@@ -1220,23 +1222,23 @@ do
         lsBtn.Position = UDim2.new(0.5, -btnSz/2, 0.7, 0)
         Instance.new("UICorner", lsBtn).CornerRadius = UDim.new(1,0)
         ApplyCustomStyle(lsBtn)
-        
+
         lsBtn.MouseButton1Click:Connect(function()
             emOn = not emOn
             lsBtn.TextColor3 = emOn and Color3.new(0,1,0) or Color3.new(1,0,0)
             if emOn and selEmote then playE(selEmote) elseif LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = 16 end
         end)
-        
+
         local d, s, p
         lsBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true s = i.Position p = lsBtn.Position i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then d = false end end) end end)
         lsBtn.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local delta = i.Position - s lsBtn.Position = UDim2.new(p.X.Scale, p.X.Offset + delta.X, p.Y.Scale, p.Y.Offset + delta.Y) end end)
-        
+
         LegitSpeedMaid:GiveTask(Services.RunService.Stepped:Connect(function()
             if not emOn or not LocalPlayer.Character then return end
             local h = LocalPlayer.Character:FindFirstChild("Humanoid")
             local r = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if not h or not r then return end
-            
+
             lsAir = h:GetState() == Enum.HumanoidStateType.Freefall or h:GetState() == Enum.HumanoidStateType.Jumping
             local spd = 16 + sideSpd
             if lsAir then
@@ -1250,14 +1252,14 @@ do
             end
         end))
     end
-    
-    lsSection:AddToggle("Enable SG Bindable Button", function(e) 
-        if e then 
-            mkLsBtn() 
-        else 
-            if LegitSpeedMaid then LegitSpeedMaid:DoCleaning() LegitSpeedMaid = nil end 
-            emOn = false 
-        end 
+
+    lsSection:AddToggle("Enable SG Bindable Button", function(e)
+        if e then
+            mkLsBtn()
+        else
+            if LegitSpeedMaid then LegitSpeedMaid:DoCleaning() LegitSpeedMaid = nil end
+            emOn = false
+        end
     end)
     lsSection:AddSlider("Speed (0-255)", 0, 255, sideSpd, function(v) sideSpd = v end)
     lsSection:AddSlider("Button Size", 30, 150, btnSz, function(v) btnSz = v if lsBtn then lsBtn.Size = UDim2.new(0, v, 0, v) lsBtn.TextSize = v/2 end end)
@@ -1266,7 +1268,7 @@ do
         setEmoteFromDropdown(s)
     end)
     lsSection:AddTextBox("Custom Emote ID", function(t)
-        if lsSelectedEmoteName == "Custom" and t ~= "" then
+        if lsDropdownTouched and lsSelectedEmoteName == "Custom" and t ~= "" then
             selEmote = t
         end
     end)
