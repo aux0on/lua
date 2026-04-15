@@ -3839,7 +3839,7 @@ local function applyPosition(Fps, Ping, preset, isHorizontal)
 
     if isHorizontal then
         -- PERFECT tight spacing (based on actual width)
-        local gap = 5 -- tiny gap between numbers
+        local gap = 2 -- tiny gap between numbers
         local width = Fps.Size.X.Offset
 
         Ping.Position = UDim2.new(
