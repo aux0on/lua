@@ -3793,8 +3793,8 @@ local positionPresets = {
     ["Top Right"]    = UDim2.new(0.80, 0, 0, 15),
     ["Top Left"]     = UDim2.new(0.02, 0, 0, 15),
     ["Top Center"]   = UDim2.new(0.44, 0, 0, 15),
-    ["Bottom Right"] = UDim2.new(0.80, 0, 0.88, 0),
-    ["Bottom Left"]  = UDim2.new(0.02, 0, 0.88, 0),
+    ["Bottom Right"] = UDim2.new(0.80, 0, 0.85, 0),
+    ["Bottom Left"]  = UDim2.new(0.02, 0, 0.85, 0),
 }
 
 local function getFpsCap()
