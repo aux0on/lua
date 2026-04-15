@@ -3776,14 +3776,14 @@ do
     enSection:AddSlider("Noclip Duration (seconds)", 1, 10, noclipDuration, function(v)
         noclipDuration = v
     end)
-    enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
-        setEmoteFromDropdown(s)
-    end)
-    enSection:AddTextBox("Custom Emote ID", function(t)
-        if enSelectedEmoteName == "Custom" and t ~= "" then
-            selEmote = t
-        end
-    end)
+    enSection:AddDropdown("EN Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
+    setEmoteFromDropdown(s)
+end)
+enSection:AddTextBox("EN Custom Emote ID", function(t)
+    if enSelectedEmoteName == "Custom" and t ~= "" then
+        selEmote = t
+    end
+end)
 end
 	
 local function createFpsPingGui()
