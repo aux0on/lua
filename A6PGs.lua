@@ -3793,9 +3793,8 @@ local positionPresets = {
     ["Top Right"]    = UDim2.new(0.80, 0, 0, 15),
     ["Top Left"]     = UDim2.new(0.02, 0, 0, 15),
     ["Top Center"]   = UDim2.new(0.44, 0, 0, 15),
-    ["Bottom Right"] = UDim2.new(0.80, 0, 0.92, 0),
-    ["Bottom Left"]  = UDim2.new(0.02, 0, 0.92, 0),
-    ["Bottom Center"]= UDim2.new(0.44, 0, 0.92, 0),
+    ["Bottom Right"] = UDim2.new(0.80, 0, 0.88, 0),
+    ["Bottom Left"]  = UDim2.new(0.02, 0, 0.88, 0),
 }
 
 local function getFpsCap()
@@ -3827,7 +3826,7 @@ end
 local function applyPosition(Fps, Ping, preset)
     local base = positionPresets[preset] or positionPresets["Top Right"]
     Fps.Position = base
-    Ping.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 20)
+    Ping.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
 end
 
 local function createFpsPingGui()
@@ -3931,7 +3930,7 @@ end)
 
 fps_ping_section:AddDropdown("UI Position", {
     "Top Right", "Top Left", "Top Center",
-    "Bottom Right", "Bottom Left", "Bottom Center"
+    "Bottom Right", "Bottom Left"
 }, function(s)
     uiPosition = s
     if _G.FpsLabel and _G.PingLabel then
