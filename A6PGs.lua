@@ -1264,14 +1264,14 @@ do
     lsSection:AddSlider("Speed (0-255)", 0, 255, sideSpd, function(v) sideSpd = v end)
     lsSection:AddSlider("Button Size", 30, 150, btnSz, function(v) btnSz = v if lsBtn then lsBtn.Size = UDim2.new(0, v, 0, v) lsBtn.TextSize = v/2 end end)
     lsSection:AddToggle("Sideways Only", function(e) lsHori = e end)
-    lsSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
-        setEmoteFromDropdown(s)
-    end)
-    lsSection:AddTextBox("Custom Emote ID", function(t)
-        if lsDropdownTouched and lsSelectedEmoteName == "Custom" and t ~= "" then
-            selEmote = t
-        end
-    end)
+lsSection:AddDropdown("SG Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
+    setEmoteFromDropdown(s)
+end)
+lsSection:AddTextBox("SG Custom Emote ID", function(t)
+    if lsDropdownTouched and lsSelectedEmoteName == "Custom" and t ~= "" then
+        selEmote = t
+    end
+end)
 end
 
  do
