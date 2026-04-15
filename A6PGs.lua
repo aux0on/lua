@@ -317,7 +317,7 @@ end)
 RootMaid:GiveTask(function() if SpeedGlitchMaid then SpeedGlitchMaid:DoCleaning() end end)
 
 speedGlitchSection:AddToggle("Sideways Only", function(e) asgHorizontal = e end)
-speedGlitchSection:AddSlider("Speed (0Ã¢â‚¬â€œ255)", 0, 255, 0, function(v) asgValue = v end)
+speedGlitchSection:AddSlider("Speed (0-255)", 0, 255, 0, function(v) asgValue = v end)
 
 do
     local Players = game:GetService("Players")
