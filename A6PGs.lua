@@ -4089,7 +4089,7 @@ local function removeFpsBoost()
     end
 end
 
-local ultra_fps_section = shared.AddSection("Ultra FPS Boost")
+local ultra_fps_section = shared.AddSection("Light FPS Boost")
 
 ultra_fps_section:AddToggle("Enable Frame Enhancement", function(bool)
     fpsBoostEnabled = bool
