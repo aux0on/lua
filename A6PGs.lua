@@ -4100,6 +4100,88 @@ ultra_fps_section:AddToggle("Enable Frame Enhancement", function(bool)
     end
 end)
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local VirtualUser = game:GetService("VirtualUser")
+
+local trueAntiFlingEnabled = false
+local trueAntiAfkEnabled = false
+local trueAntiFlingConnection = nil
+local trueAntiAfkConnection = nil
+
+local function enableTrueAntiFling()
+    if trueAntiFlingConnection then
+        trueAntiFlingConnection:Disconnect()
+        trueAntiFlingConnection = nil
+    end
+    trueAntiFlingConnection = RunService.Stepped:Connect(function()
+        local myChar = LocalPlayer.Character
+        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        if not myHRP then return end
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local distance = (hrp.Position - myHRP.Position).Magnitude
+                    if distance <= 5 then
+                        for _, v in pairs(player.Character:GetDescendants()) do
+                            if v:IsA("BasePart") then
+                                v.CanCollide = false
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function disableTrueAntiFling()
+    if trueAntiFlingConnection then
+        trueAntiFlingConnection:Disconnect()
+        trueAntiFlingConnection = nil
+    end
+end
+
+local function enableTrueAntiAfk()
+    if trueAntiAfkConnection then
+        trueAntiAfkConnection:Disconnect()
+        trueAntiAfkConnection = nil
+    end
+    trueAntiAfkConnection = LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+end
+
+local function disableTrueAntiAfk()
+    if trueAntiAfkConnection then
+        trueAntiAfkConnection:Disconnect()
+        trueAntiAfkConnection = nil
+    end
+end
+
+local true_antis_section = shared.AddSection("True Anti's")
+
+true_antis_section:AddToggle("Enable IY Anti Fling", function(bool)
+    trueAntiFlingEnabled = bool
+    if bool then
+        enableTrueAntiFling()
+    else
+        disableTrueAntiFling()
+    end
+end)
+
+true_antis_section:AddToggle("Enable True Anti AFK", function(bool)
+    trueAntiAfkEnabled = bool
+    if bool then
+        enableTrueAntiAfk()
+    else
+        disableTrueAntiAfk()
+    end
+end)
+
 RootMaid:GiveTask(function()
     
 end)
