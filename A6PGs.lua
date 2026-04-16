@@ -4114,7 +4114,10 @@ local function enableTrueAntiFling()
         trueAntiFlingConnection:Disconnect()
         trueAntiFlingConnection = nil
     end
+    local tick_counter = 0
     trueAntiFlingConnection = RunService.Stepped:Connect(function()
+        tick_counter += 1
+        if tick_counter % 10 ~= 0 then return end
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 for _, v in pairs(player.Character:GetDescendants()) do
