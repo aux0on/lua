@@ -3944,75 +3944,148 @@ local fpsBoostEnabled = false
 
 local function applyFpsBoost()
     local Lighting = game:GetService("Lighting")
-    local RunService = game:GetService("RunService")
+    local Players = game:GetService("Players")
+    local localPlayer = Players.LocalPlayer
 
-    -- Lighting quality reduction
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 100000
     Lighting.FogStart = 100000
+    Lighting.Brightness = 1
+    Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+    Lighting.OutdoorAmbient = Color3.fromRGB(178, 178, 178)
+    Lighting.ClockTime = 14
 
-    -- Disable post-processing effects
     for _, effect in ipairs(Lighting:GetChildren()) do
-        if effect:IsA("PostEffect") then
+        if effect:IsA("PostEffect") or effect:IsA("Sky") or effect:IsA("Atmosphere") then
             effect.Enabled = false
         end
     end
 
-    -- Terrain quality
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Disabled
+
     workspace.Terrain.WaterWaveSize = 0
     workspace.Terrain.WaterWaveSpeed = 0
     workspace.Terrain.Decoration = false
+    workspace.Terrain.WaterReflectance = 0
+    workspace.Terrain.WaterTransparency = 0
 
-    -- Lower render quality via settings
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-
-    -- Handle existing parts and future ones
-    local function degradePart(obj)
-        if obj:IsA("BasePart") then
-            obj.CastShadow = false
-            obj.ReceiveAge = 0
-        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
-            obj.Enabled = false
-        elseif obj:IsA("Decal") or obj:IsA("Texture") then
-            obj.Transparency = 0
+    if localPlayer and localPlayer.Character then
+        for _, obj in ipairs(localPlayer.Character:GetDescendants()) do
+            if obj:IsA("Accessory") or obj:IsA("Hat") then
+                for _, part in ipairs(obj:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CastShadow = false
+                    end
+                end
+            end
         end
     end
 
-    -- Apply to all existing objects
+    local function degradePart(obj)
+        if obj:IsA("BasePart") then
+            obj.CastShadow = false
+            obj.RenderFidelity = Enum.RenderFidelity.Disabled
+            obj.LODFactor = 0
+        elseif obj:IsA("MeshPart") then
+            obj.CastShadow = false
+            obj.RenderFidelity = Enum.RenderFidelity.Disabled
+        elseif obj:IsA("SpecialMesh") then
+            obj.LOD = Enum.MeshPartDetailLevel.Disabled
+        elseif obj:IsA("ParticleEmitter") then
+            obj.Enabled = false
+            obj.Rate = 0
+        elseif obj:IsA("Trail") then
+            obj.Enabled = false
+        elseif obj:IsA("Smoke") then
+            obj.Enabled = false
+        elseif obj:IsA("Fire") then
+            obj.Enabled = false
+        elseif obj:IsA("Sparkles") then
+            obj.Enabled = false
+        elseif obj:IsA("Explosion") then
+            obj.BlastPressure = 0
+        elseif obj:IsA("SelectionBox") then
+            obj.Visible = false
+        elseif obj:IsA("BillboardGui") then
+            obj.Enabled = false
+        elseif obj:IsA("SurfaceGui") then
+            obj.Enabled = false
+        elseif obj:IsA("Decal") then
+            obj.Transparency = 1
+        elseif obj:IsA("Texture") then
+            obj.Transparency = 1
+        elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+            obj.Enabled = false
+        elseif obj:IsA("Sky") then
+            obj.Parent = nil
+        end
+    end
+
     for _, obj in ipairs(workspace:GetDescendants()) do
         degradePart(obj)
     end
 
-    -- Listen for new objects (resource efficient: event-based, not looped)
     _G.FpsBoostConnection = workspace.DescendantAdded:Connect(function(obj)
         task.defer(degradePart, obj)
     end)
+
+    _G.FpsBoostLightingConnection = Lighting.DescendantAdded:Connect(function(obj)
+        if obj:IsA("PostEffect") or obj:IsA("Sky") or obj:IsA("Atmosphere") then
+            obj.Enabled = false
+        end
+    end)
+
+    if localPlayer then
+        _G.FpsBoostCharConnection = localPlayer.CharacterAdded:Connect(function(char)
+            for _, obj in ipairs(char:GetDescendants()) do
+                degradePart(obj)
+            end
+            char.DescendantAdded:Connect(function(obj)
+                task.defer(degradePart, obj)
+            end)
+        end)
+    end
 end
 
 local function removeFpsBoost()
-    -- Restore lighting
     local Lighting = game:GetService("Lighting")
-    Lighting.GlobalShadows = true
 
-    -- Re-enable post-processing effects
+    Lighting.GlobalShadows = true
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 0
+    Lighting.Brightness = 2
+    Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+
     for _, effect in ipairs(Lighting:GetChildren()) do
-        if effect:IsA("PostEffect") then
+        if effect:IsA("PostEffect") or effect:IsA("Sky") or effect:IsA("Atmosphere") then
             effect.Enabled = true
         end
     end
 
-    -- Restore terrain
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+    settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Full
+
     workspace.Terrain.WaterWaveSize = 0.15
     workspace.Terrain.WaterWaveSpeed = 10
     workspace.Terrain.Decoration = true
+    workspace.Terrain.WaterReflectance = 1
+    workspace.Terrain.WaterTransparency = 0
 
-    -- Restore render quality
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
-
-    -- Disconnect the new object listener
     if _G.FpsBoostConnection then
         _G.FpsBoostConnection:Disconnect()
         _G.FpsBoostConnection = nil
+    end
+
+    if _G.FpsBoostLightingConnection then
+        _G.FpsBoostLightingConnection:Disconnect()
+        _G.FpsBoostLightingConnection = nil
+    end
+
+    if _G.FpsBoostCharConnection then
+        _G.FpsBoostCharConnection:Disconnect()
+        _G.FpsBoostCharConnection = nil
     end
 end
 
