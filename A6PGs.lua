@@ -480,6 +480,7 @@ end
 
 local whitelistSection = shared.AddSection("Kill All")
 local whitelist = {}
+local autoWLFriends = false
 
 whitelistSection:AddLabel("Ignores Whitelisted Players")
 whitelistSection:AddPlayerDropdown("Whitelist Player", function(p)
@@ -492,48 +493,53 @@ whitelistSection:AddButton("Clear Whitelist", function()
     whitelist = {}
     shared.Notify("Whitelist cleared.", 2)
 end)
+whitelistSection:AddToggle("Auto WL Friends", false, function(enabled)
+    autoWLFriends = enabled
+    shared.Notify("Auto WL Friends " .. (enabled and "enabled." or "disabled."), 2)
+end)
 
-local KillAllMaid = nil
 whitelistSection:AddButton("Kill All", function()
-    if KillAllMaid then KillAllMaid:DoCleaning() KillAllMaid = nil end
-    local bp = LocalPlayer:FindFirstChild("Backpack")
-    local knife = (bp and bp:FindFirstChild("Knife"))
-    if not knife then return shared.Notify("Knife not found!", 2) end
-    
-    KillAllMaid = Maid.new()
-    knife.Parent = LocalPlayer.Character
-    local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    
-    local offset = -2
-    local targets = {}
-    
-    for _, p in pairs(Services.Players:GetPlayers()) do
-        if p ~= LocalPlayer and not table.find(whitelist, p.UserId) and p.Character and p.Character.PrimaryPart then
-            table.insert(targets, p.Character)
+    local character = LocalPlayer.Character
+    if not character then return shared.Notify("No character found!", 2) end
+
+    local knife = character:FindFirstChild("Knife")
+    local wasInBackpack = false
+
+    if not knife then
+        local bp = LocalPlayer:FindFirstChild("Backpack")
+        knife = bp and bp:FindFirstChild("Knife")
+        if knife then
+            knife.Parent = character
+            wasInBackpack = true
         end
     end
-    
-    local start = tick()
-    KillAllMaid:GiveTask(Services.RunService.RenderStepped:Connect(function()
-        if tick() - start > 3 then
-            if KillAllMaid then KillAllMaid:DoCleaning() KillAllMaid = nil end
-            for _, p in pairs(LocalPlayer.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
-            for _, c in pairs(targets) do for _, p in pairs(c:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end end
-            return
-        end
-        
-        for _, p in pairs(LocalPlayer.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end
-        
-        for _, c in pairs(targets) do
-            if c.PrimaryPart then
-                c:SetPrimaryPartCFrame(root.CFrame * CFrame.new(0, 0, offset))
-                for _, p in pairs(c:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end
+
+    if not knife then return shared.Notify("Knife not found!", 2) end
+
+    local events = knife:FindFirstChild("Events")
+    if not events then return shared.Notify("Knife Events not found!", 2) end
+
+    local handleTouched = events:FindFirstChild("HandleTouched")
+    if not handleTouched then return shared.Notify("HandleTouched event not found!", 2) end
+
+    for _, p in pairs(Services.Players:GetPlayers()) do
+        if p ~= LocalPlayer and not table.find(whitelist, p.UserId) then
+            local isFriend = autoWLFriends and LocalPlayer:IsFriendsWith(p.UserId)
+            if not isFriend then
+                if p.Character then
+                    local upperTorso = p.Character:FindFirstChild("UpperTorso")
+                    if upperTorso then
+                        handleTouched:FireServer(upperTorso)
+                    end
+                end
             end
         end
-    end))
+    end
+
+    if wasInBackpack then
+        knife.Parent = LocalPlayer:FindFirstChild("Backpack")
+    end
 end)
-RootMaid:GiveTask(function() if KillAllMaid then KillAllMaid:DoCleaning() end end)
 
 do
     local tsSection = shared.AddSection("Trickshot")
