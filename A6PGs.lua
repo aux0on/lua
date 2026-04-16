@@ -480,8 +480,6 @@ end
 
 local whitelistSection = shared.AddSection("Kill All")
 local whitelist = {}
-local autoWLFriends = false
-
 whitelistSection:AddLabel("Ignores Whitelisted Players")
 whitelistSection:AddPlayerDropdown("Whitelist Player", function(p)
     if not table.find(whitelist, p.UserId) then
@@ -492,10 +490,6 @@ end)
 whitelistSection:AddButton("Clear Whitelist", function()
     whitelist = {}
     shared.Notify("Whitelist cleared.", 2)
-end)
-whitelistSection:AddToggle("Auto WL Friends", false, function(enabled)
-    autoWLFriends = enabled
-    shared.Notify("Auto WL Friends " .. (enabled and "enabled." or "disabled."), 2)
 end)
 
 whitelistSection:AddButton("Kill All", function()
@@ -522,17 +516,19 @@ whitelistSection:AddButton("Kill All", function()
     local handleTouched = events:FindFirstChild("HandleTouched")
     if not handleTouched then return shared.Notify("HandleTouched event not found!", 2) end
 
+    local targets = {}
     for _, p in pairs(Services.Players:GetPlayers()) do
-        if p ~= LocalPlayer and not table.find(whitelist, p.UserId) then
-            local isFriend = autoWLFriends and LocalPlayer:IsFriendsWith(p.UserId)
-            if not isFriend then
-                if p.Character then
-                    local upperTorso = p.Character:FindFirstChild("UpperTorso")
-                    if upperTorso then
-                        handleTouched:FireServer(upperTorso)
-                    end
-                end
+        if p ~= LocalPlayer and not table.find(whitelist, p.UserId) and p.Character then
+            local upperTorso = p.Character:FindFirstChild("UpperTorso")
+            if upperTorso then
+                table.insert(targets, upperTorso)
             end
+        end
+    end
+
+    for i = 1, 2 do
+        for _, upperTorso in pairs(targets) do
+            handleTouched:FireServer(upperTorso)
         end
     end
 
