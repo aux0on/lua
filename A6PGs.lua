@@ -3940,6 +3940,9 @@ end)
 
 fps_ping_section:AddParagraph("Skidded & Improved By:", "@lzzzx")
 
+local creditsSection = shared.AddSection("Credits")
+creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.") end
+
 RootMaid:GiveTask(function()
     
 end)
