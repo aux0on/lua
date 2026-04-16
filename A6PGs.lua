@@ -4104,7 +4104,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local VirtualUser = game:GetService("VirtualUser")
-
 local trueAntiFlingEnabled = false
 local trueAntiAfkEnabled = false
 local trueAntiFlingConnection = nil
@@ -4116,20 +4115,11 @@ local function enableTrueAntiFling()
         trueAntiFlingConnection = nil
     end
     trueAntiFlingConnection = RunService.Stepped:Connect(function()
-        local myChar = LocalPlayer.Character
-        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        if not myHRP then return end
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
-                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local distance = (hrp.Position - myHRP.Position).Magnitude
-                    if distance <= 5 then
-                        for _, v in pairs(player.Character:GetDescendants()) do
-                            if v:IsA("BasePart") then
-                                v.CanCollide = false
-                            end
-                        end
+                for _, v in pairs(player.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        v.CanCollide = false
                     end
                 end
             end
@@ -4163,7 +4153,6 @@ local function disableTrueAntiAfk()
 end
 
 local true_antis_section = shared.AddSection("True Anti's")
-
 true_antis_section:AddToggle("Enable IY Anti Fling", function(bool)
     trueAntiFlingEnabled = bool
     if bool then
@@ -4172,7 +4161,6 @@ true_antis_section:AddToggle("Enable IY Anti Fling", function(bool)
         disableTrueAntiFling()
     end
 end)
-
 true_antis_section:AddToggle("Enable True Anti AFK", function(bool)
     trueAntiAfkEnabled = bool
     if bool then
