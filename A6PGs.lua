@@ -3940,6 +3940,93 @@ end)
 
 fps_ping_section:AddParagraph("Skidded & Improved By:", "@lzzzx")
 
+local fpsBoostEnabled = false
+
+local function applyFpsBoost()
+    local Lighting = game:GetService("Lighting")
+    local RunService = game:GetService("RunService")
+
+    -- Lighting quality reduction
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 100000
+
+    -- Disable post-processing effects
+    for _, effect in ipairs(Lighting:GetChildren()) do
+        if effect:IsA("PostEffect") then
+            effect.Enabled = false
+        end
+    end
+
+    -- Terrain quality
+    workspace.Terrain.WaterWaveSize = 0
+    workspace.Terrain.WaterWaveSpeed = 0
+    workspace.Terrain.Decoration = false
+
+    -- Lower render quality via settings
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+    -- Handle existing parts and future ones
+    local function degradePart(obj)
+        if obj:IsA("BasePart") then
+            obj.CastShadow = false
+            obj.ReceiveAge = 0
+        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+            obj.Enabled = false
+        elseif obj:IsA("Decal") or obj:IsA("Texture") then
+            obj.Transparency = 0
+        end
+    end
+
+    -- Apply to all existing objects
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        degradePart(obj)
+    end
+
+    -- Listen for new objects (resource efficient: event-based, not looped)
+    _G.FpsBoostConnection = workspace.DescendantAdded:Connect(function(obj)
+        task.defer(degradePart, obj)
+    end)
+end
+
+local function removeFpsBoost()
+    -- Restore lighting
+    local Lighting = game:GetService("Lighting")
+    Lighting.GlobalShadows = true
+
+    -- Re-enable post-processing effects
+    for _, effect in ipairs(Lighting:GetChildren()) do
+        if effect:IsA("PostEffect") then
+            effect.Enabled = true
+        end
+    end
+
+    -- Restore terrain
+    workspace.Terrain.WaterWaveSize = 0.15
+    workspace.Terrain.WaterWaveSpeed = 10
+    workspace.Terrain.Decoration = true
+
+    -- Restore render quality
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+
+    -- Disconnect the new object listener
+    if _G.FpsBoostConnection then
+        _G.FpsBoostConnection:Disconnect()
+        _G.FpsBoostConnection = nil
+    end
+end
+
+local ultra_fps_section = shared.AddSection("Ultra FPS Boost")
+
+ultra_fps_section:AddToggle("Enable Frame Enhancement", function(bool)
+    fpsBoostEnabled = bool
+    if bool then
+        applyFpsBoost()
+    else
+        removeFpsBoost()
+    end
+end)
+
 RootMaid:GiveTask(function()
     
 end)
