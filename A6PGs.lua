@@ -189,24 +189,28 @@ serverSection:AddButton("Join Dead Server", function()
 end)
 	
 local PlaySong = Services.ReplicatedStorage.Remotes.Inventory.PlaySong
-local RoleSelect = Services.ReplicatedStorage.Remotes.Gameplay.RoleSelect
 local radioSection = shared.AddSection("Radio Abuse")
 local songSaveFile = "saved_songs.json"
 local savedSongs = {}
+
 if isfile and readfile and isfile(songSaveFile) then
     local ok, data = pcall(function() return Services.HttpService:JSONDecode(readfile(songSaveFile)) end)
     if ok and type(data) == "table" then savedSongs = data end
 end
+
 local function saveSongs()
     if writefile then writefile(songSaveFile, Services.HttpService:JSONEncode(savedSongs)) end
 end
+
 local function getSongNames()
     local names = {}
     for _, song in ipairs(savedSongs) do table.insert(names, song.name or song.id) end
     return names
 end
+
 local songDropdown
 local lastSelectedSong = nil
+
 songDropdown = radioSection:AddDropdown("Saved Songs", getSongNames(), function(selectedName)
     for _, song in ipairs(savedSongs) do
         if song.name == selectedName then
@@ -216,6 +220,17 @@ songDropdown = radioSection:AddDropdown("Saved Songs", getSongNames(), function(
         end
     end
 end)
+
+radioSection:AddButton("Replay Audio", function()
+    if lastSelectedSong then
+        PlaySong:FireServer("https://www.roblox.com/asset/?id=" .. lastSelectedSong.id)
+        task.wait(0.1)
+        PlaySong:FireServer("https://www.roblox.com/asset/?id=" .. lastSelectedSong.id)
+    else
+        shared.Notify("No audio selected!", 2)
+    end
+end)
+
 radioSection:AddTextBox("Add Audio ID", function(text)
     local id = text:match("%d+")
     if id then
@@ -229,6 +244,7 @@ radioSection:AddTextBox("Add Audio ID", function(text)
         shared.Notify("Invalid audio ID!", 2)
     end
 end)
+
 radioSection:AddButton("Delete Selected Audio", function()
     if lastSelectedSong then
         for i, song in ipairs(savedSongs) do
@@ -246,15 +262,17 @@ end)
 
 local RadioMaid = nil
 local autoPlayEnabled = false
+
 local function playSelectedSong()
     if lastSelectedSong then
         PlaySong:FireServer("https://www.roblox.com/asset/?id=" .. lastSelectedSong.id)
     end
 end
+
 radioSection:AddToggle("Auto Play Selected Audio", function(state)
     if RadioMaid then RadioMaid:DoCleaning() RadioMaid = nil end
     autoPlayEnabled = state
-    
+
     if autoPlayEnabled then
         RadioMaid = Maid.new()
         RadioMaid:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
@@ -263,6 +281,7 @@ radioSection:AddToggle("Auto Play Selected Audio", function(state)
         end))
     end
 end)
+
 RootMaid:GiveTask(function() if RadioMaid then RadioMaid:DoCleaning() end end)
 radioSection:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")
 
@@ -3694,111 +3713,6 @@ do
         grabGG()
     end)
 end
-
-do
-    local enSection = shared.AddSection("Emote Noclip")
-    local btnSz = 50
-    local selEmote = nil
-    local noclipDuration = 4
-    local enGui, enBtn
-    local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
-
-    local EmoteNoclipMaid = nil
-    RootMaid:GiveTask(function() if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() end end)
-
-    local function setNoclip(enabled)
-        if not LocalPlayer.Character then return end
-        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = not enabled end
-        end
-    end
-
-    local function playE(id)
-        local char = LocalPlayer.Character
-        if not char then return end
-        local h = char:FindFirstChild("Humanoid")
-        if not h then return end
-
-        pcall(function()
-            h:PlayEmoteAndGetAnimTrackById(id)
-        end)
-
-        setNoclip(true)
-        task.delay(noclipDuration, function()
-            setNoclip(false)
-        end)
-    end
-
-    local function triggerEmote()
-        if not selEmote then return end
-        playE(selEmote)
-    end
-
-    local function mkEnBtn()
-        if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
-        EmoteNoclipMaid = Maid.new()
-
-        enGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-        enGui.Name = "ENGui"
-        enGui.ResetOnSpawn = false
-        EmoteNoclipMaid:GiveTask(enGui)
-
-        enBtn = Instance.new("TextButton", enGui)
-        enBtn.Name = "ENButton"
-        enBtn.Text = "Emote"
-        enBtn.TextSize = btnSz / 2.5
-        enBtn.TextColor3 = Color3.new(1, 1, 1)
-        enBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        enBtn.Size = UDim2.new(0, btnSz, 0, btnSz)
-        enBtn.Position = UDim2.new(0.8, -btnSz / 2, 0.7, 0)
-        Instance.new("UICorner", enBtn).CornerRadius = UDim.new(1, 0)
-        ApplyCustomStyle(enBtn)
-
-        enBtn.MouseButton1Click:Connect(triggerEmote)
-
-        local d, s, p
-        enBtn.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                d = true s = i.Position p = enBtn.Position
-                i.Changed:Connect(function()
-                    if i.UserInputState == Enum.UserInputState.End then d = false end
-                end)
-            end
-        end)
-        enBtn.InputChanged:Connect(function(i)
-            if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-                local delta = i.Position - s
-                enBtn.Position = UDim2.new(p.X.Scale, p.X.Offset + delta.X, p.Y.Scale, p.Y.Offset + delta.Y)
-            end
-        end)
-
-        EmoteNoclipMaid:GiveTask(function() setNoclip(false) end)
-    end
-
-    enSection:AddButton("Emote (Noclip)", triggerEmote)
-    enSection:AddToggle("Enable Bindable Button", function(e)
-        if e then
-            mkEnBtn()
-        else
-            if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
-            setNoclip(false)
-        end
-    end)
-    enSection:AddSlider("Button Size", 30, 150, btnSz, function(v)
-        btnSz = v
-        if enBtn then
-            enBtn.Size = UDim2.new(0, v, 0, v)
-            enBtn.TextSize = v / 2.5
-        end
-    end)
-    enSection:AddSlider("Noclip Duration (seconds)", 1, 10, noclipDuration, function(v)
-        noclipDuration = v
-    end)
-    enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
-        if s ~= "Custom" then selEmote = emotes[s] else selEmote = nil end
-    end)
-    enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
-end
 	
 local statColorsEnabled = false
 local uiPosition = "Top Right"
@@ -4183,6 +4097,9 @@ true_antis_section:AddToggle("Enable True Anti AFK", function(bool)
         disableTrueAntiAfk()
     end
 end)
+
+local creditsSection = shared.AddSection("Credits")
+creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
 RootMaid:GiveTask(function()
     
