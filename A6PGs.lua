@@ -3512,14 +3512,6 @@ do
         return nearestGG
     end
 
-    -- NEW: Check if player's health is full
-    local function isHealthFull()
-        local char = LocalPlayer.Character
-        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return false end
-        return humanoid.Health >= humanoid.MaxHealth
-    end
-
     local function grabGG()
         local char = LocalPlayer.Character
         local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -3528,15 +3520,6 @@ do
             return
         end
 
-        -- NEW: If health is full, fire the remote signal instead
-        if isHealthFull() then
-            ggNotify("Grab Gun", "Health is full — using remote give!", 2)
-            local Remote = game:GetService("ReplicatedStorage").Remotes.Gameplay.GiveWeapon
-            firesignal(Remote.OnClientEvent, "Gun")
-            return
-        end
-
-        -- Original grab gun logic (runs when health is NOT full)
         local ggDrop = findNearestGG()
         if not ggDrop then
             ggNotify("Grab Gun", "No gun drop found!", 3)
