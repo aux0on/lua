@@ -526,7 +526,7 @@ whitelistSection:AddButton("Kill All", function()
         end
     end
 
-    for i = 1, 2 do
+    for i = 1, 3 do
         for _, upperTorso in pairs(targets) do
             handleTouched:FireServer(upperTorso)
         end
