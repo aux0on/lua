@@ -2879,6 +2879,15 @@ do
             climb = "http://www.roblox.com/asset/?id=106213237973858",
             fall  = "https://www.roblox.com/asset/?id=127802717128367"
 		},
+	    ["Wicked Popular"] = {
+            idle1 = "https://www.roblox.com/asset/?id=118832222982049",
+            idle2 = "https://www.roblox.com/asset/?id=118832222982049",
+            walk  = "http://www.roblox.com/asset/?id=92072849924640",
+            run   = "http://www.roblox.com/asset/?id=72301599441680",
+            jump  = "http://www.roblox.com/asset/?id=104325245285198",
+            climb = "http://www.roblox.com/asset/?id=131326830509784",
+            fall  = "https://www.roblox.com/asset/?id=121152442762481"
+		},
     }
 
     local animMap = {
@@ -3039,7 +3048,7 @@ end
         "Default", "OG Rthro Run", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed","Glow Motion","Bubbly","Adidas Comm","KATSEYE"
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed","Glow Motion","Bubbly","Adidas Comm","KATSEYE","Wicked Popular"
     }
 
     feAnimSection:AddToggle("Enable FE Anims", function(enabled)
@@ -3693,8 +3702,8 @@ do
     local noclipDuration = 4
     local enGui, enBtn
     local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
+
     local EmoteNoclipMaid = nil
-    local enSelectedEmoteName = nil
     RootMaid:GiveTask(function() if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() end end)
 
     local function setNoclip(enabled)
@@ -3709,9 +3718,11 @@ do
         if not char then return end
         local h = char:FindFirstChild("Humanoid")
         if not h then return end
+
         pcall(function()
             h:PlayEmoteAndGetAnimTrackById(id)
         end)
+
         setNoclip(true)
         task.delay(noclipDuration, function()
             setNoclip(false)
@@ -3723,22 +3734,15 @@ do
         playE(selEmote)
     end
 
-    local function setEmoteFromDropdown(s)
-        enSelectedEmoteName = s
-        if s == "Custom" then
-            selEmote = nil
-        else
-            selEmote = emotes[s] or nil
-        end
-    end
-
     local function mkEnBtn()
         if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() EmoteNoclipMaid = nil end
         EmoteNoclipMaid = Maid.new()
+
         enGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
         enGui.Name = "ENGui"
         enGui.ResetOnSpawn = false
         EmoteNoclipMaid:GiveTask(enGui)
+
         enBtn = Instance.new("TextButton", enGui)
         enBtn.Name = "ENButton"
         enBtn.Text = "Emote"
@@ -3749,7 +3753,9 @@ do
         enBtn.Position = UDim2.new(0.8, -btnSz / 2, 0.7, 0)
         Instance.new("UICorner", enBtn).CornerRadius = UDim.new(1, 0)
         ApplyCustomStyle(enBtn)
+
         enBtn.MouseButton1Click:Connect(triggerEmote)
+
         local d, s, p
         enBtn.InputBegan:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
@@ -3765,6 +3771,7 @@ do
                 enBtn.Position = UDim2.new(p.X.Scale, p.X.Offset + delta.X, p.Y.Scale, p.Y.Offset + delta.Y)
             end
         end)
+
         EmoteNoclipMaid:GiveTask(function() setNoclip(false) end)
     end
 
@@ -3787,14 +3794,10 @@ do
     enSection:AddSlider("Noclip Duration (seconds)", 1, 10, noclipDuration, function(v)
         noclipDuration = v
     end)
-    enSection:AddDropdown("EN Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
-    setEmoteFromDropdown(s)
-end)
-enSection:AddTextBox("EN Custom Emote ID", function(t)
-    if enSelectedEmoteName == "Custom" and t ~= "" then
-        selEmote = t
-    end
-end)
+    enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
+        if s ~= "Custom" then selEmote = emotes[s] else selEmote = nil end
+    end)
+    enSection:AddTextBox("Custom Emote ID", function(t) if t ~= "" then selEmote = t end end)
 end
 	
 local statColorsEnabled = false
