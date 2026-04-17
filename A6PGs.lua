@@ -2870,6 +2870,15 @@ do
             climb = "http://www.roblox.com/asset/?id=88763136693023",
             fall  = "https://www.roblox.com/asset/?id=98600215928904"
 		},
+	    ["KATSEYE"] = {
+            idle1 = "https://www.roblox.com/asset/?id=108187809145790",
+            idle2 = "https://www.roblox.com/asset/?id=108187809145790",
+            walk  = "http://www.roblox.com/asset/?id=99182913548783",
+            run   = "http://www.roblox.com/asset/?id=73117360545482",
+            jump  = "http://www.roblox.com/asset/?id=103632305262747",
+            climb = "http://www.roblox.com/asset/?id=106213237973858",
+            fall  = "https://www.roblox.com/asset/?id=127802717128367"
+		},
     }
 
     local animMap = {
@@ -3030,7 +3039,7 @@ end
         "Default", "OG Rthro Run", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
         "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
         "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed","Glow Motion","Bubbly","Adidas Comm"
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed","Glow Motion","Bubbly","Adidas Comm","KATSEYE"
     }
 
     feAnimSection:AddToggle("Enable FE Anims", function(enabled)
