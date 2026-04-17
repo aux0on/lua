@@ -697,7 +697,12 @@ end
             end))
         end
     end)
-    RootMaid:GiveTask(function() if DualEffectMaid then DualEffectMaid:DoCleaning() end end)
+    
+    RootMaid:GiveTask(function()
+        if DualEffectMaid then
+            DualEffectMaid:DoCleaning()
+        end
+    end)
 end
 
 do
