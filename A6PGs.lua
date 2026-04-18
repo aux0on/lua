@@ -1974,7 +1974,8 @@ end
 do
     local perkSection = shared.AddSection("Perks")
     local hasteOn = false
-    local hasteSpd = 19
+    local blatantMode = false
+    local hasteSpd = 18
     local PerkMaid = nil
     RootMaid:GiveTask(function() if PerkMaid then PerkMaid:DoCleaning() end end)
     
@@ -2015,6 +2016,11 @@ do
     end
     
     perkSection:AddToggle("Enable Auto Haste", function(s) hasteOn = s setupHaste() end)
+    perkSection:AddToggle("Enable Blatant Mode", function(s)
+        blatantMode = s
+        hasteSpd = blatantMode and 19 or 18
+        updSpd()
+    end)
     perkSection:AddLabel("Stacks With Other Perks")
 end
 
