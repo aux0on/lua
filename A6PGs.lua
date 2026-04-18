@@ -537,11 +537,11 @@ whitelistSection:AddButton("Kill All", function()
             end
         end
     end
-    for i = 1, 3 do
+    for i = 1, 6 do
         for _, upperTorso in pairs(targets) do
             handleTouched:FireServer(upperTorso)
         end
-        if i < 3 then
+        if i < 6 then
             task.wait(1)
         end
     end
