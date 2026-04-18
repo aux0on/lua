@@ -696,6 +696,26 @@ end
 end
 
 do
+    local tradeSection = shared.AddSection("Disable Trading")
+    tradeSection:AddLabel("Turn Off & Rejoin To Trade Again")
+    local TradeMaid = nil
+    
+    tradeSection:AddToggle("Decline Trades", function(t)
+        if TradeMaid then TradeMaid:DoCleaning() TradeMaid = nil end
+        if t then
+            TradeMaid = Maid.new()
+            Services.ReplicatedStorage.Trade.SendRequest.OnClientInvoke = function()
+                Services.ReplicatedStorage.Trade.DeclineRequest:FireServer()
+            end
+            TradeMaid:GiveTask(function()
+                Services.ReplicatedStorage.Trade.SendRequest.OnClientInvoke = nil
+            end)
+        end
+    end)
+    RootMaid:GiveTask(function() if TradeMaid then TradeMaid:DoCleaning() end end)
+end
+	
+do
     local Players = game:GetService("Players")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local HttpService = game:GetService("HttpService")
