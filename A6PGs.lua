@@ -510,14 +510,11 @@ whitelistSection:AddButton("Clear Whitelist", function()
     whitelist = {}
     shared.Notify("Whitelist cleared.", 2)
 end)
-
 whitelistSection:AddButton("Kill All", function()
     local character = LocalPlayer.Character
     if not character then return shared.Notify("No character found!", 2) end
-
     local knife = character:FindFirstChild("Knife")
     local wasInBackpack = false
-
     if not knife then
         local bp = LocalPlayer:FindFirstChild("Backpack")
         knife = bp and bp:FindFirstChild("Knife")
@@ -526,15 +523,11 @@ whitelistSection:AddButton("Kill All", function()
             wasInBackpack = true
         end
     end
-
     if not knife then return shared.Notify("Knife not found!", 2) end
-
     local events = knife:FindFirstChild("Events")
     if not events then return shared.Notify("Knife Events not found!", 2) end
-
     local handleTouched = events:FindFirstChild("HandleTouched")
     if not handleTouched then return shared.Notify("HandleTouched event not found!", 2) end
-
     local targets = {}
     for _, p in pairs(Services.Players:GetPlayers()) do
         if p ~= LocalPlayer and not table.find(whitelist, p.UserId) and p.Character then
@@ -544,13 +537,14 @@ whitelistSection:AddButton("Kill All", function()
             end
         end
     end
-
     for i = 1, 3 do
         for _, upperTorso in pairs(targets) do
             handleTouched:FireServer(upperTorso)
         end
+        if i < 3 then
+            task.wait(1)
+        end
     end
-
     if wasInBackpack then
         knife.Parent = LocalPlayer:FindFirstChild("Backpack")
     end
