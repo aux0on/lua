@@ -30,6 +30,8 @@ function Maid:Destroy() self:DoCleaning() end
 local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
+local _game = shared.game_name
+if _game == "Murder Mystery 2" then
 
 local Services = {
     Players = game:GetService("Players"),
@@ -535,11 +537,11 @@ whitelistSection:AddButton("Kill All", function()
             end
         end
     end
-    for i = 1, 5 do
+    for i = 1, 6 do
         for _, upperTorso in pairs(targets) do
             handleTouched:FireServer(upperTorso)
         end
-        if i < 5 then
+        if i < 6 then
             task.wait(1)
         end
     end
