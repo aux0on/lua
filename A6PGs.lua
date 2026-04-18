@@ -1042,32 +1042,6 @@ do
     makeEmote("103788740211648", "DS", "EmoteGUI_DualSwing")
 end
 
-local muteSection = shared.AddSection("Mute Buttons")
-muteSection:AddLabel("Turn Off and Rejoin to Enable Sounds Again")
-local muteTarget = "rbxassetid://3868133279"
-local muteEnabled = false
-local MuteMaid = nil
-RootMaid:GiveTask(function() if MuteMaid then MuteMaid:DoCleaning() end end)
-
-local function doMute(s)
-    if s.SoundId == muteTarget then
-        s.Volume = 0
-        if MuteMaid then
-            MuteMaid:GiveTask(s:GetPropertyChangedSignal("Volume"):Connect(function() if muteEnabled and s.Volume > 0 then s.Volume = 0 end end))
-        end
-    end
-end
-
-muteSection:AddToggle("Disable ODH Button Sounds", function(s)
-    if MuteMaid then MuteMaid:DoCleaning() MuteMaid = nil end
-    muteEnabled = s
-    if s then
-        MuteMaid = Maid.new()
-        for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("Sound") then doMute(o) end end
-        MuteMaid:GiveTask(workspace.DescendantAdded:Connect(function(o) if o:IsA("Sound") then doMute(o) end end))
-    end
-end)
-
 do
     local rtxSection = shared.AddSection("RTX")
     local rtx = {Sky=nil, Blur=nil, CC=nil, Bloom=nil, Sun=nil}
