@@ -2045,8 +2045,9 @@ do
 end
 
 do
-    local skySection = shared.AddSection("Skybox")
-    local skyId = 70883871260184
+    local skySection = shared.AddSection("FE Blind All")
+    skySection:AddLabel("Requires The Glitch Walker Bundle")
+	local skyId = 70883871260184
     local SkyboxMaid = nil
     RootMaid:GiveTask(function() if SkyboxMaid then SkyboxMaid:DoCleaning() end end)
     
