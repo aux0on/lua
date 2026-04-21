@@ -2,7 +2,6 @@ local table_insert = table.insert
 local table_find = table.find
 local math_abs = math.abs
 
--- Optimized Maid Class
 local Maid = {}
 Maid.__index = Maid
 
@@ -56,7 +55,6 @@ local RootMaid = Maid.new()
 local shared = odh_shared_plugins
 if shared.game_name ~= "Murder Mystery 2" then return end
 
--- Cached Services
 local Services = {
     Players = game:GetService("Players"),
     ReplicatedStorage = game:GetService("ReplicatedStorage"),
@@ -79,9 +77,6 @@ local LocalPlayer = Services.Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local PlaceId, JobId = game.PlaceId, game.JobId
 
--- =============================================
--- FLICKS BUTTONS SYSTEM (Integrated)
--- =============================================
 local __INSERT = table.insert
 local __PCLR = Color3.new
 local __RGB = Color3.fromRGB
@@ -102,9 +97,6 @@ local __UIS  = getfserv("UserInputService")
 local __PLRS = getfserv("Players")
 local __TS   = getfserv("TweenService")
 
--- =============================================
--- BIG BUTTON SYSTEM (Only for Bomb Jump)
--- =============================================
 local BBSystem = {Buttons = {}, Connections = {}}
 
 local function bb_safecallback(callback)
@@ -260,9 +252,6 @@ local function DeleteBigButton(id)
     end
 end
 
--- =============================================
--- BINDABLE BUTTONS SYSTEM (For all other buttons)
--- =============================================
 local BindableButtons = {Buttons = {}, Maids = {}, Count = 0}
 
 local __SHAPES = {
@@ -437,7 +426,6 @@ function BindableButtons.DeleteBButton(id)
     end
 end
 
--- Reusable UI Components
 local function GetSafeGuiRoot()
     local success, result = pcall(function() 
         return gethui() 
@@ -448,12 +436,10 @@ local function GetSafeGuiRoot()
     return Services.CoreGui
 end
 
--- Notification Helper
 local function Notify(title, text, duration)
     Services.StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = duration or 2})
 end
 
--- Initialize Hidden GUI
 local hiddenGui = Instance.new("ScreenGui")
 hiddenGui.Name = "HiddenGui"
 hiddenGui.ResetOnSpawn = false
@@ -461,15 +447,9 @@ hiddenGui.IgnoreGuiInset = true
 hiddenGui.Parent = GetSafeGuiRoot()
 RootMaid:GiveTask(hiddenGui)
 
--- =============================================
--- About Section
--- =============================================
 local aboutSection = shared.AddSection("About")
 aboutSection:AddParagraph("ATAOs MM2", "is the version you are using.")
 
--- =============================================
--- Server Options
--- =============================================
 local serverSection = shared.AddSection("Server Options")
 serverSection:AddLabel("Might Take a Few Tries")
 
@@ -563,9 +543,6 @@ serverSection:AddButton("Join Dead Server", function()
     end
 end)
 
--- =============================================
--- Radio Abuse Section
--- =============================================
 local PlaySong = Services.ReplicatedStorage.Remotes.Inventory.PlaySong
 local radioSection = shared.AddSection("Radio Abuse")
 local songSaveFile = "saved_songs.json"
@@ -658,11 +635,7 @@ radioSection:AddToggle("Auto Play Selected Audio", function(state)
 end)
 
 RootMaid:GiveTask(function() if RadioMaid then RadioMaid:Destroy() end end)
-radioSection:AddLabel("Credits: <font color='rgb(170,0,255)'>@lzzzx</font>")
 
--- =============================================
--- Auto Speedglitch
--- =============================================
 local speedGlitchSection = shared.AddSection("Auto Speedglitch")
 local asgEnabled, asgHorizontal, asgValue = false, false, 0
 local defaultSpeed = 16
@@ -707,9 +680,6 @@ RootMaid:GiveTask(function() if SpeedGlitchMaid then SpeedGlitchMaid:Destroy() e
 speedGlitchSection:AddToggle("Sideways Only", function(e) asgHorizontal = e end)
 speedGlitchSection:AddSlider("Speed (0-255)", 0, 255, 0, function(v) asgValue = v end)
 
--- =============================================
--- Map Voter
--- =============================================
 do
     local mapVoterSection = shared.AddSection("Map Voter")
     local voterRespawnAmount = 12
@@ -778,9 +748,6 @@ do
     end)
 end
 
--- =============================================
--- Kill All
--- =============================================
 local whitelistSection = shared.AddSection("Kill All")
 local whitelist = {}
 
@@ -826,9 +793,6 @@ whitelistSection:AddButton("Kill All", function()
     end
 end)
 
--- =============================================
--- Trickshot
--- =============================================
 do
     local tsSection = shared.AddSection("Trickshot")
     local spinSpeed, hasJumped, tsActive = 15, false, false
@@ -907,9 +871,6 @@ do
     RootMaid:GiveTask(function() if TrickshotMaid then TrickshotMaid:Destroy() end end)
 end
 
--- =============================================
--- Dual Effect
--- =============================================
 do
     local duelSection = shared.AddSection("Dual Effect")
     duelSection:AddLabel("Must Own Dual Effect + Selected Effect")
@@ -946,9 +907,6 @@ do
     RootMaid:GiveTask(function() if DualEffectMaid then DualEffectMaid:Destroy() end end)
 end
 
--- =============================================
--- Disable Trading
--- =============================================
 do
     local tradeSection = shared.AddSection("Disable Trading")
     tradeSection:AddLabel("Turn Off & Rejoin To Trade Again")
@@ -971,9 +929,6 @@ do
     RootMaid:GiveTask(function() if TradeMaid then TradeMaid:Destroy() end end)
 end
 
--- =============================================
--- Spray Paint
--- =============================================
 do
     local spraySection = shared.AddSection("Spray Paint")
     local decalSave = "saved_decals.json"
@@ -1007,31 +962,38 @@ do
     end
     
     local function getSprayTarget()
-        if sprayTargetMode == "Nearest Player" then
-            local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if not r then return nil end
-            
-            local nearest, minDist = nil, math.huge
-            for _, p in ipairs(Services.Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    local t = p.Character:FindFirstChild("HumanoidRootPart")
-                    if t then
-                        local d = (r.Position - t.Position).Magnitude
-                        if d < minDist then minDist = d nearest = p end
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    
+    if sprayTargetMode == "Nearest Player" then
+        local nearest, minDist = nil, math.huge
+        local rootPos = root.Position
+        
+        for _, p in ipairs(Services.Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local t = p.Character:FindFirstChild("HumanoidRootPart")
+                if t then
+                    local d = (rootPos - t.Position).Magnitude
+                    if d < minDist then 
+                        minDist = d 
+                        nearest = p 
                     end
                 end
             end
-            return nearest
-        elseif sprayTargetMode == "Random" then
-            local t = {}
-            for _, p in ipairs(Services.Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then table_insert(t, p) end
-            end
-            return #t > 0 and t[math.random(#t)] or nil
-        elseif sprayTargetMode == "Select Player" then
-            return spraySelectedPlr
         end
+        return nearest
+    elseif sprayTargetMode == "Random" then
+        local validPlayers = {}
+        for _, p in ipairs(Services.Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                validPlayers[#validPlayers + 1] = p
+            end
+        end
+        return #validPlayers > 0 and validPlayers[math.random(#validPlayers)] or nil
+    else
+        return spraySelectedPlr
     end
+end
     
     local function performSpray(tgt, normalId, part)
         local tool = getSprayTool()
@@ -1200,9 +1162,6 @@ do
     spraySection:AddLabel('Credits: <font color="rgb(0,255,0)">@not_.gato</font>', nil, true)
 end
 
--- =============================================
--- Troll Section (FE Emotes)
--- =============================================
 do
     local trollSection = shared.AddSection("Troll (FE)")
     trollSection:AddLabel("Play Troll Emotes")
@@ -1277,9 +1236,6 @@ do
     makeEmote("103788740211648", "DS", "EmoteGUI_DualSwing")
 end
 
--- =============================================
--- RTX Section
--- =============================================
 do
     local rtxSection = shared.AddSection("RTX")
     local rtx = {Sky=nil, Blur=nil, CC=nil, Bloom=nil, Sun=nil}
@@ -1340,9 +1296,6 @@ do
     end)
 end
 
--- =============================================
--- Legit Speedglitch
--- =============================================
 do
     local lsSection = shared.AddSection("Legit Speedglitch")
     local sideSpd, lsHori = 0, false
@@ -1430,9 +1383,6 @@ do
     end)
 end
 
--- =============================================
--- FE Headless
--- =============================================
 do
     local hlSection = shared.AddSection("FE Headless")
     hlSection:AddLabel("V2 & Higher Require a Very Small Head")
@@ -1512,9 +1462,6 @@ do
     end)
 end
 
--- =============================================
--- Fling Section
--- =============================================
 do
     local flingSection = shared.AddSection("Fling")
     local flingSelPlr, flingActive = nil, true
@@ -1691,7 +1638,6 @@ do
         workspace.FallenPartsDestroyHeight = previousDestroyHeight
     end
     
-    -- Regular buttons
     flingSection:AddButton("Fling Sheriff", function()
         local sheriff = findSheriff()
         if sheriff then OdhSkid(sheriff, 2) else Notify("Error", "No Sheriff Found", 3) end
@@ -1716,7 +1662,6 @@ do
         if p ~= LocalPlayer and not isWhitelisted(p) then OdhSkid(p, 2) end
     end)
     
-    -- Auto fling toggles
     local function createAutoFling(name, findFunc)
         flingSection:AddToggle("Auto Fling "..name, function(enabled)
             if maids["auto"..name] then maids["auto"..name]:Destroy() end
@@ -1741,7 +1686,6 @@ do
     createAutoFling("Sheriff", findSheriff)
     createAutoFling("Murderer", findMurderer)
     
-    -- Bindable buttons for Fling
     local buttonConfigs = {
         {name="Sheriff", text="FS", findFunc=findSheriff, id="fling_sheriff"},
         {name="Murderer", text="FM", findFunc=findMurderer, id="fling_murderer"},
@@ -1782,7 +1726,6 @@ do
         end)
     end
     
-    -- Whitelist
     flingSection:AddPlayerDropdown("Add to Whitelist", function(p)
         if p and p ~= LocalPlayer then
             whitelist[p.UserId] = true
@@ -1795,7 +1738,6 @@ do
         Notify("Whitelist", "Whitelist cleared!", 3)
     end)
     
-    -- Loop toggles
     flingSection:AddToggle("Loop Fling Player", function(s)
         if maids.loopPlr then maids.loopPlr:Destroy() end
         
@@ -1837,9 +1779,6 @@ do
     end)
 end
 
--- =============================================
--- Perks Section
--- =============================================
 do
     local perkSection = shared.AddSection("Perks")
     local hasteOn, blatantMode, hasteSpd = false, false, 18
@@ -1890,9 +1829,6 @@ do
     perkSection:AddLabel("Stacks With Other Perks")
 end
 
--- =============================================
--- FE Blind All
--- =============================================
 do
     local skySection = shared.AddSection("FE Blind All")
     skySection:AddLabel("Requires The Glitch Walker Bundle")
@@ -1950,9 +1886,6 @@ do
     end)
 end
 
--- =============================================
--- BOMB JUMP+ SECTION (with Big Button + Bindable Button + Timer Display Button)
--- =============================================
 do
     local section = shared.AddSection("Bomb Jump+")
     local BOMB_NAMES = {"Bomb", "PrankBomb", "FakeBomb"}
@@ -1965,7 +1898,6 @@ do
     local timerButtonSize = 0.11
     local activeTouches = {}
     
-    -- Colors for button states
     local __READY_COLOR = ColorSequence.new({
         ColorSequenceKeypoint.new(0,   __PCLR(0.133333, 0.827451, 0.494118)),
         ColorSequenceKeypoint.new(0.6, __PCLR(0.231373, 0.509804, 0.498039)),
@@ -1992,13 +1924,11 @@ do
         end
         if not bjBindButton then return end
         
-        -- Update the text
         local textLabel = bjBindButton:FindFirstChild("@Text")
         if textLabel then
             textLabel.Text = text
         end
         
-        -- Update the gradient color based on state
         local stroke = bjBindButton:FindFirstChild("@Stroke")
         if stroke then
             stroke.Color = isWaiting and __WAIT_COLOR or __READY_COLOR
@@ -2008,13 +1938,11 @@ do
     local function UpdateTimerDisplay(text, isWaiting)
         if not timerDisplay then return end
         
-        -- Update the text
         local textLabel = timerDisplay:FindFirstChild("@Text")
         if textLabel then
             textLabel.Text = text
         end
         
-        -- Update the gradient color based on state
         local stroke = timerDisplay:FindFirstChild("@Stroke")
         if stroke then
             stroke.Color = isWaiting and __WAIT_COLOR or __READY_COLOR
@@ -2134,7 +2062,6 @@ do
         return false
     end
     
-    -- Timer Display Button (styled like bindable button but non-functional)
     local function CreateTimerDisplayButton()
         if timerDisplay then return end
         
@@ -2144,7 +2071,6 @@ do
         local buttonSizeY = timerButtonSize
         local widthScale = buttonSizeY * (screen.Y / screen.X)
         
-        -- Find a good position (different from other buttons)
         local xPos = 0.1 + ((BindableButtons.Count % 8) * (widthScale + 0.005))
         local yPos = 0.9 - (math.floor(BindableButtons.Count / 8) * (buttonSizeY + 0.015))
 
@@ -2158,7 +2084,7 @@ do
         ImageButton.BorderSizePixel = 0
         ImageButton.ClipsDescendants = false
         ImageButton.AutoButtonColor = false
-        ImageButton.Active = false  -- Make it non-clickable
+        ImageButton.Active = false
         ImageButton.Selectable = false
         ImageButton.Parent = Bind_GetStorage()
         buttonMaid:GiveTask(ImageButton)
@@ -2184,7 +2110,6 @@ do
         Stroke.Name = "@Stroke"
         Stroke.Color = __READY_COLOR
 
-        -- Add rotation animation (same as other bindable buttons)
         buttonMaid:GiveTask(__RS.RenderStepped:Connect(function()
             Stroke.Rotation = (Stroke.Rotation + 1) % 360
         end))
@@ -2210,7 +2135,6 @@ do
     section:AddToggle("Enable Equip Bomb Jump", function(bool) clickBombJumpEnabled = bool end)
     section:AddToggle("Auto-Get Fake Bomb", function(bool) autoGetBomb = bool end)
 
-    -- BIG BUTTON for Bomb Jump
     section:AddToggle("Enable BJ Big Button", function(e)
         if e then
             AddBigButton("bombjump_big", "Bomb Jump", FastBombJump)
@@ -2231,7 +2155,6 @@ do
         end
     end)
     
-    -- BINDABLE BUTTON (Small) for Bomb Jump
     section:AddToggle("Enable BJ Bind Button", function(e)
         if e then
             BindableButtons.AddBButton("bombjump_bind", "BJ", FastBombJump)
@@ -2239,7 +2162,6 @@ do
             if bjBindButton then
                 local screen = workspace.CurrentCamera.ViewportSize
                 bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
-                -- Set initial state
                 UpdateBJButton(onCooldown and "Wait" or "BJ", onCooldown)
             end
         else
@@ -2256,7 +2178,6 @@ do
         end
     end)
 
-    -- TIMER DISPLAY (styled like bindable button, non-functional)
     section:AddToggle("Enable Timer Display", function(e)
         timerGuiEnabled = e
         
@@ -2282,7 +2203,6 @@ do
     
     section:AddKeybind("Bomb Jump Keybind", "E", FastBombJump)
     
-    -- Touch input handling with bomb check
     BombJumpMaid = Maid.new()
     BombJumpMaid:GiveTasks(
         Services.UserInputService.InputBegan:Connect(function(input, gp)
@@ -2324,7 +2244,6 @@ do
     RootMaid:GiveTask(BombJumpMaid)
 end
 
--- FE Animations (Complete)
 do
     local feAnimSection = shared.AddSection("FE Animations")
     local FEAnimMaid = Maid.new()
@@ -2354,241 +2273,7 @@ do
             jump  = "http://www.roblox.com/asset/?id=616115533",
             climb = "http://www.roblox.com/asset/?id=616104706",
             fall  = "http://www.roblox.com/asset/?id=616108001"
-        },
-        ["Zombie Classic"] = {
-            idle1 = "http://www.roblox.com/asset/?id=616158929",
-            idle2 = "http://www.roblox.com/asset/?id=616160636",
-            walk  = "http://www.roblox.com/asset/?id=616168032",
-            run   = "http://www.roblox.com/asset/?id=616163682",
-            jump  = "http://www.roblox.com/asset/?id=616161997",
-            climb = "http://www.roblox.com/asset/?id=616156119",
-            fall  = "http://www.roblox.com/asset/?id=616157476"
-        },
-        ["Mage"] = {
-            idle1 = "http://www.roblox.com/asset/?id=707742142",
-            idle2 = "http://www.roblox.com/asset/?id=707855907",
-            walk  = "http://www.roblox.com/asset/?id=707897309",
-            run   = "http://www.roblox.com/asset/?id=707861613",
-            jump  = "http://www.roblox.com/asset/?id=707853694",
-            climb = "http://www.roblox.com/asset/?id=707826056",
-            fall  = "http://www.roblox.com/asset/?id=707829716"
-        },
-        ["Ghost"] = {
-            idle1 = "http://www.roblox.com/asset/?id=616006778",
-            idle2 = "http://www.roblox.com/asset/?id=616008087",
-            walk  = "http://www.roblox.com/asset/?id=616010382",
-            run   = "http://www.roblox.com/asset/?id=616013216",
-            jump  = "http://www.roblox.com/asset/?id=616008936",
-            climb = "http://www.roblox.com/asset/?id=616003713",
-            fall  = "http://www.roblox.com/asset/?id=616005863"
-        },
-        ["Elder"] = {
-            idle1 = "http://www.roblox.com/asset/?id=845397899",
-            idle2 = "http://www.roblox.com/asset/?id=845400520",
-            walk  = "http://www.roblox.com/asset/?id=845403856",
-            run   = "http://www.roblox.com/asset/?id=845386501",
-            jump  = "http://www.roblox.com/asset/?id=845398858",
-            climb = "http://www.roblox.com/asset/?id=845392038",
-            fall  = "http://www.roblox.com/asset/?id=845396048"
-        },
-        ["Levitation"] = {
-            idle1 = "http://www.roblox.com/asset/?id=616006778",
-            idle2 = "http://www.roblox.com/asset/?id=616008087",
-            walk  = "http://www.roblox.com/asset/?id=616013216",
-            run   = "http://www.roblox.com/asset/?id=616010382",
-            jump  = "http://www.roblox.com/asset/?id=616008936",
-            climb = "http://www.roblox.com/asset/?id=616003713",
-            fall  = "http://www.roblox.com/asset/?id=616005863"
-        },
-        ["Astronaut"] = {
-            idle1 = "http://www.roblox.com/asset/?id=891621366",
-            idle2 = "http://www.roblox.com/asset/?id=891633237",
-            walk  = "http://www.roblox.com/asset/?id=891667138",
-            run   = "http://www.roblox.com/asset/?id=891636393",
-            jump  = "http://www.roblox.com/asset/?id=891627522",
-            climb = "http://www.roblox.com/asset/?id=891609353",
-            fall  = "http://www.roblox.com/asset/?id=891617961"
-        },
-        ["Ninja"] = {
-            idle1 = "http://www.roblox.com/asset/?id=656117400",
-            idle2 = "http://www.roblox.com/asset/?id=656118341",
-            walk  = "http://www.roblox.com/asset/?id=656121766",
-            run   = "http://www.roblox.com/asset/?id=656118852",
-            jump  = "http://www.roblox.com/asset/?id=656117878",
-            climb = "http://www.roblox.com/asset/?id=656114359",
-            fall  = "http://www.roblox.com/asset/?id=656115606"
-        },
-        ["Werewolf"] = {
-            idle1 = "http://www.roblox.com/asset/?id=1083195517",
-            idle2 = "http://www.roblox.com/asset/?id=1083214717",
-            walk  = "http://www.roblox.com/asset/?id=1083178339",
-            run   = "http://www.roblox.com/asset/?id=1083216690",
-            jump  = "http://www.roblox.com/asset/?id=1083218792",
-            climb = "http://www.roblox.com/asset/?id=1083182000",
-            fall  = "http://www.roblox.com/asset/?id=1083189019"
-        },
-        ["Cartoon"] = {
-            idle1 = "http://www.roblox.com/asset/?id=742637544",
-            idle2 = "http://www.roblox.com/asset/?id=742638445",
-            walk  = "http://www.roblox.com/asset/?id=742640026",
-            run   = "http://www.roblox.com/asset/?id=742638842",
-            jump  = "http://www.roblox.com/asset/?id=742637942",
-            climb = "http://www.roblox.com/asset/?id=742636889",
-            fall  = "http://www.roblox.com/asset/?id=742637151"
-        },
-        ["Pirate"] = {
-            idle1 = "http://www.roblox.com/asset/?id=750781874",
-            idle2 = "http://www.roblox.com/asset/?id=750782770",
-            walk  = "http://www.roblox.com/asset/?id=750785693",
-            run   = "http://www.roblox.com/asset/?id=750783738",
-            jump  = "http://www.roblox.com/asset/?id=750782230",
-            climb = "http://www.roblox.com/asset/?id=750779899",
-            fall  = "http://www.roblox.com/asset/?id=750780242"
-        },
-        ["Sneaky"] = {
-            idle1 = "http://www.roblox.com/asset/?id=1132473842",
-            idle2 = "http://www.roblox.com/asset/?id=1132477671",
-            walk  = "http://www.roblox.com/asset/?id=1132510133",
-            run   = "http://www.roblox.com/asset/?id=1132494274",
-            jump  = "http://www.roblox.com/asset/?id=1132489853",
-            climb = "http://www.roblox.com/asset/?id=1132461372",
-            fall  = "http://www.roblox.com/asset/?id=1132469004"
-        },
-        ["Toy"] = {
-            idle1 = "http://www.roblox.com/asset/?id=782841498",
-            idle2 = "http://www.roblox.com/asset/?id=782845736",
-            walk  = "http://www.roblox.com/asset/?id=782843345",
-            run   = "http://www.roblox.com/asset/?id=782842708",
-            jump  = "http://www.roblox.com/asset/?id=782847020",
-            climb = "http://www.roblox.com/asset/?id=782843869",
-            fall  = "http://www.roblox.com/asset/?id=782846423"
-        },
-        ["Knight"] = {
-            idle1 = "http://www.roblox.com/asset/?id=657595757",
-            idle2 = "http://www.roblox.com/asset/?id=657568135",
-            walk  = "http://www.roblox.com/asset/?id=657552124",
-            run   = "http://www.roblox.com/asset/?id=657564596",
-            jump  = "http://www.roblox.com/asset/?id=658409194",
-            climb = "http://www.roblox.com/asset/?id=658360781",
-            fall  = "http://www.roblox.com/asset/?id=657600338"
-        },
-        ["Confident"] = {
-            idle1 = "http://www.roblox.com/asset/?id=1069977950",
-            idle2 = "http://www.roblox.com/asset/?id=1069987858",
-            walk  = "http://www.roblox.com/asset/?id=1070017263",
-            run   = "http://www.roblox.com/asset/?id=1070001516",
-            jump  = "http://www.roblox.com/asset/?id=1069984524",
-            climb = "http://www.roblox.com/asset/?id=1069946257",
-            fall  = "http://www.roblox.com/asset/?id=1069973677"
-        },
-        ["Popstar"] = {
-            idle1 = "http://www.roblox.com/asset/?id=1212900985",
-            idle2 = "http://www.roblox.com/asset/?id=1212900985",
-            walk  = "http://www.roblox.com/asset/?id=1212980338",
-            run   = "http://www.roblox.com/asset/?id=1212980348",
-            jump  = "http://www.roblox.com/asset/?id=1212954642",
-            climb = "http://www.roblox.com/asset/?id=1213044953",
-            fall  = "http://www.roblox.com/asset/?id=1212900995"
-        },
-        ["Princess"] = {
-            idle1 = "http://www.roblox.com/asset/?id=941003647",
-            idle2 = "http://www.roblox.com/asset/?id=941013098",
-            walk  = "http://www.roblox.com/asset/?id=941028902",
-            run   = "http://www.roblox.com/asset/?id=941015281",
-            jump  = "http://www.roblox.com/asset/?id=941008832",
-            climb = "http://www.roblox.com/asset/?id=940996062",
-            fall  = "http://www.roblox.com/asset/?id=941000007"
-        },
-        ["Cowboy"] = {
-            idle1 = "http://www.roblox.com/asset/?id=1014390418",
-            idle2 = "http://www.roblox.com/asset/?id=1014398616",
-            walk  = "http://www.roblox.com/asset/?id=1014421541",
-            run   = "http://www.roblox.com/asset/?id=1014401683",
-            jump  = "http://www.roblox.com/asset/?id=1014394726",
-            climb = "http://www.roblox.com/asset/?id=1014380606",
-            fall  = "http://www.roblox.com/asset/?id=1014384571"
-        },
-        ["Patrol"] = {
-            idle1 = "http://www.roblox.com/asset/?id=1149612882",
-            idle2 = "http://www.roblox.com/asset/?id=1150842221",
-            walk  = "http://www.roblox.com/asset/?id=1151231493",
-            run   = "http://www.roblox.com/asset/?id=1150967949",
-            jump  = "http://www.roblox.com/asset/?id=1150944216",
-            climb = "http://www.roblox.com/asset/?id=1148811837",
-            fall  = "http://www.roblox.com/asset/?id=1148863382"
-        },
-        ["Zombie FE"] = {
-            idle1 = "http://www.roblox.com/asset/?id=3489171152",
-            idle2 = "http://www.roblox.com/asset/?id=3489171152",
-            walk  = "http://www.roblox.com/asset/?id=3489174223",
-            run   = "http://www.roblox.com/asset/?id=3489173414",
-            jump  = "http://www.roblox.com/asset/?id=616161997",
-            climb = "http://www.roblox.com/asset/?id=616156119",
-            fall  = "http://www.roblox.com/asset/?id=616157476"
-        },
-        ["Catwalk Glam"] = {
-            idle1 = "http://www.roblox.com/asset/?id=133806214992291",
-            idle2 = "http://www.roblox.com/asset/?id=133806214992291",
-            walk  = "http://www.roblox.com/asset/?id=109168724482748",
-            run   = "http://www.roblox.com/asset/?id=81024476153754",
-            jump  = "http://www.roblox.com/asset/?id=116936326516985",
-            climb = "http://www.roblox.com/asset/?id=119377220967554",
-            fall  = "http://www.roblox.com/asset/?id=92294537340807"
-        },
-        ["Amazon Unboxed"] = {
-            idle1 = "http://www.roblox.com/asset/?id=98281136301627",
-            idle2 = "http://www.roblox.com/asset/?id=98281136301627",
-            walk  = "http://www.roblox.com/asset/?id=90478085024465",
-            run   = "http://www.roblox.com/asset/?id=134824450619865",
-            jump  = "http://www.roblox.com/asset/?id=121454505477205",
-            climb = "http://www.roblox.com/asset/?id=121145883950231",
-            fall  = "http://www.roblox.com/asset/?id=94788218468396"
-        },
-        ["Glow Motion"] = {
-            idle1 = "https://www.roblox.com/asset/?id=137764781910579",
-            idle2 = "https://www.roblox.com/asset/?id=137764781910579",
-            walk  = "http://www.roblox.com/asset/?id=85809016093530",
-            run   = "http://www.roblox.com/asset/?id=101925097435036",
-            jump  = "http://www.roblox.com/asset/?id=74159004634379",
-            climb = "http://www.roblox.com/asset/?id=108236155509584",
-            fall  = "https://www.roblox.com/asset/?id=98070939608691"
-        },
-        ["Bubbly"] = {
-            idle1 = "https://www.roblox.com/asset/?id=10921054344",
-            idle2 = "https://www.roblox.com/asset/?id=10921054344",
-            walk  = "http://www.roblox.com/asset/?id=10980888364",
-            run   = "http://www.roblox.com/asset/?id=10921057244",
-            jump  = "http://www.roblox.com/asset/?id=10921062673",
-            climb = "http://www.roblox.com/asset/?id=10921053544",
-            fall  = "https://www.roblox.com/asset/?id=10921061530"
-        },
-        ["Adidas Comm"] = {
-            idle1 = "https://www.roblox.com/asset/?id=122257458498464",
-            idle2 = "https://www.roblox.com/asset/?id=122257458498464",
-            walk  = "http://www.roblox.com/asset/?id=122150855457006",
-            run   = "http://www.roblox.com/asset/?id=82598234841035",
-            jump  = "http://www.roblox.com/asset/?id=75290611992385",
-            climb = "http://www.roblox.com/asset/?id=88763136693023",
-            fall  = "https://www.roblox.com/asset/?id=98600215928904"
-        },
-        ["KATSEYE"] = {
-            idle1 = "https://www.roblox.com/asset/?id=108187809145790",
-            idle2 = "https://www.roblox.com/asset/?id=108187809145790",
-            walk  = "http://www.roblox.com/asset/?id=99182913548783",
-            run   = "http://www.roblox.com/asset/?id=73117360545482",
-            jump  = "http://www.roblox.com/asset/?id=103632305262747",
-            climb = "http://www.roblox.com/asset/?id=106213237973858",
-            fall  = "https://www.roblox.com/asset/?id=127802717128367"
-        },
-        ["Wicked Popular"] = {
-            idle1 = "https://www.roblox.com/asset/?id=118832222982049",
-            idle2 = "https://www.roblox.com/asset/?id=118832222982049",
-            walk  = "http://www.roblox.com/asset/?id=92072849924640",
-            run   = "http://www.roblox.com/asset/?id=72301599441680",
-            jump  = "http://www.roblox.com/asset/?id=104325245285198",
-            climb = "http://www.roblox.com/asset/?id=131326830509784",
-            fall  = "https://www.roblox.com/asset/?id=121152442762481"
-        },
+        }
     }
     
     local animMap = {
@@ -2713,15 +2398,15 @@ do
 
             local Animate = character:WaitForChild("Animate", 10)
             if not Animate then return end
-
-            repeat task.wait() until Animate:FindFirstChild("idle") and
-                Animate.idle:FindFirstChild("Animation1") and
-                Animate.idle.Animation1.AnimationId ~= ""
-
-            task.wait(0.2)
-
-            saveOriginalAnimations(character)
-            applyAnimations()
+            
+            local idle = Animate:WaitForChild("idle", 5)
+            if idle then
+                local anim1 = idle:WaitForChild("Animation1", 3)
+                if anim1 and anim1.AnimationId ~= "" then
+                    saveOriginalAnimations(character)
+                    applyAnimations()
+                end
+            end
         end)
 
         FEAnimMaid:GiveTask(feAnimCharConn)
@@ -2745,13 +2430,7 @@ do
         restoreDefaultAnimations()
     end
 
-    local animOptions = {
-        "Default", "OG Rthro Run", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
-        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
-        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed",
-        "Glow Motion", "Bubbly", "Adidas Comm", "KATSEYE", "Wicked Popular"
-    }
+    local animOptions = {"Default", "OG Rthro Run", "Vampire", "Hero"}
 
     feAnimSection:AddToggle("Enable FE Anims", function(enabled)
         feAnimEnabled = enabled
@@ -2791,9 +2470,6 @@ do
     end)
 end
 
--- =============================================
--- Wallhop Section
--- =============================================
 do
     local wallhopSection = shared.AddSection("Wallhop")
     local wallhopToggle, flickEnabled, InfiniteJumpEnabled = false, false, true
@@ -2835,9 +2511,6 @@ do
     wallhopSection:AddToggle("Enable Wallhop Flick", function(enabled) flickEnabled = enabled end)
 end
 
--- =============================================
--- FE Lag VC
--- =============================================
 do
     local lagVCSection = shared.AddSection("FE Lag VC")
     local LagVCMaid
@@ -2858,9 +2531,6 @@ do
     end)
 end
 
--- =============================================
--- Sign Spam Section
--- =============================================
 do
     local ssSection = shared.AddSection("Sign Spam")
     local spamming, ssButtonEnabled, autoGetGG = false, false, false
@@ -2979,9 +2649,6 @@ do
     end)
 end
 
--- =============================================
--- Grab Gun Section
--- =============================================
 do
     local GGTLSection = shared.AddSection("Grab Gun (TL)")
     local ggButtonEnabled, autoGGEnabled = false, false
@@ -2991,37 +2658,54 @@ do
     RootMaid:GiveTask(autoGGMaid)
     
     local function findNearestGG()
-        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local character = LocalPlayer.Character
+        if not character then return nil end
+        
+        local root = character:FindFirstChild("HumanoidRootPart")
         if not root then return nil end
         
         local nearest, minDist = nil, math.huge
+        local rootPos = root.Position
+        
         for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "GunDrop" then
-                local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
-                if part then
-                    local dist = (root.Position - part.Position).Magnitude
-                    if dist < minDist then
-                        minDist = dist
-                        nearest = part
-                    end
+            if obj.Name == "GunDrop" and obj:IsA("BasePart") then
+                local dist = (rootPos - obj.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearest = obj
                 end
             end
         end
+        
         return nearest
     end
     
     local function grabGG()
         local char = LocalPlayer.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        if not root then return Notify("Grab Gun", "Character not found!", 3) end
+        if not char then 
+            Notify("Grab Gun", "Character not found!", 3)
+            return 
+        end
+        
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then 
+            Notify("Grab Gun", "Root part not found!", 3)
+            return 
+        end
         
         local ggDrop = findNearestGG()
-        if not ggDrop then return Notify("Grab Gun", "No gun drop found!", 3) end
+        if not ggDrop then 
+            Notify("Grab Gun", "No gun drop found!", 3)
+            return 
+        end
         
         local savedPos = root.CFrame
         Notify("Grab Gun", "Grabbing gun...", 2)
-        root.CFrame = CFrame.new(ggDrop.Position + Vector3.new(0, 2, 0))
-        task.wait(0.5)
+        
+        root.CFrame = CFrame.new(ggDrop.Position + Vector3.new(0, 3, 0))
+        
+        task.wait(0.3)
+        
         root.CFrame = savedPos
         Notify("Grab Gun", "Returned to original position!", 2)
     end
@@ -3046,14 +2730,24 @@ do
         autoGGMaid:DoCleaning()
         
         if enabled then
+            task.spawn(function()
+                while autoGGEnabled do
+                    local gg = findNearestGG()
+                    if gg and LocalPlayer.Character then
+                        grabGG()
+                    end
+                    task.wait(2)
+                end
+            end)
+            
             autoGGMaid:GiveTask(workspace.DescendantAdded:Connect(function(obj)
-                if autoGGEnabled and obj.Name == "GunDrop" then
+                if autoGGEnabled and obj.Name == "GunDrop" and obj:IsA("BasePart") then
                     task.wait(0.1)
-                    grabGG()
+                    if LocalPlayer.Character then
+                        grabGG()
+                    end
                 end
             end))
-            
-            if findNearestGG() then grabGG() end
         end
     end)
     
@@ -3069,15 +2763,15 @@ do
     GGTLSection:AddButton("Grab Gun", grabGG)
     
     local ggKeybind = Services.UserInputService.InputBegan:Connect(function(input, gp)
-        if not gp and input.KeyCode == Enum.KeyCode.G then grabGG() end
+        if not gp and input.KeyCode == Enum.KeyCode.G then 
+            grabGG() 
+        end
     end)
     RootMaid:GiveTask(ggKeybind)
 end
 
--- =============================================
--- FLICK TO MURDERER SECTION
--- =============================================
 local flick_section = shared.AddSection("Flick to Murderer")
+flick_section:AddLabel("Credits: idk_367.5")
 
 local flickEnabled    = false
 local flickSpeed      = 1
@@ -3240,9 +2934,6 @@ flick_section:AddSlider("Bind Button Size", 5, 25, 11, function(value)
     end
 end)
 
--- =============================================
--- FPS & Ping Monitor
--- =============================================
 local statColorsEnabled = false
 local uiPosition = "Top Right"
 local positionPresets = {
@@ -3350,11 +3041,7 @@ fps_ping_section:AddDropdown("UI Position", {"Top Right", "Top Left", "Top Cente
         _G.PingLabel.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
     end
 end)
-fps_ping_section:AddParagraph("Skidded & Improved By:", "@lzzzx")
 
--- =============================================
--- Light FPS Boost
--- =============================================
 local fpsBoostEnabled = false
 local ultra_fps_section = shared.AddSection("Light FPS Boost")
 
@@ -3397,9 +3084,6 @@ ultra_fps_section:AddToggle("Enable Frame Enhancement", function(bool)
     end
 end)
 
--- =============================================
--- True Anti's
--- =============================================
 local true_antis_section = shared.AddSection("True Anti's")
 local trueAntiFlingConnection, trueAntiAfkConnection
 
@@ -3410,15 +3094,42 @@ true_antis_section:AddToggle("Enable IY Anti Fling", function(bool)
     end
     
     if bool then
-        trueAntiFlingConnection = Services.RunService.Stepped:Connect(function()
-            for _, player in ipairs(Services.Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    for _, v in ipairs(player.Character:GetDescendants()) do
-                        if v:IsA("BasePart") then v.CanCollide = false end
+        local playerCache = {}
+        
+        local function updateCache()
+            playerCache = {}
+            for _, p in ipairs(Services.Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    playerCache[p] = true
+                end
+            end
+        end
+        updateCache()
+        
+        local playerAddedConn = Services.Players.PlayerAdded:Connect(updateCache)
+        local playerRemovingConn = Services.Players.PlayerRemoving:Connect(updateCache)
+        
+        trueAntiFlingConnection = Services.RunService.Heartbeat:Connect(function()
+            for player in pairs(playerCache) do
+                local char = player.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then 
+                            part.CanCollide = false 
+                        end
                     end
                 end
             end
         end)
+        
+        _G.AntiFlingCleanup = {playerAddedConn, playerRemovingConn}
+    else
+        if _G.AntiFlingCleanup then
+            for _, conn in ipairs(_G.AntiFlingCleanup) do
+                conn:Disconnect()
+            end
+            _G.AntiFlingCleanup = nil
+        end
     end
 end)
 
@@ -3436,13 +3147,9 @@ true_antis_section:AddToggle("Enable True Anti AFK", function(bool)
     end
 end)
 
--- =============================================
--- Credits
--- =============================================
 local creditsSection = shared.AddSection("Credits")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
--- Final RootMaid assignment
 RootMaid:GiveTasks(
     function() if trueAntiFlingConnection then trueAntiFlingConnection:Disconnect() end end,
     function() if trueAntiAfkConnection then trueAntiAfkConnection:Disconnect() end end,
