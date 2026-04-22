@@ -2273,7 +2273,241 @@ do
             jump  = "http://www.roblox.com/asset/?id=616115533",
             climb = "http://www.roblox.com/asset/?id=616104706",
             fall  = "http://www.roblox.com/asset/?id=616108001"
-        }
+        },
+        ["Zombie Classic"] = {
+            idle1 = "http://www.roblox.com/asset/?id=616158929",
+            idle2 = "http://www.roblox.com/asset/?id=616160636",
+            walk  = "http://www.roblox.com/asset/?id=616168032",
+            run   = "http://www.roblox.com/asset/?id=616163682",
+            jump  = "http://www.roblox.com/asset/?id=616161997",
+            climb = "http://www.roblox.com/asset/?id=616156119",
+            fall  = "http://www.roblox.com/asset/?id=616157476"
+        },
+        ["Mage"] = {
+            idle1 = "http://www.roblox.com/asset/?id=707742142",
+            idle2 = "http://www.roblox.com/asset/?id=707855907",
+            walk  = "http://www.roblox.com/asset/?id=707897309",
+            run   = "http://www.roblox.com/asset/?id=707861613",
+            jump  = "http://www.roblox.com/asset/?id=707853694",
+            climb = "http://www.roblox.com/asset/?id=707826056",
+            fall  = "http://www.roblox.com/asset/?id=707829716"
+        },
+        ["Ghost"] = {
+            idle1 = "http://www.roblox.com/asset/?id=616006778",
+            idle2 = "http://www.roblox.com/asset/?id=616008087",
+            walk  = "http://www.roblox.com/asset/?id=616010382",
+            run   = "http://www.roblox.com/asset/?id=616013216",
+            jump  = "http://www.roblox.com/asset/?id=616008936",
+            climb = "http://www.roblox.com/asset/?id=616003713",
+            fall  = "http://www.roblox.com/asset/?id=616005863"
+        },
+        ["Elder"] = {
+            idle1 = "http://www.roblox.com/asset/?id=845397899",
+            idle2 = "http://www.roblox.com/asset/?id=845400520",
+            walk  = "http://www.roblox.com/asset/?id=845403856",
+            run   = "http://www.roblox.com/asset/?id=845386501",
+            jump  = "http://www.roblox.com/asset/?id=845398858",
+            climb = "http://www.roblox.com/asset/?id=845392038",
+            fall  = "http://www.roblox.com/asset/?id=845396048"
+        },
+        ["Levitation"] = {
+            idle1 = "http://www.roblox.com/asset/?id=616006778",
+            idle2 = "http://www.roblox.com/asset/?id=616008087",
+            walk  = "http://www.roblox.com/asset/?id=616013216",
+            run   = "http://www.roblox.com/asset/?id=616010382",
+            jump  = "http://www.roblox.com/asset/?id=616008936",
+            climb = "http://www.roblox.com/asset/?id=616003713",
+            fall  = "http://www.roblox.com/asset/?id=616005863"
+        },
+        ["Astronaut"] = {
+            idle1 = "http://www.roblox.com/asset/?id=891621366",
+            idle2 = "http://www.roblox.com/asset/?id=891633237",
+            walk  = "http://www.roblox.com/asset/?id=891667138",
+            run   = "http://www.roblox.com/asset/?id=891636393",
+            jump  = "http://www.roblox.com/asset/?id=891627522",
+            climb = "http://www.roblox.com/asset/?id=891609353",
+            fall  = "http://www.roblox.com/asset/?id=891617961"
+        },
+        ["Ninja"] = {
+            idle1 = "http://www.roblox.com/asset/?id=656117400",
+            idle2 = "http://www.roblox.com/asset/?id=656118341",
+            walk  = "http://www.roblox.com/asset/?id=656121766",
+            run   = "http://www.roblox.com/asset/?id=656118852",
+            jump  = "http://www.roblox.com/asset/?id=656117878",
+            climb = "http://www.roblox.com/asset/?id=656114359",
+            fall  = "http://www.roblox.com/asset/?id=656115606"
+        },
+        ["Werewolf"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1083195517",
+            idle2 = "http://www.roblox.com/asset/?id=1083214717",
+            walk  = "http://www.roblox.com/asset/?id=1083178339",
+            run   = "http://www.roblox.com/asset/?id=1083216690",
+            jump  = "http://www.roblox.com/asset/?id=1083218792",
+            climb = "http://www.roblox.com/asset/?id=1083182000",
+            fall  = "http://www.roblox.com/asset/?id=1083189019"
+        },
+        ["Cartoon"] = {
+            idle1 = "http://www.roblox.com/asset/?id=742637544",
+            idle2 = "http://www.roblox.com/asset/?id=742638445",
+            walk  = "http://www.roblox.com/asset/?id=742640026",
+            run   = "http://www.roblox.com/asset/?id=742638842",
+            jump  = "http://www.roblox.com/asset/?id=742637942",
+            climb = "http://www.roblox.com/asset/?id=742636889",
+            fall  = "http://www.roblox.com/asset/?id=742637151"
+        },
+        ["Pirate"] = {
+            idle1 = "http://www.roblox.com/asset/?id=750781874",
+            idle2 = "http://www.roblox.com/asset/?id=750782770",
+            walk  = "http://www.roblox.com/asset/?id=750785693",
+            run   = "http://www.roblox.com/asset/?id=750783738",
+            jump  = "http://www.roblox.com/asset/?id=750782230",
+            climb = "http://www.roblox.com/asset/?id=750779899",
+            fall  = "http://www.roblox.com/asset/?id=750780242"
+        },
+        ["Sneaky"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1132473842",
+            idle2 = "http://www.roblox.com/asset/?id=1132477671",
+            walk  = "http://www.roblox.com/asset/?id=1132510133",
+            run   = "http://www.roblox.com/asset/?id=1132494274",
+            jump  = "http://www.roblox.com/asset/?id=1132489853",
+            climb = "http://www.roblox.com/asset/?id=1132461372",
+            fall  = "http://www.roblox.com/asset/?id=1132469004"
+        },
+        ["Toy"] = {
+            idle1 = "http://www.roblox.com/asset/?id=782841498",
+            idle2 = "http://www.roblox.com/asset/?id=782845736",
+            walk  = "http://www.roblox.com/asset/?id=782843345",
+            run   = "http://www.roblox.com/asset/?id=782842708",
+            jump  = "http://www.roblox.com/asset/?id=782847020",
+            climb = "http://www.roblox.com/asset/?id=782843869",
+            fall  = "http://www.roblox.com/asset/?id=782846423"
+        },
+        ["Knight"] = {
+            idle1 = "http://www.roblox.com/asset/?id=657595757",
+            idle2 = "http://www.roblox.com/asset/?id=657568135",
+            walk  = "http://www.roblox.com/asset/?id=657552124",
+            run   = "http://www.roblox.com/asset/?id=657564596",
+            jump  = "http://www.roblox.com/asset/?id=658409194",
+            climb = "http://www.roblox.com/asset/?id=658360781",
+            fall  = "http://www.roblox.com/asset/?id=657600338"
+        },
+        ["Confident"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1069977950",
+            idle2 = "http://www.roblox.com/asset/?id=1069987858",
+            walk  = "http://www.roblox.com/asset/?id=1070017263",
+            run   = "http://www.roblox.com/asset/?id=1070001516",
+            jump  = "http://www.roblox.com/asset/?id=1069984524",
+            climb = "http://www.roblox.com/asset/?id=1069946257",
+            fall  = "http://www.roblox.com/asset/?id=1069973677"
+        },
+        ["Popstar"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1212900985",
+            idle2 = "http://www.roblox.com/asset/?id=1212900985",
+            walk  = "http://www.roblox.com/asset/?id=1212980338",
+            run   = "http://www.roblox.com/asset/?id=1212980348",
+            jump  = "http://www.roblox.com/asset/?id=1212954642",
+            climb = "http://www.roblox.com/asset/?id=1213044953",
+            fall  = "http://www.roblox.com/asset/?id=1212900995"
+        },
+        ["Princess"] = {
+            idle1 = "http://www.roblox.com/asset/?id=941003647",
+            idle2 = "http://www.roblox.com/asset/?id=941013098",
+            walk  = "http://www.roblox.com/asset/?id=941028902",
+            run   = "http://www.roblox.com/asset/?id=941015281",
+            jump  = "http://www.roblox.com/asset/?id=941008832",
+            climb = "http://www.roblox.com/asset/?id=940996062",
+            fall  = "http://www.roblox.com/asset/?id=941000007"
+        },
+        ["Cowboy"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1014390418",
+            idle2 = "http://www.roblox.com/asset/?id=1014398616",
+            walk  = "http://www.roblox.com/asset/?id=1014421541",
+            run   = "http://www.roblox.com/asset/?id=1014401683",
+            jump  = "http://www.roblox.com/asset/?id=1014394726",
+            climb = "http://www.roblox.com/asset/?id=1014380606",
+            fall  = "http://www.roblox.com/asset/?id=1014384571"
+        },
+        ["Patrol"] = {
+            idle1 = "http://www.roblox.com/asset/?id=1149612882",
+            idle2 = "http://www.roblox.com/asset/?id=1150842221",
+            walk  = "http://www.roblox.com/asset/?id=1151231493",
+            run   = "http://www.roblox.com/asset/?id=1150967949",
+            jump  = "http://www.roblox.com/asset/?id=1150944216",
+            climb = "http://www.roblox.com/asset/?id=1148811837",
+            fall  = "http://www.roblox.com/asset/?id=1148863382"
+        },
+        ["Zombie FE"] = {
+            idle1 = "http://www.roblox.com/asset/?id=3489171152",
+            idle2 = "http://www.roblox.com/asset/?id=3489171152",
+            walk  = "http://www.roblox.com/asset/?id=3489174223",
+            run   = "http://www.roblox.com/asset/?id=3489173414",
+            jump  = "http://www.roblox.com/asset/?id=616161997",
+            climb = "http://www.roblox.com/asset/?id=616156119",
+            fall  = "http://www.roblox.com/asset/?id=616157476"
+        },
+        ["Catwalk Glam"] = {
+            idle1 = "http://www.roblox.com/asset/?id=133806214992291",
+            idle2 = "http://www.roblox.com/asset/?id=133806214992291",
+            walk  = "http://www.roblox.com/asset/?id=109168724482748",
+            run   = "http://www.roblox.com/asset/?id=81024476153754",
+            jump  = "http://www.roblox.com/asset/?id=116936326516985",
+            climb = "http://www.roblox.com/asset/?id=119377220967554",
+            fall  = "http://www.roblox.com/asset/?id=92294537340807"
+        },
+        ["Amazon Unboxed"] = {
+            idle1 = "http://www.roblox.com/asset/?id=98281136301627",
+            idle2 = "http://www.roblox.com/asset/?id=98281136301627",
+            walk  = "http://www.roblox.com/asset/?id=90478085024465",
+            run   = "http://www.roblox.com/asset/?id=134824450619865",
+            jump  = "http://www.roblox.com/asset/?id=121454505477205",
+            climb = "http://www.roblox.com/asset/?id=121145883950231",
+            fall  = "http://www.roblox.com/asset/?id=94788218468396"
+        },
+        ["Glow Motion"] = {
+            idle1 = "https://www.roblox.com/asset/?id=137764781910579",
+            idle2 = "https://www.roblox.com/asset/?id=137764781910579",
+            walk  = "http://www.roblox.com/asset/?id=85809016093530",
+            run   = "http://www.roblox.com/asset/?id=101925097435036",
+            jump  = "http://www.roblox.com/asset/?id=74159004634379",
+            climb = "http://www.roblox.com/asset/?id=108236155509584",
+            fall  = "https://www.roblox.com/asset/?id=98070939608691"
+        },
+        ["Bubbly"] = {
+            idle1 = "https://www.roblox.com/asset/?id=10921054344",
+            idle2 = "https://www.roblox.com/asset/?id=10921054344",
+            walk  = "http://www.roblox.com/asset/?id=10980888364",
+            run   = "http://www.roblox.com/asset/?id=10921057244",
+            jump  = "http://www.roblox.com/asset/?id=10921062673",
+            climb = "http://www.roblox.com/asset/?id=10921053544",
+            fall  = "https://www.roblox.com/asset/?id=10921061530"
+        },
+        ["Adidas Comm"] = {
+            idle1 = "https://www.roblox.com/asset/?id=122257458498464",
+            idle2 = "https://www.roblox.com/asset/?id=122257458498464",
+            walk  = "http://www.roblox.com/asset/?id=122150855457006",
+            run   = "http://www.roblox.com/asset/?id=82598234841035",
+            jump  = "http://www.roblox.com/asset/?id=75290611992385",
+            climb = "http://www.roblox.com/asset/?id=88763136693023",
+            fall  = "https://www.roblox.com/asset/?id=98600215928904"
+        },
+        ["KATSEYE"] = {
+            idle1 = "https://www.roblox.com/asset/?id=108187809145790",
+            idle2 = "https://www.roblox.com/asset/?id=108187809145790",
+            walk  = "http://www.roblox.com/asset/?id=99182913548783",
+            run   = "http://www.roblox.com/asset/?id=73117360545482",
+            jump  = "http://www.roblox.com/asset/?id=103632305262747",
+            climb = "http://www.roblox.com/asset/?id=106213237973858",
+            fall  = "https://www.roblox.com/asset/?id=127802717128367"
+        },
+        ["Wicked Popular"] = {
+            idle1 = "https://www.roblox.com/asset/?id=118832222982049",
+            idle2 = "https://www.roblox.com/asset/?id=118832222982049",
+            walk  = "http://www.roblox.com/asset/?id=92072849924640",
+            run   = "http://www.roblox.com/asset/?id=72301599441680",
+            jump  = "http://www.roblox.com/asset/?id=104325245285198",
+            climb = "http://www.roblox.com/asset/?id=131326830509784",
+            fall  = "https://www.roblox.com/asset/?id=121152442762481"
+        },
     }
     
     local animMap = {
@@ -2381,36 +2615,37 @@ do
 
     local feAnimCharConn = nil
 
-    local function enableFEAnims()
-        if feAnimCharConn then
-            feAnimCharConn:Disconnect()
-            feAnimCharConn = nil
-        end
-
-        if LocalPlayer.Character then
-            saveOriginalAnimations(LocalPlayer.Character)
-            applyAnimations()
-        end
-
-        feAnimCharConn = LocalPlayer.CharacterAdded:Connect(function(character)
-            if not feAnimEnabled then return end
-            originalAnims = {}
-
-            local Animate = character:WaitForChild("Animate", 10)
-            if not Animate then return end
-            
-            local idle = Animate:WaitForChild("idle", 5)
-            if idle then
-                local anim1 = idle:WaitForChild("Animation1", 3)
-                if anim1 and anim1.AnimationId ~= "" then
-                    saveOriginalAnimations(character)
-                    applyAnimations()
-                end
-            end
-        end)
-
-        FEAnimMaid:GiveTask(feAnimCharConn)
+local function enableFEAnims()
+    if feAnimCharConn then
+        feAnimCharConn:Disconnect()
+        feAnimCharConn = nil
     end
+
+    if LocalPlayer.Character then
+        saveOriginalAnimations(LocalPlayer.Character)
+        applyAnimations()
+    end
+
+    feAnimCharConn = LocalPlayer.CharacterAdded:Connect(function(character)
+        if not feAnimEnabled then return end
+        originalAnims = {}
+
+        -- Use WaitForChild with timeout instead of repeat loop
+        local Animate = character:WaitForChild("Animate", 10)
+        if not Animate then return end
+        
+        local idle = Animate:WaitForChild("idle", 5)
+        if idle then
+            local anim1 = idle:WaitForChild("Animation1", 3)
+            if anim1 and anim1.AnimationId ~= "" then
+                saveOriginalAnimations(character)
+                applyAnimations()
+            end
+        end
+    end)
+
+    FEAnimMaid:GiveTask(feAnimCharConn)
+end
 
     local function disableFEAnims()
         if feAnimCharConn then
@@ -2430,7 +2665,13 @@ do
         restoreDefaultAnimations()
     end
 
-    local animOptions = {"Default", "OG Rthro Run", "Vampire", "Hero"}
+    local animOptions = {
+        "Default", "OG Rthro Run", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
+        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
+        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed",
+        "Glow Motion", "Bubbly", "Adidas Comm", "KATSEYE", "Wicked Popular"
+    }
 
     feAnimSection:AddToggle("Enable FE Anims", function(enabled)
         feAnimEnabled = enabled
