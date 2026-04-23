@@ -3283,6 +3283,8 @@ fps_ping_section:AddDropdown("UI Position", {"Top Right", "Top Left", "Top Cente
     end
 end)
   
+local shared = odh_shared_plugins
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
