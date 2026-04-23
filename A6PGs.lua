@@ -3282,9 +3282,7 @@ fps_ping_section:AddDropdown("UI Position", {"Top Right", "Top Left", "Top Cente
         _G.PingLabel.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
     end
 end)
-
-do
-    
+  
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
