@@ -3283,37 +3283,286 @@ fps_ping_section:AddDropdown("UI Position", {"Top Right", "Top Left", "Top Cente
     end
 end)
 
-local fpsBoostEnabled = false
-local ultra_fps_section = shared.AddSection("Light FPS Boost")
+do
+    
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
 
-ultra_fps_section:AddToggle("Enable Frame Enhancement", function(bool)
+local original_materials = {}
+local original_particle_states = {}
+local original_textures = {}
+local original_mesh_transparency = {}
+local original_accessories = {}
+
+local conns = {
+    Meshes = nil,
+    Smooth = nil,
+    Particles = nil,
+    Textures = nil,
+    CharacterAdded = nil
+}
+
+local fpsBoostEnabled = false
+
+local function isPlayerDescendant(obj)
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Character and obj:IsDescendantOf(plr.Character) then
+            return true
+        end
+    end
+    return false
+end
+
+local function applyMeshToObj(obj)
+    if isPlayerDescendant(obj) then return end
+
+    if obj:IsA("MeshPart") then
+        if original_mesh_transparency[obj] == nil then
+            original_mesh_transparency[obj] = obj.Transparency
+        end
+        obj.Transparency = 1
+        return
+    end
+
+    if obj:IsA("SpecialMesh") or obj:IsA("BlockMesh") or obj:IsA("CylinderMesh") then
+        local parent = obj.Parent
+        if parent and parent:IsA("BasePart") and not isPlayerDescendant(parent) then
+            if original_mesh_transparency[parent] == nil then
+                original_mesh_transparency[parent] = parent.Transparency
+            end
+            parent.Transparency = 1
+        end
+    end
+end
+
+local function setMeshes(on)
+    if on then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            applyMeshToObj(obj)
+        end
+        if not conns.Meshes then
+            conns.Meshes = Workspace.DescendantAdded:Connect(function(obj)
+                task.defer(function() applyMeshToObj(obj) end)
+            end)
+        end
+    else
+        for part, trans in pairs(original_mesh_transparency) do
+            if part and part.Parent then
+                pcall(function() part.Transparency = trans end)
+            end
+        end
+        original_mesh_transparency = {}
+        if conns.Meshes then
+            conns.Meshes:Disconnect()
+            conns.Meshes = nil
+        end
+    end
+end
+
+local function setSmoothPlastic(on)
+    if on then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and not isPlayerDescendant(obj) and obj.Material ~= Enum.Material.SmoothPlastic then
+                original_materials[obj] = obj.Material
+                obj.Material = Enum.Material.SmoothPlastic
+            end
+        end
+        if not conns.Smooth then
+            conns.Smooth = Workspace.DescendantAdded:Connect(function(obj)
+                if obj:IsA("BasePart") and not isPlayerDescendant(obj) then
+                    original_materials[obj] = obj.Material
+                    obj.Material = Enum.Material.SmoothPlastic
+                end
+            end)
+        end
+    else
+        for part, mat in pairs(original_materials) do
+            if part and part.Parent then
+                pcall(function() part.Material = mat end)
+            end
+        end
+        original_materials = {}
+        if conns.Smooth then 
+            conns.Smooth:Disconnect() 
+            conns.Smooth = nil 
+        end
+    end
+end
+
+local function setParticles(on)
+    if on then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                original_particle_states[obj] = obj.Enabled
+                obj.Enabled = false
+            end
+        end
+        if not conns.Particles then
+            conns.Particles = Workspace.DescendantAdded:Connect(function(obj)
+                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                    original_particle_states[obj] = obj.Enabled
+                    obj.Enabled = false
+                end
+            end)
+        end
+    else
+        for obj, state in pairs(original_particle_states) do
+            if obj and obj.Parent then
+                pcall(function() obj.Enabled = state end)
+            end
+        end
+        original_particle_states = {}
+        if conns.Particles then 
+            conns.Particles:Disconnect() 
+            conns.Particles = nil 
+        end
+    end
+end
+
+local function setTextures(on)
+    if on then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Decal") or obj:IsA("Texture") then
+                if original_textures[obj] == nil then
+                    original_textures[obj] = obj.Texture
+                end
+                obj.Texture = ""
+            end
+        end
+        if not conns.Textures then
+            conns.Textures = Workspace.DescendantAdded:Connect(function(obj)
+                if obj:IsA("Decal") or obj:IsA("Texture") then
+                    if original_textures[obj] == nil then
+                        original_textures[obj] = obj.Texture
+                    end
+                    obj.Texture = ""
+                end
+            end)
+        end
+    else
+        for obj, tex in pairs(original_textures) do
+            if obj and obj.Parent then
+                pcall(function() obj.Texture = tex end)
+            end
+        end
+        original_textures = {}
+        if conns.Textures then 
+            conns.Textures:Disconnect() 
+            conns.Textures = nil 
+        end
+    end
+end
+
+local function setShadows(on)
+    Lighting.GlobalShadows = not on
+end
+
+local function setAccessories(on)
+    if on then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            local char = plr.Character
+            if char then
+                for _, acc in ipairs(char:GetChildren()) do
+                    if acc:IsA("Accessory") then
+                        original_accessories[acc] = plr
+                        acc.Parent = nil
+                    end
+                end
+            end
+        end
+        if not conns.CharacterAdded then
+            conns.CharacterAdded = Players.PlayerAdded:Connect(function(p)
+                p.CharacterAdded:Connect(function(ch)
+                    task.defer(function()
+                        for _, acc in ipairs(ch:GetChildren()) do
+                            if acc:IsA("Accessory") then
+                                original_accessories[acc] = p
+                                acc.Parent = nil
+                            end
+                        end
+                    end)
+                end)
+            end)
+        end
+    else
+        for acc, owner in pairs(original_accessories) do
+            if owner and owner.Character and acc and not acc.Parent then
+                pcall(function() acc.Parent = owner.Character end)
+            end
+        end
+        original_accessories = {}
+        if conns.CharacterAdded then
+            conns.CharacterAdded:Disconnect()
+            conns.CharacterAdded = nil
+        end
+    end
+end
+
+local function setGraySky(on)
+    if on then
+        for _, obj in ipairs(Lighting:GetChildren()) do
+            if obj:IsA("Sky") then
+                obj:Destroy()
+            end
+        end
+        local sky = Instance.new("Sky")
+        local assetId = "rbxassetid://99742693890881"
+        sky.SkyboxBk = assetId
+        sky.SkyboxDn = assetId
+        sky.SkyboxFt = assetId
+        sky.SkyboxLf = assetId
+        sky.SkyboxRt = assetId
+        sky.SkyboxUp = assetId
+        sky.Parent = Lighting
+    else
+        for _, obj in ipairs(Lighting:GetChildren()) do
+            if obj:IsA("Sky") then
+                obj:Destroy()
+            end
+        end
+    end
+end
+
+local function removeWeaponDisplays()
+    local wd = Workspace:FindFirstChild("WeaponDisplays")
+    if wd then 
+        wd:Destroy() 
+    end
+end
+
+local function degradePart(obj)
+    if obj:IsA("BasePart") then
+        obj.CastShadow = false
+        obj.RenderFidelity = Enum.RenderFidelity.Disabled
+    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+        obj.Enabled = false
+    elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+        obj.Enabled = false
+    end
+end
+
+local function setFrameEnhancement(bool)
     fpsBoostEnabled = bool
     
     if bool then
-        Services.Lighting.GlobalShadows = false
-        Services.Lighting.Brightness = 1
-        Services.Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+        Lighting.Brightness = 1
+        Lighting.ClockTime = 14
         settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
         settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Disabled
         workspace.Terrain.Decoration = false
         
-        local function degradePart(obj)
-            if obj:IsA("BasePart") then
-                obj.CastShadow = false
-                obj.RenderFidelity = Enum.RenderFidelity.Disabled
-            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
-                obj.Enabled = false
-            elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-                obj.Enabled = false
-            end
+        for _, obj in ipairs(workspace:GetDescendants()) do 
+            degradePart(obj) 
         end
-        
-        for _, obj in ipairs(workspace:GetDescendants()) do degradePart(obj) end
         
         _G.FpsBoostConnection = workspace.DescendantAdded:Connect(degradePart)
     else
-        Services.Lighting.GlobalShadows = true
-        Services.Lighting.Brightness = 2
+        Lighting.GlobalShadows = true
+        Lighting.Brightness = 2
         settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
         settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Full
         workspace.Terrain.Decoration = true
@@ -3323,7 +3572,19 @@ ultra_fps_section:AddToggle("Enable Frame Enhancement", function(bool)
             _G.FpsBoostConnection = nil
         end
     end
-end)
+end
+
+if perf_tab then
+    perf_tab:AddToggle("No Textures (SmoothPlastic)", setSmoothPlastic)
+    perf_tab:AddToggle("Disable Shadows", setShadows)
+    perf_tab:AddToggle("Disable Particles/Trails", setParticles)
+    perf_tab:AddToggle("Hide Meshes (world only)", setMeshes)
+    perf_tab:AddToggle("Remove Textures/Decals", setTextures)
+    perf_tab:AddToggle("Remove Accessories", setAccessories)
+    perf_tab:AddToggle("Gray Skybox", setGraySky)
+    perf_tab:AddButton("Remove Weapon Displays", removeWeaponDisplays)
+    perf_tab:AddToggle("Enable Frame Enhancement", setFrameEnhancement)
+end
 
 local true_antis_section = shared.AddSection("True Anti's")
 local trueAntiFlingConnection, trueAntiAfkConnection
