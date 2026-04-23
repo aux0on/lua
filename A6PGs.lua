@@ -3282,14 +3282,14 @@ fps_ping_section:AddDropdown("UI Position", {"Top Right", "Top Left", "Top Cente
         _G.PingLabel.Position = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset + 28)
     end
 end)
-  
-local shared = odh_shared_plugins
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+
+local perf_section = shared.AddSection("Performance Optimization")
 
 local original_materials = {}
 local original_particle_states = {}
@@ -3574,17 +3574,15 @@ local function setFrameEnhancement(bool)
     end
 end
 
-if perf_tab then
-    perf_tab:AddToggle("No Textures (SmoothPlastic)", setSmoothPlastic)
-    perf_tab:AddToggle("Disable Shadows", setShadows)
-    perf_tab:AddToggle("Disable Particles/Trails", setParticles)
-    perf_tab:AddToggle("Hide Meshes (world only)", setMeshes)
-    perf_tab:AddToggle("Remove Textures/Decals", setTextures)
-    perf_tab:AddToggle("Remove Accessories", setAccessories)
-    perf_tab:AddToggle("Gray Skybox", setGraySky)
-    perf_tab:AddButton("Remove Weapon Displays", removeWeaponDisplays)
-    perf_tab:AddToggle("Enable Frame Enhancement", setFrameEnhancement)
-end
+perf_section:AddToggle("No Textures (SmoothPlastic)", setSmoothPlastic)
+perf_section:AddToggle("Disable Shadows", setShadows)
+perf_section:AddToggle("Disable Particles/Trails", setParticles)
+perf_section:AddToggle("Hide Meshes (world only)", setMeshes)
+perf_section:AddToggle("Remove Textures/Decals", setTextures)
+perf_section:AddToggle("Remove Accessories", setAccessories)
+perf_section:AddToggle("Gray Skybox", setGraySky)
+perf_section:AddButton("Remove Weapon Displays", removeWeaponDisplays)
+perf_section:AddToggle("Enable Frame Enhancement", setFrameEnhancement)
 
 local true_antis_section = shared.AddSection("True Anti's")
 local trueAntiFlingConnection, trueAntiAfkConnection
