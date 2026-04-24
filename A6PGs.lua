@@ -3011,6 +3011,156 @@ do
     RootMaid:GiveTask(ggKeybind)
 end
 
+local giveGunSection = shared.AddSection("Give Gun")
+
+local giveGunEnabled, autoGiveGunEnabled = false, false
+local selectedPlayer = nil
+local autoGiveMaid = Maid.new()
+local giveGunButtonSize = 0.11
+
+RootMaid:GiveTask(autoGiveMaid)
+
+local function hasGunInInventory()
+    local player = LocalPlayer
+    local character = player.Character
+    local backpack = player.Backpack
+    
+    if not character then return false end
+    
+    for _, tool in pairs(character:GetChildren()) do
+        if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
+            return true
+        end
+    end
+    
+    if backpack then
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
+                return true
+            end
+        end
+    end
+    
+    return false
+end
+
+local function giveGunToPlayer(targetPlayer)
+    if not targetPlayer then
+        Notify("Give Gun", "No player selected!", 3)
+        return
+    end
+    
+    if not hasGunInInventory() then
+        Notify("Give Gun", "You don't have a gun in your inventory!", 3)
+        return
+    end
+    
+    local char = LocalPlayer.Character
+    if not char then
+        Notify("Give Gun", "Character not found!", 3)
+        return
+    end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then
+        Notify("Give Gun", "Root part not found!", 3)
+        return
+    end
+    
+    local targetChar = targetPlayer.Character
+    if not targetChar then
+        Notify("Give Gun", "Target character not found!", 3)
+        return
+    end
+    
+    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then
+        Notify("Give Gun", "Target root part not found!", 3)
+        return
+    end
+    
+    Notify("Give Gun", "Giving gun to " .. targetPlayer.Name .. "...", 2)
+    
+    root.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+    
+    task.wait(0.3)
+    
+    LocalPlayer.Character:BreakJoints()
+end
+
+local function executeGiveGun()
+    if giveGunEnabled and selectedPlayer then
+        giveGunToPlayer(selectedPlayer)
+    end
+end
+
+local players = {}
+for _, player in pairs(game.Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        table.insert(players, player.Name)
+    end
+end
+
+local playerDropdown = giveGunSection:AddDropdown("Select Player", players, function(value)
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player.Name == value then
+            selectedPlayer = player
+            break
+        end
+    end
+end)
+
+giveGunSection:AddToggle("Auto Give Gun", function(enabled)
+    autoGiveGunEnabled = enabled
+    autoGiveMaid:DoCleaning()
+    
+    if enabled then
+        task.spawn(function()
+            while autoGiveGunEnabled do
+                if giveGunEnabled and selectedPlayer and hasGunInInventory() then
+                    giveGunToPlayer(selectedPlayer)
+                end
+                task.wait(2)
+            end
+        end)
+    end
+end)
+
+giveGunSection:AddButton("Give Gun", executeGiveGun)
+
+giveGunSection:AddToggle("Enable Give Gun Button", function(enabled)
+    giveGunEnabled = enabled
+    
+    if enabled then
+        BindableButtons.AddBButton("givegun_bind", "Give Gun", executeGiveGun)
+        local btn = BindableButtons.Buttons["givegun_bind"]
+        if btn then
+            local screen = workspace.CurrentCamera.ViewportSize
+            btn.Size = __UD2(giveGunButtonSize * (screen.Y / screen.X), 0, giveGunButtonSize, 0)
+        end
+    else
+        BindableButtons.DeleteBButton("givegun_bind")
+    end
+end)
+
+giveGunSection:AddSlider("Give Gun Button Size", 5, 25, 11, function(value)
+    giveGunButtonSize = value / 100
+    local btn = BindableButtons.Buttons["givegun_bind"]
+    if btn then
+        local screen = workspace.CurrentCamera.ViewportSize
+        btn.Size = __UD2(giveGunButtonSize * (screen.Y / screen.X), 0, giveGunButtonSize, 0)
+    end
+end)
+
+giveGunSection:AddLabel("Must enable auto grab gun for auto give gun to work")
+
+local giveGunKeybind = Services.UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp and input.KeyCode == Enum.KeyCode.G and giveGunEnabled and selectedPlayer then
+        executeGiveGun()
+    end
+end)
+RootMaid:GiveTask(giveGunKeybind)
+
 local flick_section = shared.AddSection("Flick to Murderer")
 flick_section:AddLabel("Credits: idk_367.5")
 
