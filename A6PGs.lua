@@ -793,6 +793,115 @@ whitelistSection:AddButton("Kill All", function()
     end
 end)
 
+local blueAuraSection = shared.AddSection("Blue Aura")
+
+blueAuraSection:AddLabel("kill them with your absolute crushing aura")
+
+local blueAuraEnabled = false
+local auraStuds = 10
+local whitelist = {}
+local auraMaid = Maid.new()
+
+RootMaid:GiveTask(auraMaid)
+
+local function getMurdererKnife()
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    
+    local knife = character:FindFirstChild("Knife")
+    if not knife and LocalPlayer.Backpack then
+        knife = LocalPlayer.Backpack:FindFirstChild("Knife")
+    end
+    
+    return knife
+end
+
+local function getHandleTouchedEvent()
+    local knife = getMurdererKnife()
+    if not knife then return nil end
+    
+    local events = knife:FindFirstChild("Events")
+    if not events then return nil end
+    
+    return events:FindFirstChild("HandleTouched")
+end
+
+local function killPlayer(targetPlayer)
+    local handleTouched = getHandleTouchedEvent()
+    if not handleTouched then return end
+    
+    local targetChar = targetPlayer.Character
+    if not targetChar then return end
+    
+    local torso = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso")
+    if torso then
+        handleTouched:FireServer(torso)
+    end
+end
+
+local function checkAura()
+    if not blueAuraEnabled then return end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local handleTouched = getHandleTouchedEvent()
+    if not handleTouched then return end
+    
+    local rootPos = root.Position
+    
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer and not table_find(whitelist, player.UserId) then
+            local targetChar = player.Character
+            if targetChar then
+                local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+                if targetRoot then
+                    local dist = (rootPos - targetRoot.Position).Magnitude
+                    if dist <= auraStuds then
+                        local torso = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso")
+                        if torso then
+                            handleTouched:FireServer(torso)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+blueAuraSection:AddToggle("Enable Blue Aura", function(enabled)
+    blueAuraEnabled = enabled
+    auraMaid:DoCleaning()
+    
+    if enabled then
+        task.spawn(function()
+            while blueAuraEnabled do
+                checkAura()
+                task.wait(0.5)
+            end
+        end)
+    end
+end)
+
+blueAuraSection:AddSlider("Aura Studs", 5, 50, 10, function(value)
+    auraStuds = value
+end)
+
+blueAuraSection:AddPlayerDropdown("Whitelist Player", function(player)
+    if not table_find(whitelist, player.UserId) then
+        table_insert(whitelist, player.UserId)
+        Notify(player.Name .. " whitelisted.", 2)
+    end
+end)
+
+blueAuraSection:AddButton("Clear Whitelist", function()
+    whitelist = {}
+    Notify("Whitelist cleared.", 2)
+end)
+
 do
     local tsSection = shared.AddSection("Trickshot")
     local spinSpeed, hasJumped, tsActive = 15, false, false
@@ -948,8 +1057,6 @@ do
     local function saveDecals()
         if writefile then writefile(decalSave, Services.HttpService:JSONEncode(decals)) end
     end
-    
-    spraySection:AddLabel('<font color="rgb(255,0,0)">Warning: Using This In MMV Gets You Banned.</font>', nil, true)
     
     local sprayId, sprayTargetMode, spraySelectedPlr = 0, "Nearest Player", nil
     local sprayDecalName, sprayLoop, sprayBehind = nil, false, false
