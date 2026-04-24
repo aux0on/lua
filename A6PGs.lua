@@ -3094,20 +3094,31 @@ local function executeGiveGun()
     end
 end
 
-local players = {}
-for _, player in pairs(game.Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        table.insert(players, player.Name)
+local function updatePlayerList()
+    local players = {}
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(players, player.Name)
+        end
     end
+    return players
 end
 
-local playerDropdown = giveGunSection:AddDropdown("Select Player", players, function(value)
+local playerDropdown = giveGunSection:AddDropdown("Select Player", updatePlayerList(), function(value)
     for _, player in pairs(game.Players:GetPlayers()) do
         if player.Name == value then
             selectedPlayer = player
             break
         end
     end
+end)
+
+game.Players.PlayerAdded:Connect(function()
+    playerDropdown:SetOptions(updatePlayerList())
+end)
+
+game.Players.PlayerRemoving:Connect(function()
+    playerDropdown:SetOptions(updatePlayerList())
 end)
 
 giveGunSection:AddToggle("Auto Give Gun", function(enabled)
