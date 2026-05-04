@@ -3698,42 +3698,17 @@ true_antis_section:AddToggle("Enable IY Anti Fling", function(bool)
     end
     
     if bool then
-        local playerCache = {}
-        
-        local function updateCache()
-            playerCache = {}
-            for _, p in ipairs(Services.Players:GetPlayers()) do
-                if p ~= LocalPlayer then
-                    playerCache[p] = true
-                end
-            end
-        end
-        updateCache()
-        
-        local playerAddedConn = Services.Players.PlayerAdded:Connect(updateCache)
-        local playerRemovingConn = Services.Players.PlayerRemoving:Connect(updateCache)
-        
-        trueAntiFlingConnection = Services.RunService.Heartbeat:Connect(function()
-            for player in pairs(playerCache) do
-                local char = player.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then 
-                            part.CanCollide = false 
+        trueAntiFlingConnection = Services.RunService.Stepped:Connect(function()
+            for _, player in ipairs(Services.Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    for _, part in ipairs(player.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
                         end
                     end
                 end
             end
         end)
-        
-        _G.AntiFlingCleanup = {playerAddedConn, playerRemovingConn}
-    else
-        if _G.AntiFlingCleanup then
-            for _, conn in ipairs(_G.AntiFlingCleanup) do
-                conn:Disconnect()
-            end
-            _G.AntiFlingCleanup = nil
-        end
     end
 end)
 
