@@ -3903,7 +3903,7 @@ end)
 local creditsSection = shared.AddSection("Credits")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
-shared.Notify("ATAOs Successfully Loaded", 5)
+shared.Notify("ATAOs (MM2) Successfully Loaded", 5)
 
 RootMaid:GiveTasks(
     function() if trueAntiFlingConnection then trueAntiFlingConnection:Disconnect() end end,
