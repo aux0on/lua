@@ -2181,7 +2181,7 @@ do
     end)
 end
 
-    local section = shared.AddSection("Bomb Jump+")
+local section = shared.AddSection("Bomb Jump+")
 
 local onCooldown = false
 local bombJumpEnabled = false
