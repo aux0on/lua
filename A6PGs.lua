@@ -2208,272 +2208,252 @@ do
     end)
 end
 
+do
     local section = shared.AddSection("Bomb Jump+")
-
-local onCooldown = false
-local bombJumpEnabled = false
-local debounce = false
-local autoGetBomb = false
-local justRespawned = false
-local bigButtonSize = 200
-local bindButtonSize = 0.11
-local bjBindButton = nil
-
-local BOMB_NAMES = {"FakeBomb"}
-
-local BombJumpMaid = Maid.new()
-RootMaid:GiveTask(BombJumpMaid)
-
-local function ResetCooldown()
-    onCooldown = false
-    local bigBtn = BBSystem.Buttons["bombjump_big"]
-    if bigBtn then bigBtn.Text = "Bomb Jump" end
-    if bjBindButton then
-        BindableButtons.UpdateBButtonText("bombjump_bind", "BJ", false, false)
-    end
-end
-
-local function StartCooldown()
-    onCooldown = true
-    debounce = false
-    local bigBtn = BBSystem.Buttons["bombjump_big"]
-    if bigBtn then bigBtn.Text = "Wait" end
-    if bjBindButton then
-        BindableButtons.UpdateBButtonText("bombjump_bind", "Wait", true, false)
+    local BOMB_NAMES = {"FakeBomb"}
+    local BombJumpMaid, BombJumpTimerMaid
+    local bjBindButton
+    local onCooldown, bombJumpEnabled = false, false
+    local debounce, autoGetBomb, justRespawned = false, false, false
+    local bigButtonSize = 200
+    local bindButtonSize = 0.11
+    local activeTouches = {}
+    
+    local __READY_COLOR = ColorSequence.new({
+        ColorSequenceKeypoint.new(0,   __PCLR(0.133333, 0.827451, 0.494118)),
+        ColorSequenceKeypoint.new(0.6, __PCLR(0.231373, 0.509804, 0.498039)),
+        ColorSequenceKeypoint.new(1,   __PCLR(0.501961, 0.501961, 0.501961))
+    })
+    
+    local __WAIT_COLOR = ColorSequence.new({
+        ColorSequenceKeypoint.new(0,   __PCLR(0.827451, 0.133333, 0.133333)),
+        ColorSequenceKeypoint.new(0.6, __PCLR(0.509804, 0.231373, 0.231373)),
+        ColorSequenceKeypoint.new(1,   __PCLR(0.501961, 0.501961, 0.501961))
+    })
+    
+    RootMaid:GiveTask(function()
+        if BombJumpTimerMaid then BombJumpTimerMaid:Destroy() end
+        if BombJumpMaid then BombJumpMaid:Destroy() end
+        DeleteBigButton("bombjump_big")
+        BindableButtons.DeleteBButton("bombjump_bind")
+    end)
+    
+    local function UpdateBJButton(text, isWaiting)
+        if not bjBindButton then 
+            bjBindButton = BindableButtons.Buttons["bombjump_bind"]
+        end
+        if not bjBindButton then return end
+        
+        local textLabel = bjBindButton:FindFirstChild("@Text")
+        if textLabel then
+            textLabel.Text = text
+        end
+        
+        local stroke = bjBindButton:FindFirstChild("@Stroke")
+        if stroke then
+            stroke.Color = isWaiting and __WAIT_COLOR or __READY_COLOR
+        end
     end
     
-    task.spawn(function()
-        for i = 22, 1, -1 do
-            if not onCooldown then break end
-            local bigBtn = BBSystem.Buttons["bombjump_big"]
-            if bigBtn then bigBtn.Text = tostring(i) end
-            if bjBindButton then
-                BindableButtons.UpdateBButtonText("bombjump_bind", tostring(i), true, false)
+    local function ResetCooldown()
+        onCooldown = false
+        local bigBtn = BBSystem.Buttons["bombjump_big"]
+        if bigBtn then bigBtn.Text = "Bomb Jump" end
+        UpdateBJButton("BJ", false)
+    end
+    
+    local function StartCooldown()
+        onCooldown = true
+        debounce = false
+        local bigBtn = BBSystem.Buttons["bombjump_big"]
+        if bigBtn then bigBtn.Text = "Wait" end
+        UpdateBJButton("Wait", true)
+        
+        task.spawn(function()
+            for i = 22, 1, -1 do
+                if not onCooldown then break end
+                local bigBtn = BBSystem.Buttons["bombjump_big"]
+                if bigBtn then bigBtn.Text = tostring(i) end
+                UpdateBJButton(tostring(i), true)
+                task.wait(1)
             end
-            task.wait(1)
-        end
-        if onCooldown then ResetCooldown() end
-    end)
-end
-
-local function GetCenterPosition()
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local camera = Services.Workspace.CurrentCamera
-        local lookDir = camera.CFrame.LookVector
-        return character.HumanoidRootPart.Position + (lookDir * 5)
+            if onCooldown then ResetCooldown() end
+        end)
     end
-    return nil
-end
-
-local function MakeCharacterJump()
-    local character = LocalPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end
-
-local function UnequipBomb()
-    task.spawn(function()
-        task.wait(0.5)
+    
+    local function GetAnyBomb()
         local character = LocalPlayer.Character
-        if character then
-            for _, bombName in ipairs(BOMB_NAMES) do
-                local bomb = character:FindFirstChild(bombName)
-                if bomb then
-                    bomb.Parent = LocalPlayer.Backpack or character
-                    break
-                end
-            end
-        end
-    end)
-end
-
-local function GetAnyBomb()
-    local character = LocalPlayer.Character
-    if not character then return false, nil end
-    
-    for _, bombName in ipairs(BOMB_NAMES) do
-        local bomb = character:FindFirstChild(bombName)
-        if bomb then return true, bomb end
-    end
-    
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if backpack then
-        for _, bombName in ipairs(BOMB_NAMES) do
-            local bomb = backpack:FindFirstChild(bombName)
-            if bomb then
-                bomb.Parent = character
-                return true, bomb
-            end
-        end
-    end
-    
-    pcall(function()
-        Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
-    end)
-    
-    for _ = 1, 5 do
+        if not character then return false, nil end
+        
         for _, bombName in ipairs(BOMB_NAMES) do
             local bomb = character:FindFirstChild(bombName)
             if bomb then return true, bomb end
-            if backpack then
-                bomb = backpack:FindFirstChild(bombName)
+        end
+        
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            for _, bombName in ipairs(BOMB_NAMES) do
+                local bomb = backpack:FindFirstChild(bombName)
                 if bomb then
                     bomb.Parent = character
                     return true, bomb
                 end
             end
         end
-        task.wait(0.05)
-    end
-    
-    return false, nil
-end
-
-local function FastBombJump()
-    if onCooldown or debounce or justRespawned then return end
-    debounce = true
-    
-    local success, bomb = GetAnyBomb()
-    
-    if success and bomb then
-        local position = GetCenterPosition()
-        if position then
-            local remote = bomb:FindFirstChild("Remote")
-            if remote then
-                pcall(function()
-                    remote:FireServer(CFrame.new(position), 50)
-                end)
+        
+        pcall(function()
+            Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
+        end)
+        
+        for _ = 1, 5 do
+            for _, bombName in ipairs(BOMB_NAMES) do
+                local bomb = character:FindFirstChild(bombName)
+                if bomb then return true, bomb end
+                if backpack then
+                    bomb = backpack:FindFirstChild(bombName)
+                    if bomb then bomb.Parent = character return true, bomb end
+                end
             end
-            
-            MakeCharacterJump()
-            UnequipBomb()
-            
-            task.spawn(function()
-                task.wait(0.1)
-                StartCooldown()
-            end)
+            task.wait(0.05)
         end
+        
+        return false, nil
     end
     
-    task.spawn(function()
-        task.wait(0.5)
-        debounce = false
-    end)
-end
-
-local function IsHoldingBomb()
-    local character = LocalPlayer.Character
-    if not character then return false end
-    
-    for _, bombName in ipairs(BOMB_NAMES) do
-        if character:FindFirstChild(bombName) then
-            return true
-        end
-    end
-    return false
-end
-
-local activeTouches = {}
-local TAP_MOVEMENT_THRESHOLD = 10
-local TAP_TIME_THRESHOLD = 0.3
-
-BombJumpMaid:GiveTasks(
-    Services.UserInputService.InputBegan:Connect(function(input, gp)
-        if gp then return end
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            activeTouches[input] = {startPosition = input.Position, startTime = tick(), moved = false}
-        end
-    end),
-    Services.UserInputService.InputChanged:Connect(function(input)
-        local data = activeTouches[input]
-        if data and (input.Position - data.startPosition).Magnitude > TAP_MOVEMENT_THRESHOLD then
-            data.moved = true
-        end
-    end),
-    Services.UserInputService.InputEnded:Connect(function(input, gp)
-        if gp then activeTouches[input] = nil return end
-        local data = activeTouches[input]
-        if data and not data.moved and tick() - data.startTime <= TAP_TIME_THRESHOLD then
-            if bombJumpEnabled and not onCooldown and not debounce then
-                if IsHoldingBomb() then
-                    FastBombJump()
+    local function FastBombJump()
+        if onCooldown or debounce or justRespawned then return end
+        debounce = true
+        
+        local success, bomb = GetAnyBomb()
+        if success and bomb then
+            local character = LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local camera = workspace.CurrentCamera
+                local position = character.HumanoidRootPart.Position + (camera.CFrame.LookVector * 5)
+                local remote = bomb:FindFirstChild("Remote")
+                
+                if remote then
+                    pcall(function() remote:FireServer(CFrame.new(position), 50) end)
+                    character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    
+                    task.spawn(function()
+                        task.wait(0.5)
+                        local bombInHand = character:FindFirstChild(bomb.Name)
+                        if bombInHand then bombInHand.Parent = LocalPlayer.Backpack or character end
+                    end)
+                    
+                    task.spawn(function()
+                        task.wait(0.1)
+                        StartCooldown()
+                    end)
                 end
             end
         end
-        activeTouches[input] = nil
-    end),
-    LocalPlayer.CharacterAdded:Connect(function()
-        ResetCooldown()
-        activeTouches = {}
-        justRespawned = true
-        task.wait(1)
-        justRespawned = false
-        if autoGetBomb then
-            task.wait(0.2)
-            pcall(function() Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb") end)
+        
+        task.spawn(function() task.wait(0.5) debounce = false end)
+    end
+    
+    local function IsHoldingBomb()
+        local character = LocalPlayer.Character
+        if not character then return false end
+        
+        for _, bombName in ipairs(BOMB_NAMES) do
+            if character:FindFirstChild(bombName) then
+                return true
+            end
+        end
+        return false
+    end
+    
+    section:AddLabel("Bomb Jump Options")
+    section:AddToggle("Enable Auto Bomb Jump", function(bool) bombJumpEnabled = bool end)
+    section:AddToggle("Auto-Get Fake Bomb", function(bool) autoGetBomb = bool end)
+
+    section:AddToggle("Enable BJ Big Button", function(e)
+        if e then
+            AddBigButton("bombjump_big", "Bomb Jump", FastBombJump)
+            local btn = BBSystem.Buttons["bombjump_big"]
+            if btn then
+                btn.Size = __UD2(0, bigButtonSize, 0, bigButtonSize * 0.375)
+            end
+        else
+            DeleteBigButton("bombjump_big")
         end
     end)
-)
-
-section:AddLabel("Bomb Jump Options")
-section:AddToggle("Enable Auto Bomb Jump", function(bool) bombJumpEnabled = bool end)
-
-section:AddToggle("Auto-Get Fake Bomb", function(bool)
-    autoGetBomb = bool
-    if bool then
-        pcall(function() Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb") end)
-    end
-end)
-
-section:AddToggle("Enable BJ Big Button", function(e)
-    if e then
-        AddBigButton("bombjump_big", "Bomb Jump", FastBombJump, false)
+    
+    section:AddSlider("BJ Big Button Size", 100, 400, 200, function(value)
+        bigButtonSize = value
         local btn = BBSystem.Buttons["bombjump_big"]
         if btn then
             btn.Size = __UD2(0, bigButtonSize, 0, bigButtonSize * 0.375)
         end
-    else
-        DeleteBigButton("bombjump_big")
-    end
-end)
-
-section:AddSlider("BJ Big Button Size", 100, 400, 200, function(value)
-    bigButtonSize = value
-    local btn = BBSystem.Buttons["bombjump_big"]
-    if btn then
-        btn.Size = __UD2(0, bigButtonSize, 0, bigButtonSize * 0.375)
-    end
-end)
-
-section:AddToggle("Enable BJ Bind Button", function(e)
-    if e then
-        BindableButtons.AddBButton("bombjump_bind", "BJ", FastBombJump, false)
-        bjBindButton = BindableButtons.Buttons["bombjump_bind"]
-        if bjBindButton then
-            local screen = Services.Workspace.CurrentCamera.ViewportSize
-            bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
-            BindableButtons.UpdateBButtonText("bombjump_bind", onCooldown and "Wait" or "BJ", onCooldown, false)
+    end)
+    
+    section:AddToggle("Enable BJ Bind Button", function(e)
+        if e then
+            BindableButtons.AddBButton("bombjump_bind", "BJ", FastBombJump)
+            bjBindButton = BindableButtons.Buttons["bombjump_bind"]
+            if bjBindButton then
+                local screen = workspace.CurrentCamera.ViewportSize
+                bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
+                UpdateBJButton(onCooldown and "Wait" or "BJ", onCooldown)
+            end
+        else
+            BindableButtons.DeleteBButton("bombjump_bind")
+            bjBindButton = nil
         end
-    else
-        BindableButtons.DeleteBButton("bombjump_bind")
-        bjBindButton = nil
-    end
-end)
-
-section:AddSlider("BJ Bind Button Size", 5, 25, 11, function(value)
-    bindButtonSize = value / 100
-    if bjBindButton then
-        local screen = Services.Workspace.CurrentCamera.ViewportSize
-        bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
-    end
-end)
-
-section:AddKeybind("Bomb Jump Keybind", "E", FastBombJump)
+    end)
+    
+    section:AddSlider("BJ Bind Button Size", 5, 25, 11, function(value)
+        bindButtonSize = value / 100
+        if bjBindButton then
+            local screen = workspace.CurrentCamera.ViewportSize
+            bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
+        end
+    end)
+    
+    section:AddKeybind("Bomb Jump Keybind", "E", FastBombJump)
+    
+    BombJumpMaid = Maid.new()
+    BombJumpMaid:GiveTasks(
+        Services.UserInputService.InputBegan:Connect(function(input, gp)
+            if gp then return end
+            if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                activeTouches[input] = {startPosition=input.Position, startTime=tick(), moved=false}
+            end
+        end),
+        Services.UserInputService.InputChanged:Connect(function(input)
+            local data = activeTouches[input]
+            if data and (input.Position - data.startPosition).Magnitude > 10 then
+                data.moved = true
+            end
+        end),
+        Services.UserInputService.InputEnded:Connect(function(input, gp)
+            if gp then activeTouches[input] = nil return end
+            local data = activeTouches[input]
+            if data and not data.moved and tick() - data.startTime <= 0.3 then
+                if bombJumpEnabled and not onCooldown and not debounce then
+                    if IsHoldingBomb() then
+                        FastBombJump()
+                    end
+                end
+            end
+            activeTouches[input] = nil
+        end),
+        LocalPlayer.CharacterAdded:Connect(function()
+            ResetCooldown()
+            activeTouches = {}
+            justRespawned = true
+            task.wait(1)
+            justRespawned = false
+            if autoGetBomb then
+                task.wait(0.2)
+                pcall(function() Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb") end)
+            end
+        end)
+    )
+    RootMaid:GiveTask(BombJumpMaid)
+end
 
 do
     local feAnimSection = shared.AddSection("FE Animations")
