@@ -1596,13 +1596,19 @@ end
 do
     local flingSection = shared.AddSection("Fling")
     local flingSelPlr, flingActive = nil, true
+    local selectedPlayers = {}
     local whitelist = {}
     local flingButtonSize = 0.11
-    local maids = {autoSheriff=nil, autoMurderer=nil, loopPlr=nil, loopAll=nil}
+    local clickFlingEnabled = false
+    local flingAuraEnabled = false
+    local auraStuds = 15
+    local maids = {autoSheriff=nil, autoMurderer=nil, loopPlr=nil, loopAll=nil, clickFling=nil, flingAura=nil}
     local buttonToggles = {Sheriff=false, Murderer=false, Player=false}
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
+    local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
     
     RootMaid:GiveTask(function() 
         for _, m in pairs(maids) do if m then m:Destroy() end end
@@ -1610,6 +1616,15 @@ do
     
     local function isWhitelisted(player)
         return whitelist[player.UserId] == true
+    end
+    
+    local function isPlayerSelected(player)
+        for _, selected in ipairs(selectedPlayers) do
+            if selected.UserId == player.UserId then
+                return true
+            end
+        end
+        return false
     end
     
     local function findSheriff()
@@ -1645,6 +1660,44 @@ do
                 end
             end
         end
+        return nil
+    end
+    
+    local function hasGun(player)
+        local character = player.Character
+        if not character then return false end
+        
+        local tools = player.Backpack:GetChildren()
+        for _, tool in ipairs(tools) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or 
+               tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun") or
+               tool.Name:lower():find("rifle") or tool.Name:lower():find("weapon")) then
+                return true
+            end
+        end
+        
+        local characterTools = character:GetChildren()
+        for _, tool in ipairs(characterTools) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or 
+               tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun") or
+               tool.Name:lower():find("rifle") or tool.Name:lower():find("weapon")) then
+                return true
+            end
+        end
+        
+        return false
+    end
+    
+    local function findSheriffWithFallback()
+        local sheriff = findSheriff()
+        if sheriff then return sheriff end
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and not isWhitelisted(player) and hasGun(player) then
+                return player
+            end
+        end
+        
         return nil
     end
     
@@ -1787,8 +1840,8 @@ do
     end
     
     flingSection:AddButton("Fling Sheriff", function()
-        local sheriff = findSheriff()
-        if sheriff then OdhSkid(sheriff, 2) else Notify("Error", "No Sheriff Found", 3) end
+        local target = findSheriffWithFallback()
+        if target then OdhSkid(target, 2) else Notify("Error", "No Sheriff or Gun Holder Found", 3) end
     end)
     
     flingSection:AddButton("Fling Murderer", function()
@@ -1808,6 +1861,20 @@ do
     flingSection:AddPlayerDropdown("Fling Player", function(p)
         flingSelPlr = p
         if p ~= LocalPlayer and not isWhitelisted(p) then OdhSkid(p, 2) end
+    end)
+    
+    flingSection:AddPlayerDropdown("Select Players", function(p)
+        if p and p ~= LocalPlayer and not isPlayerSelected(p) then
+            table.insert(selectedPlayers, p)
+            Notify("Selected", p.Name.." added to fling list", 3)
+        elseif p and isPlayerSelected(p) then
+            Notify("Error", p.Name.." is already selected", 3)
+        end
+    end)
+    
+    flingSection:AddButton("Clear Selected Players", function()
+        selectedPlayers = {}
+        Notify("Cleared", "All selected players removed", 3)
     end)
     
     local function createAutoFling(name, findFunc)
@@ -1831,11 +1898,11 @@ do
         end)
     end
     
-    createAutoFling("Sheriff", findSheriff)
+    createAutoFling("Sheriff", findSheriffWithFallback)
     createAutoFling("Murderer", findMurderer)
     
     local buttonConfigs = {
-        {name="Sheriff", text="FS", findFunc=findSheriff, id="fling_sheriff"},
+        {name="Sheriff", text="FS", findFunc=findSheriffWithFallback, id="fling_sheriff"},
         {name="Murderer", text="FM", findFunc=findMurderer, id="fling_murderer"},
         {name="Player", text="FP", findFunc=function() return flingSelPlr end, id="fling_player"}
     }
@@ -1886,7 +1953,7 @@ do
         Notify("Whitelist", "Whitelist cleared!", 3)
     end)
     
-    flingSection:AddToggle("Loop Fling Player", function(s)
+    flingSection:AddToggle("Loop Fling Player(s)", function(s)
         if maids.loopPlr then maids.loopPlr:Destroy() end
         
         if s then
@@ -1896,8 +1963,13 @@ do
                     if flingSelPlr and flingSelPlr.Parent and not isWhitelisted(flingSelPlr) then
                         OdhSkid(flingSelPlr, 2)
                         task.wait(3)
-                    else
-                        if not flingSelPlr or not flingSelPlr.Parent then break end
+                    end
+                    
+                    for _, player in ipairs(selectedPlayers) do
+                        if player and player.Parent and not isWhitelisted(player) then
+                            OdhSkid(player, 2)
+                            task.wait(0.5)
+                        end
                     end
                     task.wait(1)
                 end
@@ -1924,6 +1996,82 @@ do
             end)
             maids.loopAll:GiveTask(function() task.cancel(thread) end)
         end
+    end)
+    
+    flingSection:AddToggle("Click Fling", function(enabled)
+        clickFlingEnabled = enabled
+        
+        if maids.clickFling then maids.clickFling:Destroy() end
+        
+        if enabled then
+            maids.clickFling = Maid.new()
+            
+            local function onMouseClick(input, processed)
+                if processed then return end
+                
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    local mouse = LocalPlayer:GetMouse()
+                    local target = mouse.Target
+                    
+                    if target then
+                        local character = target:FindFirstAncestorWhichIsA("Model")
+                        if character then
+                            local player = Players:GetPlayerFromCharacter(character)
+                            if player and player ~= LocalPlayer and not isWhitelisted(player) then
+                                OdhSkid(player, 2)
+                                Notify("Click Fling", "Flinging "..player.Name, 2)
+                            elseif player and isWhitelisted(player) then
+                                Notify("Click Fling", player.Name.." is whitelisted!", 3)
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if UserInputService.TouchEnabled then
+                maids.clickFling:GiveTask(UserInputService.TouchTap:Connect(onMouseClick))
+            end
+            
+            maids.clickFling:GiveTask(UserInputService.InputBegan:Connect(onMouseClick))
+        end
+    end)
+    
+    flingSection:AddToggle("Fling Aura", function(enabled)
+        flingAuraEnabled = enabled
+        
+        if maids.flingAura then maids.flingAura:Destroy() end
+        
+        if enabled then
+            maids.flingAura = Maid.new()
+            local thread = task.spawn(function()
+                while flingAuraEnabled do
+                    task.wait(0.5)
+                    local character = LocalPlayer.Character
+                    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+                    
+                    if rootPart then
+                        for _, player in ipairs(Players:GetPlayers()) do
+                            if player ~= LocalPlayer and not isWhitelisted(player) then
+                                local targetChar = player.Character
+                                local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                                
+                                if targetRoot and rootPart then
+                                    local distance = (rootPart.Position - targetRoot.Position).Magnitude
+                                    if distance <= auraStuds then
+                                        OdhSkid(player, 1)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+            maids.flingAura:GiveTask(function() task.cancel(thread) end)
+        end
+    end)
+    
+    flingSection:AddSlider("Aura Studs", 5, 50, 15, function(value)
+        auraStuds = value
     end)
 end
 
