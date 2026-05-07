@@ -1434,8 +1434,27 @@ do
     local emotes = {Moonwalk="79127989560307", Yungblud="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
     local lsSelectedEmoteName, lsDropdownTouched = nil, false
     local LegitSpeedMaid
+    local lsBindButton = nil
+    local lsButtonStroke = nil
     
     RootMaid:GiveTask(function() if LegitSpeedMaid then LegitSpeedMaid:Destroy() end end)
+    
+    local function UpdateButtonColor()
+        if not lsBindButton or not lsButtonStroke then return end
+        if emOn then
+            lsButtonStroke.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 0)),
+                ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 200, 0)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 150, 0))
+            })
+        else
+            lsButtonStroke.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.6, Color3.fromRGB(200, 0, 0)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 0, 0))
+            })
+        end
+    end
     
     local function playE(id)
         local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -1452,19 +1471,28 @@ do
     lsSection:AddToggle("Enable SG Bindable Button", function(e)
         if LegitSpeedMaid then LegitSpeedMaid:Destroy() LegitSpeedMaid = nil end
         BindableButtons.DeleteBButton("sg_bind")
+        lsBindButton = nil
+        lsButtonStroke = nil
+        emOn = false
         
         if e then
             LegitSpeedMaid = Maid.new()
             
             BindableButtons.AddBButton("sg_bind", "SG", function()
                 emOn = not emOn
-                if emOn and selEmote then playE(selEmote) 
-                elseif LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = 16 end
+                if emOn and selEmote then 
+                    playE(selEmote) 
+                elseif not emOn and LocalPlayer.Character then 
+                    LocalPlayer.Character.Humanoid.WalkSpeed = 16 
+                end
+                UpdateButtonColor()
             end)
-            local btn = BindableButtons.Buttons["sg_bind"]
-            if btn then
+            lsBindButton = BindableButtons.Buttons["sg_bind"]
+            if lsBindButton then
                 local screen = workspace.CurrentCamera.ViewportSize
-                btn.Size = __UD2(lsButtonSize * (screen.Y / screen.X), 0, lsButtonSize, 0)
+                lsBindButton.Size = __UD2(lsButtonSize * (screen.Y / screen.X), 0, lsButtonSize, 0)
+                lsButtonStroke = lsBindButton:FindFirstChild("@Stroke")
+                UpdateButtonColor()
             end
             
             LegitSpeedMaid:GiveTask(Services.RunService.Stepped:Connect(function()
@@ -1478,7 +1506,7 @@ do
                 
                 if lsAir then
                     if lsHori then
-                        h.WalkSpeed = (math_abs(h.MoveDirection:Dot(r.CFrame.RightVector)) > 0.5) and spd or 16
+                        h.WalkSpeed = (math.abs(h.MoveDirection:Dot(r.CFrame.RightVector)) > 0.5) and spd or 16
                     else
                         h.WalkSpeed = spd
                     end
@@ -1492,10 +1520,9 @@ do
     lsSection:AddSlider("Speed (0-255)", 0, 255, sideSpd, function(v) sideSpd = v end)
     lsSection:AddSlider("Button Size", 5, 25, 11, function(value)
         lsButtonSize = value / 100
-        local btn = BindableButtons.Buttons["sg_bind"]
-        if btn then
+        if lsBindButton then
             local screen = workspace.CurrentCamera.ViewportSize
-            btn.Size = __UD2(lsButtonSize * (screen.Y / screen.X), 0, lsButtonSize, 0)
+            lsBindButton.Size = __UD2(lsButtonSize * (screen.Y / screen.X), 0, lsButtonSize, 0)
         end
     end)
     lsSection:AddToggle("Sideways Only", function(e) lsHori = e end)
@@ -2181,7 +2208,7 @@ do
     end)
 end
 
-local section = shared.AddSection("Bomb Jump+")
+    local section = shared.AddSection("Bomb Jump+")
 
 local onCooldown = false
 local bombJumpEnabled = false
