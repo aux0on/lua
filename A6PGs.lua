@@ -2367,7 +2367,15 @@ do
     
     section:AddLabel("Bomb Jump Options")
     section:AddToggle("Enable Auto Bomb Jump", function(bool) bombJumpEnabled = bool end)
-    section:AddToggle("Auto-Get Fake Bomb", function(bool) autoGetBomb = bool end)
+    section:AddToggle("Auto-Get Fake Bomb", function(bool)
+        autoGetBomb = bool
+        if autoGetBomb then
+            -- Fire the remote immediately when toggled on
+            pcall(function() 
+                Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
+            end)
+        end
+    end)
 
     section:AddToggle("Enable BJ Big Button", function(e)
         if e then
