@@ -3066,9 +3066,9 @@ local function playEmoteWithNoclip(emoteId)
     
     enableNoclip()
     
-    disableTimer = 4
+    disableTimer = 2
     spawn(function()
-        wait(4)
+        wait(2)
         if disableTimer then
             disableNoclip()
             disableTimer = nil
