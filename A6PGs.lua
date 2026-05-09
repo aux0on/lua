@@ -2963,10 +2963,9 @@ do
                         humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                         
                         if flickEnabled then
-                            local camera = workspace.CurrentCamera
                             local wallNormal = hit.Normal
-                            local newDirection = (root.CFrame.LookVector - (wallNormal * (root.CFrame.LookVector:Dot(wallNormal)))).Unit
-                            camera.CFrame = CFrame.lookAt(camera.CFrame.Position, camera.CFrame.Position + newDirection)
+                            local newCFrame = CFrame.lookAt(root.Position, root.Position + wallNormal)
+                            root.CFrame = newCFrame
                         end
                     end
                     task.wait(0.1)
