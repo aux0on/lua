@@ -3050,131 +3050,177 @@ do
 end
 
 do
-local enSection = shared.AddSection("Emote Noclip")
-local selEmote = nil
-local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
+    local enSection = shared.AddSection("Emote Noclip")
 
-local EmoteNoclipMaid = nil
-RootMaid:GiveTask(function() if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() end end)
+    local selEmote = nil
+    local emotes = {
+        ["Moonwalk"] = "79127989560307",
+        ["Yungblud"] = "15610015346",
+        ["Bouncy Twirl"] = "14353423348",
+        ["Flex Walk"] = "15506506103"
+    }
 
-local noclipConn = nil
-local Clip = true
-local disableTimer = nil
-local bindableButtonEnabled = false
-local bindableButtonSize = 0.11
+    local EmoteNoclipMaid = nil
+    RootMaid:GiveTask(function()
+        if EmoteNoclipMaid then
+            EmoteNoclipMaid:DoCleaning()
+        end
+    end)
 
-local function NoclipLoop()
-    if Clip == false and LocalPlayer.Character ~= nil then
-        for _, child in pairs(LocalPlayer.Character:GetDescendants()) do
-            if child:IsA("BasePart") and child.CanCollide == true then
-                child.CanCollide = false
+    local noclipConn = nil
+    local Clip = true
+    local disableTimer = nil
+    local bindableButtonEnabled = false
+    local bindableButtonSize = 0.11
+
+    -- NEW: Adjustable noclip duration
+    local noclipDuration = 2
+
+    local function NoclipLoop()
+        if Clip == false and LocalPlayer.Character ~= nil then
+            for _, child in pairs(LocalPlayer.Character:GetDescendants()) do
+                if child:IsA("BasePart") and child.CanCollide == true then
+                    child.CanCollide = false
+                end
             end
         end
     end
-end
 
-local function enableNoclip()
-    if noclipConn then
-        noclipConn:Disconnect()
-        noclipConn = nil
-    end
-    Clip = false
-    noclipConn = Services.RunService.Stepped:Connect(NoclipLoop)
-end
+    local function enableNoclip()
+        if noclipConn then
+            noclipConn:Disconnect()
+            noclipConn = nil
+        end
 
-local function disableNoclip()
-    if noclipConn then
-        noclipConn:Disconnect()
-        noclipConn = nil
+        Clip = false
+        noclipConn = Services.RunService.Stepped:Connect(NoclipLoop)
     end
-    Clip = true
-    if not LocalPlayer.Character then return end
-    for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = true
+
+    local function disableNoclip()
+        if noclipConn then
+            noclipConn:Disconnect()
+            noclipConn = nil
+        end
+
+        Clip = true
+
+        if not LocalPlayer.Character then
+            return
+        end
+
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
         end
     end
-end
 
-local function playEmoteWithNoclip(emoteId)
-    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if not humanoid then return end
+    local function playEmoteWithNoclip(emoteId)
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+        if not humanoid then
+            return
+        end
 
-    if disableTimer then
-        spawn(function() 
-            wait(disableTimer)
-            disableNoclip()
+        if disableTimer then
+            spawn(function()
+                wait(disableTimer)
+                disableNoclip()
+            end)
+        end
+
+        disableNoclip()
+
+        local track
+        local ok, result = pcall(function()
+            return humanoid:PlayEmoteAndGetAnimTrackById(emoteId)
+        end)
+
+        if ok and result then
+            track = result
+        else
+            local animation = Instance.new("Animation")
+            animation.AnimationId = "rbxassetid://" .. emoteId
+
+            track = humanoid:LoadAnimation(animation)
+            track:Play()
+        end
+
+        enableNoclip()
+
+        -- UPDATED: Uses slider value
+        disableTimer = noclipDuration
+
+        spawn(function()
+            wait(noclipDuration)
+
+            if disableTimer then
+                disableNoclip()
+                disableTimer = nil
+            end
         end)
     end
-    
-    disableNoclip()
-    
-    local track
-    local ok, result = pcall(function() 
-        return humanoid:PlayEmoteAndGetAnimTrackById(emoteId) 
-    end)
-    
-    if ok and result then
-        track = result
-    else
-        local animation = Instance.new("Animation")
-        animation.AnimationId = "rbxassetid://" .. emoteId
-        track = humanoid:LoadAnimation(animation)
-        track:Play()
+
+    local function triggerEmote()
+        if not selEmote then
+            return
+        end
+
+        playEmoteWithNoclip(selEmote)
     end
-    
-    enableNoclip()
-    
-    disableTimer = 2
-    spawn(function()
-        wait(2)
-        if disableTimer then
-            disableNoclip()
-            disableTimer = nil
+
+    local function updateBindableButtonSize()
+        local btn = BindableButtons.Buttons["en_bind"]
+
+        if btn then
+            local screen = workspace.CurrentCamera.ViewportSize
+
+            btn.Size = __UD2(
+                bindableButtonSize * (screen.Y / screen.X),
+                0,
+                bindableButtonSize,
+                0
+            )
+        end
+    end
+
+    local selectEmoteDropdown = enSection:AddDropdown(
+        "Select Emote",
+        {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"},
+        function(s)
+            if s ~= "Custom" then
+                selEmote = emotes[s]
+            else
+                selEmote = nil
+            end
+        end
+    )
+
+    enSection:AddToggle("Enable EN Button", function(enabled)
+        bindableButtonEnabled = enabled
+
+        if enabled then
+            BindableButtons.AddBButton("en_bind", "EN", triggerEmote)
+            updateBindableButtonSize()
+        else
+            BindableButtons.DeleteBButton("en_bind")
         end
     end)
-end
 
-local function triggerEmote()
-    if not selEmote then return end
-    playEmoteWithNoclip(selEmote)
-end
-
-local function updateBindableButtonSize()
-    local btn = BindableButtons.Buttons["en_bind"]
-    if btn then
-        local screen = workspace.CurrentCamera.ViewportSize
-        btn.Size = __UD2(bindableButtonSize * (screen.Y / screen.X), 0, bindableButtonSize, 0)
-    end
-end
-
-local selectEmoteDropdown = enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
-    if s ~= "Custom" then 
-        selEmote = emotes[s] 
-    else 
-        selEmote = nil 
-    end
-end)
-
-enSection:AddToggle("Enable EN Button", function(enabled)
-    bindableButtonEnabled = enabled
-    
-    if enabled then
-        BindableButtons.AddBButton("en_bind", "EN", triggerEmote)
+    enSection:AddSlider("EN Button Size", 5, 25, 11, function(value)
+        bindableButtonSize = value / 100
         updateBindableButtonSize()
-    else
-        BindableButtons.DeleteBButton("en_bind")
-    end
-end)
-enSection:AddSlider("EN Button Size", 5, 25, 11, function(value)
-    bindableButtonSize = value / 100
-    updateBindableButtonSize()
-end)
-enSection:AddTextBox("Custom Emote ID", function(t) 
-    if t ~= "" then 
-        selEmote = t 
-    end 
-end)
+    end)
+
+    -- NEW: Noclip duration slider
+    enSection:AddSlider("Noclip Duration", 1, 15, 2, function(value)
+        noclipDuration = value
+    end)
+
+    enSection:AddTextBox("Custom Emote ID", function(t)
+        if t ~= "" then
+            selEmote = t
+        end
+    end)
 end
 
 do
