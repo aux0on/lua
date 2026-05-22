@@ -1006,26 +1006,71 @@ end
 do
     local duelSection = shared.AddSection("Dual Effect")
     duelSection:AddLabel("Must Own Dual Effect + Selected Effect")
+
     local dualEnabled, selectedDualEffect = false, "Electric"
     local DualEffectMaid
     local RoleSelect = Services.ReplicatedStorage.Remotes.Gameplay.RoleSelect
-    
+
     duelSection:AddDropdown("Select Second Effect", {
-        "Vampiric2024", "SynthEffect2025", "Sunbeams2024", "Snowstorm2024", "Retro2025", "Radioactive", "Musical",
-        "Heatwave2025", "Heartify", "Gifts2024", "Ghosts2024", "FlamingoEffect2025", "Burn", "Cursed2024",
-        "Starry2024", "Bats2024", "Aquatic2025", "Jellyfish2024", "Carrots2025", "BlueFire", "Rainbows2025",
-        "Elitify", "Electric", "Ghostify", "SweetEffect26"
-    }, function(s) selectedDualEffect = s end)
-    
+        "Vampiric2024",
+        "SynthEffect2025",
+        "Sunbeams2024",
+        "Snowstorm2024",
+        "Retro2025",
+        "Radioactive",
+        "Musical",
+        "Heatwave2025",
+        "Heartify",
+        "Gifts2024",
+        "Ghosts2024",
+        "Ghostify",
+        "FlamingoEffect2025",
+        "Burn",
+        "Cursed2024",
+        "Coal2025",
+        "Starry2024",
+        "Bats2024",
+        "Aquatic2025",
+        "Treats2025",
+        "Confetti2025",
+        "Bokeh2025",
+        "Lights2025",
+        "Jellyfish2024",
+        "Hearts26",
+        "XmasGlow2025",
+        "Cats2025",
+        "Carrots2025",
+        "BlueFire",
+        "Rainbows2025",
+        "Nightsky2025",
+        "Frost2025",
+        "Elitify",
+        "Electric",
+        "Dual",
+        "Abduction2025",
+        "SweetEffect26",
+        "UFOs2025",
+        "Strawberries26",
+        "Snowballs2025",
+        "Leaves2025"
+    }, function(s)
+        selectedDualEffect = s
+    end)
+
     duelSection:AddToggle("Auto Equip Dual Effect", function(e)
-        if DualEffectMaid then DualEffectMaid:Destroy() end
+        if DualEffectMaid then
+            DualEffectMaid:Destroy()
+        end
+
         dualEnabled = e
-        
+
         if e then
             DualEffectMaid = Maid.new()
+
             DualEffectMaid:GiveTask(RoleSelect.OnClientEvent:Connect(function(role)
                 if role == "Murderer" then
                     Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer("Dual", "Effects")
+
                     task.delay(15, function()
                         if dualEnabled then
                             Services.ReplicatedStorage.Remotes.Inventory.Equip:FireServer(selectedDualEffect, "Effects")
@@ -1035,8 +1080,12 @@ do
             end))
         end
     end)
-    
-    RootMaid:GiveTask(function() if DualEffectMaid then DualEffectMaid:Destroy() end end)
+
+    RootMaid:GiveTask(function()
+        if DualEffectMaid then
+            DualEffectMaid:Destroy()
+        end
+    end)
 end
 
 do
@@ -2101,495 +2150,6 @@ do
     end)
 end
 
-local resetSection = shared.AddSection("Reset Players")
-local resetSelPlr, resetActive = nil, true
-local selectedPlayers = {}
-local whitelist = {}
-local resetButtonSize = 0.11
-local clickResetEnabled = false
-local resetAuraEnabled = false
-local auraStuds = 15
-local maids = {autoSheriff=nil, autoMurderer=nil, loopPlr=nil, loopAll=nil, clickReset=nil, resetAura=nil}
-local buttonToggles = {Sheriff=false, Murderer=false, Player=false}
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-
-RootMaid:GiveTask(function() 
-    for _, m in pairs(maids) do if m then m:Destroy() end end
-end)
-
-local function isWhitelisted(player)
-    return whitelist[player.UserId] == true
-end
-
-local function isPlayerSelected(player)
-    for _, selected in ipairs(selectedPlayers) do
-        if selected.UserId == player.UserId then
-            return true
-        end
-    end
-    return false
-end
-
-local function findSheriff()
-    local success, roleData = pcall(function()
-        local remote = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
-        if remote and remote:IsA("RemoteFunction") then
-            return remote:InvokeServer()
-        end
-    end)
-    if success and roleData then
-        for playerName, data in pairs(roleData) do
-            if data.Role == "Sheriff" and not data.Killed and not data.Dead then
-                local p = Players:FindFirstChild(playerName)
-                if p and not isWhitelisted(p) then return p end
-            end
-        end
-    end
-    return nil
-end
-
-local function findMurderer()
-    local success, roleData = pcall(function()
-        local remote = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
-        if remote and remote:IsA("RemoteFunction") then
-            return remote:InvokeServer()
-        end
-    end)
-    if success and roleData then
-        for playerName, data in pairs(roleData) do
-            if data.Role == "Murderer" and not data.Killed and not data.Dead then
-                local p = Players:FindFirstChild(playerName)
-                if p and not isWhitelisted(p) then return p end
-            end
-        end
-    end
-    return nil
-end
-
-local function hasGun(player)
-    local character = player.Character
-    if not character then return false end
-    
-    local tools = player.Backpack:GetChildren()
-    for _, tool in ipairs(tools) do
-        if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or 
-           tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun") or
-           tool.Name:lower():find("rifle") or tool.Name:lower():find("weapon")) then
-            return true
-        end
-    end
-    
-    local characterTools = character:GetChildren()
-    for _, tool in ipairs(characterTools) do
-        if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or 
-           tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun") or
-           tool.Name:lower():find("rifle") or tool.Name:lower():find("weapon")) then
-            return true
-        end
-    end
-    
-    return false
-end
-
-local function findSheriffWithFallback()
-    local sheriff = findSheriff()
-    if sheriff then return sheriff end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and not isWhitelisted(player) and hasGun(player) then
-            return player
-        end
-    end
-    
-    return nil
-end
-
--- NANFLING FUNCTION (from your GUI)
-local function NaNfling(TargetPlayer, duration)
-    if isWhitelisted(TargetPlayer) then
-        Notify("Whitelist", TargetPlayer.Name.." is whitelisted!", 3)
-        return
-    end
-    
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local player = Players.LocalPlayer
-    local TIME = duration or 1
-    local PO = Vector3.new(0, 0, 0)
-    local RO = CFrame.Angles(0, 0, 0)
-    local TP = TargetPlayer
-    local con = nil
-    local savedpos = nil
-    local character, humanoid, root = nil, nil, nil
-    local db = false
-    
-    local function updateLocalCharacter(newChar)
-        character = newChar
-        humanoid = newChar:WaitForChild("Humanoid")
-        root = newChar:WaitForChild("HumanoidRootPart")
-    end
-    
-    if player.Character then
-        updateLocalCharacter(player.Character)
-    end
-    
-    local function Stop()
-        if con then
-            con:Disconnect()
-            con = nil
-        end
-        pcall(function()
-            sethiddenproperty(root, "PhysicsRepRootPart", nil)
-        end)
-        if savedpos and root and root.Parent then
-            root.CFrame = savedpos
-            root.Velocity = Vector3.new()
-            root.AssemblyLinearVelocity = Vector3.new()
-            root.AssemblyAngularVelocity = Vector3.new()
-            root.RotVelocity = Vector3.new()
-        end
-        savedpos = nil
-    end
-    
-    local function Start()
-        if db then return end
-        db = true
-        if con then
-            con:Disconnect()
-            con = nil
-        end
-    
-        if not TP then
-            db = false
-            return
-        end
-    
-        if not root or not root.Parent or not humanoid or not humanoid.Parent then
-            db = false
-            return
-        end
-    
-        savedpos = root.CFrame
-        local tChar = TP.Character
-        local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
-        local sessionActive = true
-    
-        con = RunService.Heartbeat:Connect(function()
-            if not sessionActive then
-                if con then con:Disconnect() con = nil end
-                return
-            end
-    
-            local localRoot = root
-            local localHumanoid = humanoid
-            if not localRoot
-                or not localRoot.Parent
-                or not localHumanoid
-                or not localHumanoid.Parent
-                or localHumanoid.Health <= 0
-            then
-                pcall(function() sethiddenproperty(localRoot, "PhysicsRepRootPart", nil) end)
-                sessionActive = false
-                return
-            end
-    
-            if not TP or not TP.Parent then
-                pcall(function() sethiddenproperty(localRoot, "PhysicsRepRootPart", nil) end)
-                sessionActive = false
-                return
-            end
-    
-            if not tRoot or not tRoot:IsDescendantOf(workspace) then
-                tChar = TP.Character
-                if tChar then
-                    tRoot = tChar:FindFirstChild("HumanoidRootPart")
-                else
-                    tRoot = nil
-                end
-                if not tRoot then return end
-            end
-    
-            pcall(function()
-                sethiddenproperty(localHumanoid, "MoveDirectionInternal", Vector3.new(0/0, 0/0, 0/0))
-            end)
-    
-            local targetCFrame = tRoot.CFrame * CFrame.new(PO) * RO
-            pcall(function() sethiddenproperty(localRoot, "PhysicsRepRootPart", tRoot) end)
-            localRoot.CFrame = targetCFrame
-            localRoot.Velocity = Vector3.new()
-            localRoot.AssemblyLinearVelocity = Vector3.new()
-            localRoot.AssemblyAngularVelocity = Vector3.new()
-            localRoot.RotVelocity = Vector3.new()
-        end)
-    
-        task.delay(TIME, function()
-            sessionActive = false
-            Stop()
-        end)
-    
-        TP.CharacterAdded:Connect(function(newChar)
-            if not sessionActive then return end
-            tChar = newChar
-            tRoot = newChar:WaitForChild("HumanoidRootPart")
-        end)
-    
-        db = false
-    end
-    
-    Start()
-    
-    player.CharacterAdded:Connect(function(newChar)
-        updateLocalCharacter(newChar)
-    end)
-    
-    player.CharacterRemoving:Connect(function()
-        pcall(function() sethiddenproperty(root, "PhysicsRepRootPart", nil) end)
-        if con then
-            con:Disconnect()
-            con = nil
-        end
-    end)
-end
-
-resetSection:AddButton("Steal Gun (Fling Sheriff)", function()
-    local target = findSheriffWithFallback()
-    if target then NaNfling(target, 2) else Notify("Error", "No Sheriff or Gun Holder Found", 3) end
-end)
-
-resetSection:AddButton("Reset Murderer", function()
-    local murderer = findMurderer()
-    if murderer then NaNfling(murderer, 2) else Notify("Error", "No Murderer Found", 3) end
-end)
-
-resetSection:AddButton("Reset All", function()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and not isWhitelisted(p) then
-            NaNfling(p, 2)
-            task.wait(0.5)
-        end
-    end
-end)
-
-resetSection:AddPlayerDropdown("Reset Player", function(p)
-    resetSelPlr = p
-    if p ~= LocalPlayer and not isWhitelisted(p) then NaNfling(p, 2) end
-end)
-
-resetSection:AddPlayerDropdown("Select Players", function(p)
-    if p and p ~= LocalPlayer and not isPlayerSelected(p) then
-        table.insert(selectedPlayers, p)
-        Notify("Selected", p.Name.." added to reset list", 3)
-    elseif p and isPlayerSelected(p) then
-        Notify("Error", p.Name.." is already selected", 3)
-    end
-end)
-
-resetSection:AddButton("Clear Selected Players", function()
-    selectedPlayers = {}
-    Notify("Cleared", "All selected players removed", 3)
-end)
-
-local function createAutoReset(name, findFunc)
-    resetSection:AddToggle("Auto Reset "..name, function(enabled)
-        if maids["auto"..name] then maids["auto"..name]:Destroy() end
-        
-        if enabled then
-            maids["auto"..name] = Maid.new()
-            local thread = task.spawn(function()
-                while true do
-                    task.wait(1)
-                    local target = findFunc()
-                    if target then
-                        NaNfling(target, 2)
-                        task.wait(3)
-                    end
-                end
-            end)
-            maids["auto"..name]:GiveTask(function() task.cancel(thread) end)
-        end
-    end)
-end
-
-createAutoReset("Sheriff", findSheriffWithFallback)
-createAutoReset("Murderer", findMurderer)
-
-local buttonConfigs = {
-    {name="Sheriff", text="SG", findFunc=findSheriffWithFallback, id="steal_gun"},
-    {name="Murderer", text="RM", findFunc=findMurderer, id="reset_murderer"},
-    {name="Player", text="RP", findFunc=function() return resetSelPlr end, id="reset_player"}
-}
-
-for _, cfg in ipairs(buttonConfigs) do
-    resetSection:AddToggle("Enable "..cfg.text.." Button", function(enabled)
-        buttonToggles[cfg.name] = enabled
-        
-        if enabled then
-            BindableButtons.AddBButton(cfg.id, cfg.text, function()
-                local target = cfg.findFunc()
-                if target then
-                    NaNfling(target, 2)
-                    Notify("Success", "Resetting "..cfg.name..": "..target.Name, 2)
-                else
-                    Notify("Error", "No "..cfg.name.." Found", 3)
-                end
-            end)
-            local btn = BindableButtons.Buttons[cfg.id]
-            if btn then
-                local screen = workspace.CurrentCamera.ViewportSize
-                btn.Size = __UD2(resetButtonSize * (screen.Y / screen.X), 0, resetButtonSize, 0)
-            end
-        else
-            BindableButtons.DeleteBButton(cfg.id)
-        end
-    end)
-    
-    resetSection:AddSlider(cfg.name.." Button Size", 5, 25, 11, function(value)
-        resetButtonSize = value / 100
-        local btn = BindableButtons.Buttons[cfg.id]
-        if btn then
-            local screen = workspace.CurrentCamera.ViewportSize
-            btn.Size = __UD2(resetButtonSize * (screen.Y / screen.X), 0, resetButtonSize, 0)
-        end
-    end)
-end
-
-resetSection:AddPlayerDropdown("Add to Whitelist", function(p)
-    if p and p ~= LocalPlayer then
-        whitelist[p.UserId] = true
-        Notify("Whitelist", p.Name.." added to whitelist", 3)
-    end
-end)
-
-resetSection:AddButton("Clear Whitelist", function()
-    whitelist = {}
-    Notify("Whitelist", "Whitelist cleared!", 3)
-end)
-
-resetSection:AddToggle("Loop Reset Player(s)", function(s)
-    if maids.loopPlr then maids.loopPlr:Destroy() end
-    
-    if s then
-        maids.loopPlr = Maid.new()
-        local thread = task.spawn(function()
-            while true do
-                if resetSelPlr and resetSelPlr.Parent and not isWhitelisted(resetSelPlr) then
-                    NaNfling(resetSelPlr, 2)
-                    task.wait(3)
-                end
-                
-                for _, player in ipairs(selectedPlayers) do
-                    if player and player.Parent and not isWhitelisted(player) then
-                        NaNfling(player, 2)
-                        task.wait(0.5)
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-        maids.loopPlr:GiveTask(function() task.cancel(thread) end)
-    end
-end)
-
-resetSection:AddToggle("Loop Reset All", function(s)
-    if maids.loopAll then maids.loopAll:Destroy() end
-    
-    if s then
-        maids.loopAll = Maid.new()
-        local thread = task.spawn(function()
-            while true do
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Parent and not isWhitelisted(p) then
-                        NaNfling(p, 2)
-                        task.wait(0.5)
-                    end
-                end
-                task.wait(3)
-            end
-        end)
-        maids.loopAll:GiveTask(function() task.cancel(thread) end)
-    end
-end)
-
-resetSection:AddToggle("Click Reset", function(enabled)
-    clickResetEnabled = enabled
-    
-    if maids.clickReset then maids.clickReset:Destroy() end
-    
-    if enabled then
-        maids.clickReset = Maid.new()
-        
-        local function onMouseClick(input, processed)
-            if processed then return end
-            
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                local mouse = LocalPlayer:GetMouse()
-                local target = mouse.Target
-                
-                if target then
-                    local character = target:FindFirstAncestorWhichIsA("Model")
-                    if character then
-                        local player = Players:GetPlayerFromCharacter(character)
-                        if player and player ~= LocalPlayer and not isWhitelisted(player) then
-                            NaNfling(player, 2)
-                            Notify("Click Reset", "Resetting "..player.Name, 2)
-                        elseif player and isWhitelisted(player) then
-                            Notify("Click Reset", player.Name.." is whitelisted!", 3)
-                        end
-                    end
-                end
-            end
-        end
-        
-        if UserInputService.TouchEnabled then
-            maids.clickReset:GiveTask(UserInputService.TouchTap:Connect(onMouseClick))
-        end
-        
-        maids.clickReset:GiveTask(UserInputService.InputBegan:Connect(onMouseClick))
-    end
-end)
-
-resetSection:AddToggle("Reset Aura", function(enabled)
-    resetAuraEnabled = enabled
-    
-    if maids.resetAura then maids.resetAura:Destroy() end
-    
-    if enabled then
-        maids.resetAura = Maid.new()
-        local thread = task.spawn(function()
-            while resetAuraEnabled do
-                task.wait(0.5)
-                local character = LocalPlayer.Character
-                local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-                
-                if rootPart then
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and not isWhitelisted(player) then
-                            local targetChar = player.Character
-                            local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-                            
-                            if targetRoot and rootPart then
-                                local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                                if distance <= auraStuds then
-                                    NaNfling(player, 1)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-        maids.resetAura:GiveTask(function() task.cancel(thread) end)
-    end
-end)
-
-resetSection:AddSlider("Aura Studs", 5, 50, 15, function(value)
-    auraStuds = value
-end)
-
 do
     local perkSection = shared.AddSection("Perks")
     local hasteOn, blatantMode, hasteSpd = false, false, 18
@@ -2697,272 +2257,260 @@ do
     end)
 end
 
+do
     local section = shared.AddSection("Bomb Jump+")
-
-local onCooldown = false
-local bombJumpEnabled = false
-local debounce = false
-local autoGetBomb = false
-local justRespawned = false
-local bigButtonSize = 200
-local bindButtonSize = 0.11
-local bjBindButton = nil
-
-local BOMB_NAMES = {"FakeBomb"}
-
-local BombJumpMaid = Maid.new()
-RootMaid:GiveTask(BombJumpMaid)
-
-local function ResetCooldown()
-    onCooldown = false
-    local bigBtn = BBSystem.Buttons["bombjump_big"]
-    if bigBtn then bigBtn.Text = "Bomb Jump" end
-    if bjBindButton then
-        BindableButtons.UpdateBButtonText("bombjump_bind", "BJ", false, false)
-    end
-end
-
-local function StartCooldown()
-    onCooldown = true
-    debounce = false
-    local bigBtn = BBSystem.Buttons["bombjump_big"]
-    if bigBtn then bigBtn.Text = "Wait" end
-    if bjBindButton then
-        BindableButtons.UpdateBButtonText("bombjump_bind", "Wait", true, false)
+    local BOMB_NAMES = {"FakeBomb"}
+    local BombJumpMaid, BombJumpTimerMaid
+    local bjBindButton
+    local onCooldown, bombJumpEnabled = false, false
+    local debounce, autoGetBomb, justRespawned = false, false, false
+    local bigButtonSize = 200
+    local bindButtonSize = 0.11
+    local activeTouches = {}
+    
+    local __READY_COLOR = ColorSequence.new({
+        ColorSequenceKeypoint.new(0,   __PCLR(0.133333, 0.827451, 0.494118)),
+        ColorSequenceKeypoint.new(0.6, __PCLR(0.231373, 0.509804, 0.498039)),
+        ColorSequenceKeypoint.new(1,   __PCLR(0.501961, 0.501961, 0.501961))
+    })
+    
+    local __WAIT_COLOR = ColorSequence.new({
+        ColorSequenceKeypoint.new(0,   __PCLR(0.827451, 0.133333, 0.133333)),
+        ColorSequenceKeypoint.new(0.6, __PCLR(0.509804, 0.231373, 0.231373)),
+        ColorSequenceKeypoint.new(1,   __PCLR(0.501961, 0.501961, 0.501961))
+    })
+    
+    RootMaid:GiveTask(function()
+        if BombJumpTimerMaid then BombJumpTimerMaid:Destroy() end
+        if BombJumpMaid then BombJumpMaid:Destroy() end
+        DeleteBigButton("bombjump_big")
+        BindableButtons.DeleteBButton("bombjump_bind")
+    end)
+    
+    local function UpdateBJButton(text, isWaiting)
+        if not bjBindButton then 
+            bjBindButton = BindableButtons.Buttons["bombjump_bind"]
+        end
+        if not bjBindButton then return end
+        
+        local textLabel = bjBindButton:FindFirstChild("@Text")
+        if textLabel then
+            textLabel.Text = text
+        end
+        
+        local stroke = bjBindButton:FindFirstChild("@Stroke")
+        if stroke then
+            stroke.Color = isWaiting and __WAIT_COLOR or __READY_COLOR
+        end
     end
     
-    task.spawn(function()
-        for i = 22, 1, -1 do
-            if not onCooldown then break end
-            local bigBtn = BBSystem.Buttons["bombjump_big"]
-            if bigBtn then bigBtn.Text = tostring(i) end
-            if bjBindButton then
-                BindableButtons.UpdateBButtonText("bombjump_bind", tostring(i), true, false)
+    local function ResetCooldown()
+        onCooldown = false
+        local bigBtn = BBSystem.Buttons["bombjump_big"]
+        if bigBtn then bigBtn.Text = "Bomb Jump" end
+        UpdateBJButton("BJ", false)
+    end
+    
+    local function StartCooldown()
+        onCooldown = true
+        debounce = false
+        local bigBtn = BBSystem.Buttons["bombjump_big"]
+        if bigBtn then bigBtn.Text = "Wait" end
+        UpdateBJButton("Wait", true)
+        
+        task.spawn(function()
+            for i = 22, 1, -1 do
+                if not onCooldown then break end
+                local bigBtn = BBSystem.Buttons["bombjump_big"]
+                if bigBtn then bigBtn.Text = tostring(i) end
+                UpdateBJButton(tostring(i), true)
+                task.wait(1)
             end
-            task.wait(1)
-        end
-        if onCooldown then ResetCooldown() end
-    end)
-end
-
-local function GetCenterPosition()
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local camera = Services.Workspace.CurrentCamera
-        local lookDir = camera.CFrame.LookVector
-        return character.HumanoidRootPart.Position + (lookDir * 5)
+            if onCooldown then ResetCooldown() end
+        end)
     end
-    return nil
-end
-
-local function MakeCharacterJump()
-    local character = LocalPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end
-
-local function UnequipBomb()
-    task.spawn(function()
-        task.wait(0.5)
+    
+    local function GetAnyBomb()
         local character = LocalPlayer.Character
-        if character then
-            for _, bombName in ipairs(BOMB_NAMES) do
-                local bomb = character:FindFirstChild(bombName)
-                if bomb then
-                    bomb.Parent = LocalPlayer.Backpack or character
-                    break
-                end
-            end
-        end
-    end)
-end
-
-local function GetAnyBomb()
-    local character = LocalPlayer.Character
-    if not character then return false, nil end
-    
-    for _, bombName in ipairs(BOMB_NAMES) do
-        local bomb = character:FindFirstChild(bombName)
-        if bomb then return true, bomb end
-    end
-    
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if backpack then
-        for _, bombName in ipairs(BOMB_NAMES) do
-            local bomb = backpack:FindFirstChild(bombName)
-            if bomb then
-                bomb.Parent = character
-                return true, bomb
-            end
-        end
-    end
-    
-    pcall(function()
-        Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
-    end)
-    
-    for _ = 1, 5 do
+        if not character then return false, nil end
+        
         for _, bombName in ipairs(BOMB_NAMES) do
             local bomb = character:FindFirstChild(bombName)
             if bomb then return true, bomb end
-            if backpack then
-                bomb = backpack:FindFirstChild(bombName)
+        end
+        
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            for _, bombName in ipairs(BOMB_NAMES) do
+                local bomb = backpack:FindFirstChild(bombName)
                 if bomb then
                     bomb.Parent = character
                     return true, bomb
                 end
             end
         end
-        task.wait(0.05)
-    end
-    
-    return false, nil
-end
-
-local function FastBombJump()
-    if onCooldown or debounce or justRespawned then return end
-    debounce = true
-    
-    local success, bomb = GetAnyBomb()
-    
-    if success and bomb then
-        local position = GetCenterPosition()
-        if position then
-            local remote = bomb:FindFirstChild("Remote")
-            if remote then
-                pcall(function()
-                    remote:FireServer(CFrame.new(position), 50)
-                end)
+        
+        pcall(function()
+            Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
+        end)
+        
+        for _ = 1, 5 do
+            for _, bombName in ipairs(BOMB_NAMES) do
+                local bomb = character:FindFirstChild(bombName)
+                if bomb then return true, bomb end
+                if backpack then
+                    bomb = backpack:FindFirstChild(bombName)
+                    if bomb then bomb.Parent = character return true, bomb end
+                end
             end
-            
-            MakeCharacterJump()
-            UnequipBomb()
-            
-            task.spawn(function()
-                task.wait(0.1)
-                StartCooldown()
-            end)
+            task.wait(0.05)
         end
+        
+        return false, nil
     end
     
-    task.spawn(function()
-        task.wait(0.5)
-        debounce = false
-    end)
-end
-
-local function IsHoldingBomb()
-    local character = LocalPlayer.Character
-    if not character then return false end
-    
-    for _, bombName in ipairs(BOMB_NAMES) do
-        if character:FindFirstChild(bombName) then
-            return true
-        end
-    end
-    return false
-end
-
-local activeTouches = {}
-local TAP_MOVEMENT_THRESHOLD = 10
-local TAP_TIME_THRESHOLD = 0.3
-
-BombJumpMaid:GiveTasks(
-    Services.UserInputService.InputBegan:Connect(function(input, gp)
-        if gp then return end
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            activeTouches[input] = {startPosition = input.Position, startTime = tick(), moved = false}
-        end
-    end),
-    Services.UserInputService.InputChanged:Connect(function(input)
-        local data = activeTouches[input]
-        if data and (input.Position - data.startPosition).Magnitude > TAP_MOVEMENT_THRESHOLD then
-            data.moved = true
-        end
-    end),
-    Services.UserInputService.InputEnded:Connect(function(input, gp)
-        if gp then activeTouches[input] = nil return end
-        local data = activeTouches[input]
-        if data and not data.moved and tick() - data.startTime <= TAP_TIME_THRESHOLD then
-            if bombJumpEnabled and not onCooldown and not debounce then
-                if IsHoldingBomb() then
-                    FastBombJump()
+    local function FastBombJump()
+        if onCooldown or debounce or justRespawned then return end
+        debounce = true
+        
+        local success, bomb = GetAnyBomb()
+        if success and bomb then
+            local character = LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local camera = workspace.CurrentCamera
+                local position = character.HumanoidRootPart.Position + (camera.CFrame.LookVector * 5)
+                local remote = bomb:FindFirstChild("Remote")
+                
+                if remote then
+                    pcall(function() remote:FireServer(CFrame.new(position), 50) end)
+                    character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    
+                    task.spawn(function()
+                        task.wait(0.5)
+                        local bombInHand = character:FindFirstChild(bomb.Name)
+                        if bombInHand then bombInHand.Parent = LocalPlayer.Backpack or character end
+                    end)
+                    
+                    task.spawn(function()
+                        task.wait(0.1)
+                        StartCooldown()
+                    end)
                 end
             end
         end
-        activeTouches[input] = nil
-    end),
-    LocalPlayer.CharacterAdded:Connect(function()
-        ResetCooldown()
-        activeTouches = {}
-        justRespawned = true
-        task.wait(1)
-        justRespawned = false
+        
+        task.spawn(function() task.wait(0.5) debounce = false end)
+    end
+    
+    local function IsHoldingBomb()
+        local character = LocalPlayer.Character
+        if not character then return false end
+        
+        for _, bombName in ipairs(BOMB_NAMES) do
+            if character:FindFirstChild(bombName) then
+                return true
+            end
+        end
+        return false
+    end
+    
+    section:AddLabel("Bomb Jump Options")
+    section:AddToggle("Enable Auto Bomb Jump", function(bool) bombJumpEnabled = bool end)
+    section:AddToggle("Auto-Get Fake Bomb", function(bool)
+        autoGetBomb = bool
         if autoGetBomb then
-            task.wait(0.2)
-            pcall(function() Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb") end)
+            -- Fire the remote immediately when toggled on
+            pcall(function() 
+                Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb")
+            end)
         end
     end)
-)
 
-section:AddLabel("Bomb Jump Options")
-section:AddToggle("Enable Auto Bomb Jump", function(bool) bombJumpEnabled = bool end)
-
-section:AddToggle("Auto-Get Fake Bomb", function(bool)
-    autoGetBomb = bool
-    if bool then
-        pcall(function() Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb") end)
-    end
-end)
-
-section:AddToggle("Enable BJ Big Button", function(e)
-    if e then
-        AddBigButton("bombjump_big", "Bomb Jump", FastBombJump, false)
+    section:AddToggle("Enable BJ Big Button", function(e)
+        if e then
+            AddBigButton("bombjump_big", "Bomb Jump", FastBombJump)
+            local btn = BBSystem.Buttons["bombjump_big"]
+            if btn then
+                btn.Size = __UD2(0, bigButtonSize, 0, bigButtonSize * 0.375)
+            end
+        else
+            DeleteBigButton("bombjump_big")
+        end
+    end)
+    
+    section:AddSlider("BJ Big Button Size", 100, 400, 200, function(value)
+        bigButtonSize = value
         local btn = BBSystem.Buttons["bombjump_big"]
         if btn then
             btn.Size = __UD2(0, bigButtonSize, 0, bigButtonSize * 0.375)
         end
-    else
-        DeleteBigButton("bombjump_big")
-    end
-end)
-
-section:AddSlider("BJ Big Button Size", 100, 400, 200, function(value)
-    bigButtonSize = value
-    local btn = BBSystem.Buttons["bombjump_big"]
-    if btn then
-        btn.Size = __UD2(0, bigButtonSize, 0, bigButtonSize * 0.375)
-    end
-end)
-
-section:AddToggle("Enable BJ Bind Button", function(e)
-    if e then
-        BindableButtons.AddBButton("bombjump_bind", "BJ", FastBombJump, false)
-        bjBindButton = BindableButtons.Buttons["bombjump_bind"]
-        if bjBindButton then
-            local screen = Services.Workspace.CurrentCamera.ViewportSize
-            bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
-            BindableButtons.UpdateBButtonText("bombjump_bind", onCooldown and "Wait" or "BJ", onCooldown, false)
+    end)
+    
+    section:AddToggle("Enable BJ Bind Button", function(e)
+        if e then
+            BindableButtons.AddBButton("bombjump_bind", "BJ", FastBombJump)
+            bjBindButton = BindableButtons.Buttons["bombjump_bind"]
+            if bjBindButton then
+                local screen = workspace.CurrentCamera.ViewportSize
+                bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
+                UpdateBJButton(onCooldown and "Wait" or "BJ", onCooldown)
+            end
+        else
+            BindableButtons.DeleteBButton("bombjump_bind")
+            bjBindButton = nil
         end
-    else
-        BindableButtons.DeleteBButton("bombjump_bind")
-        bjBindButton = nil
-    end
-end)
-
-section:AddSlider("BJ Bind Button Size", 5, 25, 11, function(value)
-    bindButtonSize = value / 100
-    if bjBindButton then
-        local screen = Services.Workspace.CurrentCamera.ViewportSize
-        bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
-    end
-end)
-
-section:AddKeybind("Bomb Jump Keybind", "E", FastBombJump)
+    end)
+    
+    section:AddSlider("BJ Bind Button Size", 5, 25, 11, function(value)
+        bindButtonSize = value / 100
+        if bjBindButton then
+            local screen = workspace.CurrentCamera.ViewportSize
+            bjBindButton.Size = __UD2(bindButtonSize * (screen.Y / screen.X), 0, bindButtonSize, 0)
+        end
+    end)
+    
+    section:AddKeybind("Bomb Jump Keybind", "E", FastBombJump)
+    
+    BombJumpMaid = Maid.new()
+    BombJumpMaid:GiveTasks(
+        Services.UserInputService.InputBegan:Connect(function(input, gp)
+            if gp then return end
+            if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                activeTouches[input] = {startPosition=input.Position, startTime=tick(), moved=false}
+            end
+        end),
+        Services.UserInputService.InputChanged:Connect(function(input)
+            local data = activeTouches[input]
+            if data and (input.Position - data.startPosition).Magnitude > 10 then
+                data.moved = true
+            end
+        end),
+        Services.UserInputService.InputEnded:Connect(function(input, gp)
+            if gp then activeTouches[input] = nil return end
+            local data = activeTouches[input]
+            if data and not data.moved and tick() - data.startTime <= 0.3 then
+                if bombJumpEnabled and not onCooldown and not debounce then
+                    if IsHoldingBomb() then
+                        FastBombJump()
+                    end
+                end
+            end
+            activeTouches[input] = nil
+        end),
+        LocalPlayer.CharacterAdded:Connect(function()
+            ResetCooldown()
+            activeTouches = {}
+            justRespawned = true
+            task.wait(1)
+            justRespawned = false
+            if autoGetBomb then
+                task.wait(0.2)
+                pcall(function() Services.ReplicatedStorage.Remotes.Extras.ReplicateToy:InvokeServer("FakeBomb") end)
+            end
+        end)
+    )
+    RootMaid:GiveTask(BombJumpMaid)
+end
 
 do
     local feAnimSection = shared.AddSection("FE Animations")
@@ -3460,7 +3008,15 @@ do
                 if hit then
                     InfiniteJumpEnabled = false
                     local humanoid = character:FindFirstChildOfClass("Humanoid")
-                    if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+                    if humanoid then 
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                        
+                        if flickEnabled then
+                            local wallNormal = hit.Normal
+                            local newCFrame = CFrame.lookAt(root.Position, root.Position + wallNormal)
+                            root.CFrame = newCFrame
+                        end
+                    end
                     task.wait(0.1)
                     InfiniteJumpEnabled = true
                 end
@@ -3468,7 +3024,9 @@ do
         end
     end)
     
-    wallhopSection:AddToggle("Enable Wallhop Flick", function(enabled) flickEnabled = enabled end)
+    wallhopSection:AddToggle("Enable Wallhop Flick", function(enabled) 
+        flickEnabled = enabled 
+    end)
 end
 
 do
@@ -3492,132 +3050,177 @@ do
 end
 
 do
-local enSection = shared.AddSection("Emote Noclip")
-local selEmote = nil
-local emotes = {["Moonwalk"]="79127989560307", ["Yungblud"]="15610015346", ["Bouncy Twirl"]="14353423348", ["Flex Walk"]="15506506103"}
+    local enSection = shared.AddSection("Emote Noclip")
 
-local EmoteNoclipMaid = nil
-RootMaid:GiveTask(function() if EmoteNoclipMaid then EmoteNoclipMaid:DoCleaning() end end)
+    local selEmote = nil
+    local emotes = {
+        ["Moonwalk"] = "79127989560307",
+        ["Yungblud"] = "15610015346",
+        ["Bouncy Twirl"] = "14353423348",
+        ["Flex Walk"] = "15506506103"
+    }
 
-local noclipConn = nil
-local Clip = true
-local disableTimer = nil
-local bindableButtonEnabled = false
-local bindableButtonSize = 0.11
+    local EmoteNoclipMaid = nil
+    RootMaid:GiveTask(function()
+        if EmoteNoclipMaid then
+            EmoteNoclipMaid:DoCleaning()
+        end
+    end)
 
-local function NoclipLoop()
-    if Clip == false and LocalPlayer.Character ~= nil then
-        for _, child in pairs(LocalPlayer.Character:GetDescendants()) do
-            if child:IsA("BasePart") and child.CanCollide == true then
-                child.CanCollide = false
+    local noclipConn = nil
+    local Clip = true
+    local disableTimer = nil
+    local bindableButtonEnabled = false
+    local bindableButtonSize = 0.11
+
+    -- NEW: Adjustable noclip duration
+    local noclipDuration = 2
+
+    local function NoclipLoop()
+        if Clip == false and LocalPlayer.Character ~= nil then
+            for _, child in pairs(LocalPlayer.Character:GetDescendants()) do
+                if child:IsA("BasePart") and child.CanCollide == true then
+                    child.CanCollide = false
+                end
             end
         end
     end
-end
 
-local function enableNoclip()
-    if noclipConn then
-        noclipConn:Disconnect()
-        noclipConn = nil
-    end
-    Clip = false
-    noclipConn = Services.RunService.Stepped:Connect(NoclipLoop)
-end
+    local function enableNoclip()
+        if noclipConn then
+            noclipConn:Disconnect()
+            noclipConn = nil
+        end
 
-local function disableNoclip()
-    if noclipConn then
-        noclipConn:Disconnect()
-        noclipConn = nil
+        Clip = false
+        noclipConn = Services.RunService.Stepped:Connect(NoclipLoop)
     end
-    Clip = true
-    if not LocalPlayer.Character then return end
-    for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = true
+
+    local function disableNoclip()
+        if noclipConn then
+            noclipConn:Disconnect()
+            noclipConn = nil
+        end
+
+        Clip = true
+
+        if not LocalPlayer.Character then
+            return
+        end
+
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
         end
     end
-end
 
-local function playEmoteWithNoclip(emoteId)
-    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if not humanoid then return end
+    local function playEmoteWithNoclip(emoteId)
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+        if not humanoid then
+            return
+        end
 
-    if disableTimer then
-        spawn(function() 
-            wait(disableTimer)
-            disableNoclip()
+        if disableTimer then
+            spawn(function()
+                wait(disableTimer)
+                disableNoclip()
+            end)
+        end
+
+        disableNoclip()
+
+        local track
+        local ok, result = pcall(function()
+            return humanoid:PlayEmoteAndGetAnimTrackById(emoteId)
+        end)
+
+        if ok and result then
+            track = result
+        else
+            local animation = Instance.new("Animation")
+            animation.AnimationId = "rbxassetid://" .. emoteId
+
+            track = humanoid:LoadAnimation(animation)
+            track:Play()
+        end
+
+        enableNoclip()
+
+        -- UPDATED: Uses slider value
+        disableTimer = noclipDuration
+
+        spawn(function()
+            wait(noclipDuration)
+
+            if disableTimer then
+                disableNoclip()
+                disableTimer = nil
+            end
         end)
     end
-    
-    disableNoclip()
-    
-    local track
-    local ok, result = pcall(function() 
-        return humanoid:PlayEmoteAndGetAnimTrackById(emoteId) 
-    end)
-    
-    if ok and result then
-        track = result
-    else
-        local animation = Instance.new("Animation")
-        animation.AnimationId = "rbxassetid://" .. emoteId
-        track = humanoid:LoadAnimation(animation)
-        track:Play()
+
+    local function triggerEmote()
+        if not selEmote then
+            return
+        end
+
+        playEmoteWithNoclip(selEmote)
     end
-    
-    enableNoclip()
-    
-    disableTimer = 3
-    spawn(function()
-        wait(3)
-        if disableTimer then
-            disableNoclip()
-            disableTimer = nil
+
+    local function updateBindableButtonSize()
+        local btn = BindableButtons.Buttons["en_bind"]
+
+        if btn then
+            local screen = workspace.CurrentCamera.ViewportSize
+
+            btn.Size = __UD2(
+                bindableButtonSize * (screen.Y / screen.X),
+                0,
+                bindableButtonSize,
+                0
+            )
+        end
+    end
+
+    local selectEmoteDropdown = enSection:AddDropdown(
+        "Select Emote",
+        {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"},
+        function(s)
+            if s ~= "Custom" then
+                selEmote = emotes[s]
+            else
+                selEmote = nil
+            end
+        end
+    )
+
+    enSection:AddToggle("Enable EN Button", function(enabled)
+        bindableButtonEnabled = enabled
+
+        if enabled then
+            BindableButtons.AddBButton("en_bind", "EN", triggerEmote)
+            updateBindableButtonSize()
+        else
+            BindableButtons.DeleteBButton("en_bind")
         end
     end)
-end
 
-local function triggerEmote()
-    if not selEmote then return end
-    playEmoteWithNoclip(selEmote)
-end
-
-local function updateBindableButtonSize()
-    local btn = BindableButtons.Buttons["en_bind"]
-    if btn then
-        local screen = workspace.CurrentCamera.ViewportSize
-        btn.Size = __UD2(bindableButtonSize * (screen.Y / screen.X), 0, bindableButtonSize, 0)
-    end
-end
-
-local selectEmoteDropdown = enSection:AddDropdown("Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
-    if s ~= "Custom" then 
-        selEmote = emotes[s] 
-    else 
-        selEmote = nil 
-    end
-end)
-
-enSection:AddButton("Emote (Noclip)", triggerEmote)
-enSection:AddToggle("Enable Bindable Button", function(enabled)
-    bindableButtonEnabled = enabled
-    
-    if enabled then
-        BindableButtons.AddBButton("en_bind", "Emote", triggerEmote)
+    enSection:AddSlider("EN Button Size", 5, 25, 11, function(value)
+        bindableButtonSize = value / 100
         updateBindableButtonSize()
-    else
-        BindableButtons.DeleteBButton("en_bind")
-    end
-end)
-enSection:AddSlider("Bindable Button Size", 5, 25, 11, function(value)
-    bindableButtonSize = value / 100
-    updateBindableButtonSize()
-end)
-enSection:AddTextBox("Custom Emote ID", function(t) 
-    if t ~= "" then 
-        selEmote = t 
-    end 
-end)
+    end)
+
+    -- NEW: Noclip duration slider
+    enSection:AddSlider("Noclip Duration", 1, 15, 2, function(value)
+        noclipDuration = value
+    end)
+
+    enSection:AddTextBox("Custom Emote ID", function(t)
+        if t ~= "" then
+            selEmote = t
+        end
+    end)
 end
 
 do
