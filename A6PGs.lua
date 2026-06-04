@@ -3531,69 +3531,10 @@ do
     local dynamicTracking = false
     local trackingConnection = nil
     local isTrackingActive = false
-    local useGunAura = true
-    
-    -- Track murderer status
-    local isMurdererAlive = false
-    local murderCheckConnection = nil
     
     RootMaid:GiveTask(autoGiveMaid)
     
-    -- Get player role data
-    local function getPlayerRoleData()
-        local success, result = pcall(function()
-            local CurrentRoundClient = require(Services.ReplicatedStorage:WaitForChild("Modules"):WaitForChild("CurrentRoundClient"))
-            return CurrentRoundClient.GetLatestPlayerData()
-        end)
-        if success and result then
-            return result
-        end
-        return nil
-    end
-    
-    -- Get current alive murderer
-    local function getAliveMurderer()
-        local roleData = getPlayerRoleData()
-        if roleData then
-            for name, data in pairs(roleData) do
-                if data.Role == "Murderer" and not data.Killed and not data.Dead then
-                    return true
-                end
-            end
-        end
-        return false
-    end
-    
-    -- Update murderer status
-    local function updateMurdererStatus()
-        isMurdererAlive = getAliveMurderer()
-    end
-    
-    -- Check if player already has a gun
-    local function hasGunInInventory()
-        local char = LocalPlayer.Character
-        local backpack = LocalPlayer.Backpack
-        
-        if char then
-            for _, tool in pairs(char:GetChildren()) do
-                if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun")) then
-                    return true
-                end
-            end
-        end
-        
-        if backpack then
-            for _, tool in pairs(backpack:GetChildren()) do
-                if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun")) then
-                    return true
-                end
-            end
-        end
-        
-        return false
-    end
-    
-    -- Gun Aura (touch method)
+    -- Gun grab functions
     local function touch(a, b)
         firetouchinterest(a, b, 0)
         firetouchinterest(a, b, 1)
@@ -3609,7 +3550,6 @@ do
         end
     end
     
-    -- Teleport fallback method
     local function grabGunTeleport()
         local char = LocalPlayer.Character
         if not char then return false end
@@ -3634,12 +3574,7 @@ do
         return true
     end
     
-    -- Grab gun with aura first, fallback to teleport
     local function grabGunWithFallback()
-        if not useGunAura then
-            return grabGunTeleport()
-        end
-        
         bringGun()
         task.wait(0.5)
         
@@ -3650,8 +3585,33 @@ do
         return true
     end
     
+    local function hasGunInInventory()
+        local player = LocalPlayer
+        local character = player.Character
+        local backpack = player.Backpack
+        
+        if not character then return false end
+        
+        for _, tool in pairs(character:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
+                return true
+            end
+        end
+        
+        if backpack then
+            for _, tool in pairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
+                    return true
+                end
+            end
+        end
+        
+        return false
+    end
+    
     local function enableNoclip()
         if noclipEnabled then return end
+        
         noclipEnabled = true
         noclipConnection = Services.RunService.Stepped:Connect(function()
             for _, player in pairs(Services.Players:GetPlayers()) do
@@ -3668,11 +3628,13 @@ do
     
     local function disableNoclip()
         if not noclipEnabled then return end
+        
         noclipEnabled = false
         if noclipConnection then
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
+        
         for _, player in pairs(Services.Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 for _, part in ipairs(player.Character:GetDescendants()) do
@@ -3692,12 +3654,16 @@ do
     local function getPlayerMoveDirection(targetPlayer)
         local targetChar = targetPlayer.Character
         if not targetChar then return Vector3.new() end
+        
         local humanoid = targetChar:FindFirstChild("Humanoid")
         if not humanoid then return Vector3.new() end
+        
         local moveDirection = humanoid.MoveDirection
+        
         if moveDirection.Magnitude > 0.1 then
             return moveDirection.Unit
         end
+        
         return Vector3.new()
     end
     
@@ -3706,11 +3672,15 @@ do
             trackingConnection:Disconnect()
             trackingConnection = nil
         end
+        
         local char = LocalPlayer.Character
         if not char then return end
+        
         local root = char:FindFirstChild("HumanoidRootPart")
         if not root then return end
+        
         isTrackingActive = true
+        
         trackingConnection = Services.RunService.Stepped:Connect(function()
             if not isTrackingActive or not giveGunEnabled or not selectedPlayer then
                 if trackingConnection then
@@ -3719,17 +3689,22 @@ do
                 end
                 return
             end
+            
             local targetChar = targetPlayer.Character
             if not targetChar then return end
+            
             local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
             if not targetRoot then return end
+            
             local moveDirection = getPlayerMoveDirection(targetPlayer)
             local teleportPosition
+            
             if moveDirection.Magnitude > 0 then
                 teleportPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
             else
                 teleportPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
             end
+            
             root.CFrame = teleportPosition
         end)
     end
@@ -3742,26 +3717,15 @@ do
         end
     end
     
-    -- MAIN GIVE GUN FUNCTION
     local function giveGunToPlayer(targetPlayer)
         if not targetPlayer then
             Notify("Give Gun", "No player selected!", 3)
             return
         end
         
-        if hasGunInInventory() then
-            Notify("Give Gun", "You already have a gun! Giving directly...", 2)
-        else
-            Notify("Give Gun", "No gun found! Attempting to grab...", 2)
-            local success = grabGunWithFallback()
-            task.wait(0.5)
-            
-            if success and hasGunInInventory() then
-                Notify("Give Gun", "Gun acquired successfully!", 2)
-            else
-                Notify("Give Gun", "Failed to acquire gun!", 3)
-                return
-            end
+        if not hasGunInInventory() then
+            Notify("Give Gun", "You don't have a gun in your inventory!", 3)
+            return
         end
         
         local char = LocalPlayer.Character
@@ -3795,22 +3759,28 @@ do
         if dynamicTracking then
             local moveDirection = getPlayerMoveDirection(targetPlayer)
             local initialPosition
+            
             if moveDirection.Magnitude > 0 then
                 initialPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
             else
                 initialPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
             end
+            
             root.CFrame = initialPosition
+            
             startDynamicTracking(targetPlayer)
+            
             task.wait(0.5)
         else
             local moveDirection = getPlayerMoveDirection(targetPlayer)
             local teleportPosition
+            
             if moveDirection.Magnitude > 0 then
                 teleportPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
             else
                 teleportPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
             end
+            
             root.CFrame = teleportPosition
             task.wait(0.3)
         end
@@ -3825,59 +3795,51 @@ do
         end
     end
     
-    -- UI Elements
-    giveGunSection:AddToggle("Use Gun Aura First", function(enabled)
-        useGunAura = enabled
-        Notify("Give Gun", "Gun grab method: " .. (enabled and "Aura (with teleport fallback)" or "Teleport only"), 2)
-    end)
-    
     giveGunSection:AddPlayerDropdown("Select Player", function(player)
-        selectedPlayer = player
+        if player then
+            selectedPlayer = player
+        else
+            selectedPlayer = nil
+        end
     end)
     
     giveGunSection:AddSlider("Teleport Distance (Studs)", 1, 20, teleportDistance, function(value)
         teleportDistance = value
+        Notify("Give Gun", "Teleport distance set to " .. value .. " studs", 2)
     end)
     
     giveGunSection:AddToggle("Dynamic Tracking (Stay in front)", function(enabled)
         dynamicTracking = enabled
+        Notify("Give Gun", "Dynamic tracking: " .. (enabled and "ON (will activate when you give gun)" or "OFF"), 2)
     end)
     
-    -- AUTO GIVE GUN - Same structure as original, just with murderer check
+    -- MODIFIED: Auto Give Gun with built-in grab fallback
     giveGunSection:AddToggle("Auto Give Gun", function(enabled)
         autoGiveGunEnabled = enabled
         autoGiveMaid:DoCleaning()
         
         if enabled then
-            -- Start checking for murderer status
-            if not murderCheckConnection then
-                murderCheckConnection = Services.RunService.Heartbeat:Connect(function()
-                    updateMurdererStatus()
-                    task.wait(2) -- Check every 2 seconds
-                end)
-            end
-            
             task.spawn(function()
                 while autoGiveGunEnabled do
-                    if giveGunEnabled and selectedPlayer and isMurdererAlive then
-                        -- Only give gun if murderer is alive
+                    if giveGunEnabled and selectedPlayer then
+                        -- Auto grab gun if needed (aura first, then teleport)
                         if not hasGunInInventory() then
-                            grabGunWithFallback()
+                            bringGun()
                             task.wait(0.5)
+                            
+                            if not hasGunInInventory() then
+                                grabGunTeleport()
+                                task.wait(0.5)
+                            end
                         end
                         
                         if hasGunInInventory() then
                             giveGunToPlayer(selectedPlayer)
                         end
                     end
-                    task.wait(0.5)
+                    task.wait(2)
                 end
             end)
-        else
-            if murderCheckConnection then
-                murderCheckConnection:Disconnect()
-                murderCheckConnection = nil
-            end
         end
     end)
     
@@ -3908,103 +3870,7 @@ do
         end
     end)
     
-    giveGunSection:AddLabel("Auto Give only runs when a Murderer is alive")
-end
-
-do
-    local godModeSection = shared.AddSection("God Mode")
-    local godModeEnabled = false
-    local godModeConnection = nil
-    
-    -- Apply God Mode using Health = math.huge
-    local function applyGodMode()
-        local Char = LocalPlayer.Character
-        if not Char then return end
-        
-        local Human = Char:FindFirstChildWhichIsA("Humanoid")
-        if not Human then return end
-        
-        Human.MaxHealth = math.huge
-        Human.Health = math.huge
-        
-        -- Keep health at max if damaged
-        local healthConn
-        healthConn = Human:GetPropertyChangedSignal("Health"):Connect(function()
-            if godModeEnabled and Human and Human.Parent and Human.Health < Human.MaxHealth then
-                Human.Health = Human.MaxHealth
-            end
-        end)
-        
-        if godModeConnection then
-            godModeConnection:GiveTask(healthConn)
-        end
-    end
-    
-    -- Start god mode loop
-    local function startGodMode()
-        if godModeConnection then 
-            godModeConnection:DoCleaning()
-            godModeConnection = nil
-        end
-        
-        godModeConnection = Maid.new()
-        
-        -- Apply on heartbeat to handle respawns
-        godModeConnection:GiveTask(Services.RunService.Heartbeat:Connect(function()
-            if godModeEnabled and LocalPlayer.Character then
-                local Human = LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
-                if Human and Human.Health < math.huge then
-                    applyGodMode()
-                end
-            end
-        end))
-        
-        -- Apply on character added
-        godModeConnection:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
-            task.wait(0.5)
-            if godModeEnabled then
-                applyGodMode()
-            end
-        end))
-        
-        -- Initial apply
-        if LocalPlayer.Character then
-            applyGodMode()
-        end
-    end
-    
-    local function stopGodMode()
-        if godModeConnection then
-            godModeConnection:DoCleaning()
-            godModeConnection = nil
-        end
-        
-        -- Reset health to normal
-        local Char = LocalPlayer.Character
-        if Char then
-            local Human = Char:FindFirstChildWhichIsA("Humanoid")
-            if Human then
-                Human.MaxHealth = 100
-                if Human.Health > 100 then
-                    Human.Health = 100
-                end
-            end
-        end
-    end
-    
-    godModeSection:AddToggle("Enable God Mode", function(state)
-        godModeEnabled = state
-        if state then
-            startGodMode()
-            Notify("God Mode", "Enabled - You are now invincible!", 2)
-        else
-            stopGodMode()
-            Notify("God Mode", "Disabled", 2)
-        end
-    end)
-    
-    godModeSection:AddLabel("Makes you invincible using math.huge method")
-    godModeSection:AddLabel("Works after respawn and prevents all damage")
+    giveGunSection:AddLabel("Auto Give will grab gun first if you don't have one")
 end
 
 local statColorsEnabled = false
