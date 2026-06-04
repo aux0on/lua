@@ -3518,349 +3518,352 @@ do
     RootMaid:GiveTask(ggKeybind)
 end
 
-do
-    local giveGunSection = shared.AddSection("Give Gun")
+local giveGunSection = shared.AddSection("Give Gun")
+
+local giveGunEnabled, autoGiveGunEnabled = false, false
+local selectedPlayer = nil
+local autoGiveMaid = Maid.new()
+local giveGunButtonSize = 0.11
+local noclipEnabled = false
+local noclipConnection = nil
+local teleportDistance = 5
+local dynamicTracking = false
+local trackingConnection = nil
+local isTrackingActive = false
+
+RootMaid:GiveTask(autoGiveMaid)
+
+-- Auto grab gun functions
+local function touch(a, b)
+    firetouchinterest(a, b, 0)
+    firetouchinterest(a, b, 1)
+end
+
+local function bringGun()
+    local character = LocalPlayer.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local gunDrop = workspace:FindFirstChild("GunDrop", true)
     
-    local giveGunEnabled, autoGiveGunEnabled = false, false
-    local selectedPlayer = nil
-    local autoGiveMaid = Maid.new()
-    local giveGunButtonSize = 0.11
-    local noclipEnabled = false
-    local noclipConnection = nil
-    local teleportDistance = 5
-    local dynamicTracking = false
-    local trackingConnection = nil
-    local isTrackingActive = false
-    
-    RootMaid:GiveTask(autoGiveMaid)
-    
-    -- Gun grab functions
-    local function touch(a, b)
-        firetouchinterest(a, b, 0)
-        firetouchinterest(a, b, 1)
+    if rootPart and gunDrop then
+        touch(rootPart, gunDrop)
     end
+end
+
+local function grabGunTeleport()
+    local char = LocalPlayer.Character
+    if not char then return false end
     
-    local function bringGun()
-        local character = LocalPlayer.Character
-        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-        local gunDrop = workspace:FindFirstChild("GunDrop", true)
-        
-        if rootPart and gunDrop then
-            touch(rootPart, gunDrop)
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+    
+    local ggDrop = nil
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "GunDrop" and obj:IsA("BasePart") then
+            ggDrop = obj
+            break
         end
     end
     
-    local function grabGunTeleport()
-        local char = LocalPlayer.Character
-        if not char then return false end
-        
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return false end
-        
-        local ggDrop = nil
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "GunDrop" and obj:IsA("BasePart") then
-                ggDrop = obj
-                break
+    if not ggDrop then return false end
+    
+    local savedPos = root.CFrame
+    root.CFrame = CFrame.new(ggDrop.Position + Vector3.new(0, 3, 0))
+    task.wait(0.3)
+    root.CFrame = savedPos
+    return true
+end
+
+local function hasGunInInventory()
+    local player = LocalPlayer
+    local character = player.Character
+    local backpack = player.Backpack
+    
+    if not character then return false end
+    
+    for _, tool in pairs(character:GetChildren()) do
+        if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
+            return true
+        end
+    end
+    
+    if backpack then
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
+                return true
             end
         end
-        
-        if not ggDrop then return false end
-        
-        local savedPos = root.CFrame
-        root.CFrame = CFrame.new(ggDrop.Position + Vector3.new(0, 3, 0))
-        task.wait(0.3)
-        root.CFrame = savedPos
-        return true
     end
     
-    -- FIXED: Gun is just called "Gun"
-    local function hasGunInInventory()
-        local character = LocalPlayer.Character
-        local backpack = LocalPlayer.Backpack
-        
-        if character then
-            for _, tool in pairs(character:GetChildren()) do
-                if tool:IsA("Tool") and tool.Name == "Gun" then
-                    return true
-                end
-            end
-        end
-        
-        if backpack then
-            for _, tool in pairs(backpack:GetChildren()) do
-                if tool:IsA("Tool") and tool.Name == "Gun" then
-                    return true
-                end
-            end
-        end
-        
-        return false
-    end
+    return false
+end
+
+local function enableNoclip()
+    if noclipEnabled then return end
     
-    local function enableNoclip()
-        if noclipEnabled then return end
-        
-        noclipEnabled = true
-        noclipConnection = Services.RunService.Stepped:Connect(function()
-            for _, player in pairs(Services.Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    for _, part in ipairs(player.Character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end
-        end)
-    end
-    
-    local function disableNoclip()
-        if not noclipEnabled then return end
-        
-        noclipEnabled = false
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
-        
+    noclipEnabled = true
+    noclipConnection = Services.RunService.Stepped:Connect(function()
         for _, player in pairs(Services.Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 for _, part in ipairs(player.Character:GetDescendants()) do
                     if part:IsA("BasePart") then
-                        part.CanCollide = true
+                        part.CanCollide = false
                     end
                 end
             end
         end
-    end
-    
-    LocalPlayer.CharacterAdded:Connect(function()
-        disableNoclip()
-        stopDynamicTracking()
     end)
+end
+
+local function disableNoclip()
+    if not noclipEnabled then return end
     
-    local function getPlayerMoveDirection(targetPlayer)
-        local targetChar = targetPlayer.Character
-        if not targetChar then return Vector3.new() end
-        
-        local humanoid = targetChar:FindFirstChild("Humanoid")
-        if not humanoid then return Vector3.new() end
-        
-        local moveDirection = humanoid.MoveDirection
-        
-        if moveDirection.Magnitude > 0.1 then
-            return moveDirection.Unit
-        end
-        
-        return Vector3.new()
+    noclipEnabled = false
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
     end
     
-    local function startDynamicTracking(targetPlayer)
-        if trackingConnection then
-            trackingConnection:Disconnect()
-            trackingConnection = nil
-        end
-        
-        local char = LocalPlayer.Character
-        if not char then return end
-        
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        
-        isTrackingActive = true
-        
-        trackingConnection = Services.RunService.Stepped:Connect(function()
-            if not isTrackingActive or not giveGunEnabled or not selectedPlayer then
-                if trackingConnection then
-                    trackingConnection:Disconnect()
-                    trackingConnection = nil
+    for _, player in pairs(Services.Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            for _, part in ipairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
                 end
-                return
             end
-            
-            local targetChar = targetPlayer.Character
-            if not targetChar then return end
-            
-            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-            if not targetRoot then return end
-            
-            local moveDirection = getPlayerMoveDirection(targetPlayer)
-            local teleportPosition
-            
-            if moveDirection.Magnitude > 0 then
-                teleportPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
-            else
-                teleportPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
-            end
-            
-            root.CFrame = teleportPosition
-        end)
-    end
-    
-    local function stopDynamicTracking()
-        isTrackingActive = false
-        if trackingConnection then
-            trackingConnection:Disconnect()
-            trackingConnection = nil
         end
     end
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    disableNoclip()
+    stopDynamicTracking()
+end)
+
+local function getPlayerMoveDirection(targetPlayer)
+    local targetChar = targetPlayer.Character
+    if not targetChar then return Vector3.new() end
     
-    local function giveGunToPlayer(targetPlayer)
-        if not targetPlayer then
-            Notify("Give Gun", "No player selected!", 3)
-            return
-        end
-        
-        if not hasGunInInventory() then
-            Notify("Give Gun", "You don't have a gun in your inventory!", 3)
-            return
-        end
-        
-        local char = LocalPlayer.Character
-        if not char then
-            Notify("Give Gun", "Character not found!", 3)
-            return
-        end
-        
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then
-            Notify("Give Gun", "Root part not found!", 3)
+    local humanoid = targetChar:FindFirstChild("Humanoid")
+    if not humanoid then return Vector3.new() end
+    
+    local moveDirection = humanoid.MoveDirection
+    
+    if moveDirection.Magnitude > 0.1 then
+        return moveDirection.Unit
+    end
+    
+    return Vector3.new()
+end
+
+local function startDynamicTracking(targetPlayer)
+    if trackingConnection then
+        trackingConnection:Disconnect()
+        trackingConnection = nil
+    end
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    isTrackingActive = true
+    
+    trackingConnection = Services.RunService.Stepped:Connect(function()
+        if not isTrackingActive or not giveGunEnabled or not selectedPlayer then
+            if trackingConnection then
+                trackingConnection:Disconnect()
+                trackingConnection = nil
+            end
             return
         end
         
         local targetChar = targetPlayer.Character
-        if not targetChar then
-            Notify("Give Gun", "Target character not found!", 3)
-            return
-        end
+        if not targetChar then return end
         
         local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-        if not targetRoot then
-            Notify("Give Gun", "Target root part not found!", 3)
-            return
-        end
+        if not targetRoot then return end
         
-        Notify("Give Gun", "Giving gun to " .. targetPlayer.Name .. "...", 2)
+        local moveDirection = getPlayerMoveDirection(targetPlayer)
+        local teleportPosition
         
-        enableNoclip()
-        
-        if dynamicTracking then
-            local moveDirection = getPlayerMoveDirection(targetPlayer)
-            local initialPosition
-            
-            if moveDirection.Magnitude > 0 then
-                initialPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
-            else
-                initialPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
-            end
-            
-            root.CFrame = initialPosition
-            
-            startDynamicTracking(targetPlayer)
-            
-            task.wait(0.5)
+        if moveDirection.Magnitude > 0 then
+            teleportPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
         else
-            local moveDirection = getPlayerMoveDirection(targetPlayer)
-            local teleportPosition
-            
-            if moveDirection.Magnitude > 0 then
-                teleportPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
-            else
-                teleportPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
-            end
-            
-            root.CFrame = teleportPosition
-            task.wait(0.3)
+            teleportPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
         end
         
-        LocalPlayer.Character:BreakJoints()
-        stopDynamicTracking()
+        root.CFrame = teleportPosition
+    end)
+end
+
+local function stopDynamicTracking()
+    isTrackingActive = false
+    if trackingConnection then
+        trackingConnection:Disconnect()
+        trackingConnection = nil
+    end
+end
+
+local function giveGunToPlayer(targetPlayer)
+    if not targetPlayer then
+        Notify("Give Gun", "No player selected!", 3)
+        return
     end
     
-    local function executeGiveGun()
-        if giveGunEnabled and selectedPlayer then
-            giveGunToPlayer(selectedPlayer)
-        end
+    if not hasGunInInventory() then
+        Notify("Give Gun", "You don't have a gun in your inventory!", 3)
+        return
     end
     
-    giveGunSection:AddPlayerDropdown("Select Player", function(player)
-        if player then
-            selectedPlayer = player
-        else
-            selectedPlayer = nil
-        end
-    end)
+    local char = LocalPlayer.Character
+    if not char then
+        Notify("Give Gun", "Character not found!", 3)
+        return
+    end
     
-    giveGunSection:AddSlider("Teleport Distance (Studs)", 1, 20, teleportDistance, function(value)
-        teleportDistance = value
-        Notify("Give Gun", "Teleport distance set to " .. value .. " studs", 2)
-    end)
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then
+        Notify("Give Gun", "Root part not found!", 3)
+        return
+    end
     
-    giveGunSection:AddToggle("Dynamic Tracking (Stay in front)", function(enabled)
-        dynamicTracking = enabled
-        Notify("Give Gun", "Dynamic tracking: " .. (enabled and "ON (will activate when you give gun)" or "OFF"), 2)
-    end)
+    local targetChar = targetPlayer.Character
+    if not targetChar then
+        Notify("Give Gun", "Target character not found!", 3)
+        return
+    end
     
-    -- Auto Give Gun with grab fallback
-    giveGunSection:AddToggle("Auto Give Gun", function(enabled)
-        autoGiveGunEnabled = enabled
-        autoGiveMaid:DoCleaning()
+    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then
+        Notify("Give Gun", "Target root part not found!", 3)
+        return
+    end
+    
+    Notify("Give Gun", "Giving gun to " .. targetPlayer.Name .. "...", 2)
+    
+    enableNoclip()
+    
+    if dynamicTracking then
+        local moveDirection = getPlayerMoveDirection(targetPlayer)
+        local initialPosition
         
-        if enabled then
-            task.spawn(function()
-                while autoGiveGunEnabled do
-                    if giveGunEnabled and selectedPlayer then
-                        -- Auto grab gun if needed (aura first, then teleport)
-                        if not hasGunInInventory() then
-                            bringGun()
-                            task.wait(0.5)
-                            
-                            if not hasGunInInventory() then
-                                grabGunTeleport()
-                                task.wait(0.5)
-                            end
-                        end
+        if moveDirection.Magnitude > 0 then
+            initialPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
+        else
+            initialPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
+        end
+        
+        root.CFrame = initialPosition
+        
+        startDynamicTracking(targetPlayer)
+        
+        task.wait(0.5)
+    else
+        local moveDirection = getPlayerMoveDirection(targetPlayer)
+        local teleportPosition
+        
+        if moveDirection.Magnitude > 0 then
+            teleportPosition = targetRoot.CFrame + (moveDirection * teleportDistance) + Vector3.new(0, 3, 0)
+        else
+            teleportPosition = targetRoot.CFrame + Vector3.new(0, 3, 0)
+        end
+        
+        root.CFrame = teleportPosition
+        task.wait(0.3)
+    end
+    
+    LocalPlayer.Character:BreakJoints()
+    stopDynamicTracking()
+end
+
+local function executeGiveGun()
+    if giveGunEnabled and selectedPlayer then
+        giveGunToPlayer(selectedPlayer)
+    end
+end
+
+giveGunSection:AddPlayerDropdown("Select Player", function(player)
+    if player then
+        selectedPlayer = player
+    else
+        selectedPlayer = nil
+    end
+end)
+
+giveGunSection:AddSlider("Teleport Distance (Studs)", 1, 20, teleportDistance, function(value)
+    teleportDistance = value
+    Notify("Give Gun", "Teleport distance set to " .. value .. " studs", 2)
+end)
+
+giveGunSection:AddToggle("Dynamic Tracking (Stay in front)", function(enabled)
+    dynamicTracking = enabled
+    Notify("Give Gun", "Dynamic tracking: " .. (enabled and "ON (will activate when you give gun)" or "OFF"), 2)
+end)
+
+-- MODIFIED: Auto Give Gun with built-in auto grab
+giveGunSection:AddToggle("Auto Give Gun", function(enabled)
+    autoGiveGunEnabled = enabled
+    autoGiveMaid:DoCleaning()
+    
+    if enabled then
+        task.spawn(function()
+            while autoGiveGunEnabled do
+                if giveGunEnabled and selectedPlayer then
+                    -- Auto grab gun if you don't have one
+                    if not hasGunInInventory() then
+                        bringGun()
+                        task.wait(0.5)
                         
-                        if hasGunInInventory() then
-                            giveGunToPlayer(selectedPlayer)
+                        if not hasGunInInventory() then
+                            grabGunTeleport()
+                            task.wait(0.5)
                         end
                     end
-                    task.wait(2)
+                    
+                    -- Give gun if you have one
+                    if hasGunInInventory() then
+                        giveGunToPlayer(selectedPlayer)
+                    end
                 end
-            end)
-        end
-    end)
-    
-    giveGunSection:AddButton("Give Gun", executeGiveGun)
-    
-    giveGunSection:AddToggle("Enable Give Gun Button", function(enabled)
-        giveGunEnabled = enabled
-        
-        if enabled then
-            BindableButtons.AddBButton("givegun_bind", "Give Gun", executeGiveGun)
-            local btn = BindableButtons.Buttons["givegun_bind"]
-            if btn then
-                local screen = workspace.CurrentCamera.ViewportSize
-                btn.Size = __UD2(giveGunButtonSize * (screen.Y / screen.X), 0, giveGunButtonSize, 0)
+                task.wait(2)
             end
-        else
-            BindableButtons.DeleteBButton("givegun_bind")
-            stopDynamicTracking()
-        end
-    end)
+        end)
+    end
+end)
+
+giveGunSection:AddButton("Give Gun", executeGiveGun)
+
+giveGunSection:AddToggle("Enable Give Gun Button", function(enabled)
+    giveGunEnabled = enabled
     
-    giveGunSection:AddSlider("Give Gun Button Size", 5, 25, 11, function(value)
-        giveGunButtonSize = value / 100
+    if enabled then
+        BindableButtons.AddBButton("givegun_bind", "Give Gun", executeGiveGun)
         local btn = BindableButtons.Buttons["givegun_bind"]
         if btn then
             local screen = workspace.CurrentCamera.ViewportSize
             btn.Size = __UD2(giveGunButtonSize * (screen.Y / screen.X), 0, giveGunButtonSize, 0)
         end
-    end)
-    
-    giveGunSection:AddLabel("Auto Give will grab gun first if you don't have one")
-end
+    else
+        BindableButtons.DeleteBButton("givegun_bind")
+        stopDynamicTracking()
+    end
+end)
+
+giveGunSection:AddSlider("Give Gun Button Size", 5, 25, 11, function(value)
+    giveGunButtonSize = value / 100
+    local btn = BindableButtons.Buttons["givegun_bind"]
+    if btn then
+        local screen = workspace.CurrentCamera.ViewportSize
+        btn.Size = __UD2(giveGunButtonSize * (screen.Y / screen.X), 0, giveGunButtonSize, 0)
+    end
+end)
+
+local keybind = giveGunSection:AddKeybind("Give Gun Keybind", "G", function()
+    if giveGunEnabled and selectedPlayer then
+        executeGiveGun()
+    end
+end)
 
 local statColorsEnabled = false
 local uiPosition = "Top Right"
