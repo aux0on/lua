@@ -3574,33 +3574,22 @@ do
         return true
     end
     
-    local function grabGunWithFallback()
-        bringGun()
-        task.wait(0.5)
-        
-        if not hasGunInInventory() then
-            return grabGunTeleport()
-        end
-        
-        return true
-    end
-    
+    -- FIXED: Gun is just called "Gun"
     local function hasGunInInventory()
-        local player = LocalPlayer
-        local character = player.Character
-        local backpack = player.Backpack
+        local character = LocalPlayer.Character
+        local backpack = LocalPlayer.Backpack
         
-        if not character then return false end
-        
-        for _, tool in pairs(character:GetChildren()) do
-            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
-                return true
+        if character then
+            for _, tool in pairs(character:GetChildren()) do
+                if tool:IsA("Tool") and tool.Name == "Gun" then
+                    return true
+                end
             end
         end
         
         if backpack then
             for _, tool in pairs(backpack:GetChildren()) do
-                if tool:IsA("Tool") and (tool.Name:lower():find("gun") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Gun"))) then
+                if tool:IsA("Tool") and tool.Name == "Gun" then
                     return true
                 end
             end
@@ -3813,7 +3802,7 @@ do
         Notify("Give Gun", "Dynamic tracking: " .. (enabled and "ON (will activate when you give gun)" or "OFF"), 2)
     end)
     
-    -- MODIFIED: Auto Give Gun with built-in grab fallback
+    -- Auto Give Gun with grab fallback
     giveGunSection:AddToggle("Auto Give Gun", function(enabled)
         autoGiveGunEnabled = enabled
         autoGiveMaid:DoCleaning()
