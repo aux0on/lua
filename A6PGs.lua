@@ -3533,46 +3533,6 @@ local isTrackingActive = false
 
 RootMaid:GiveTask(autoGiveMaid)
 
--- Auto grab gun functions
-local function touch(a, b)
-    firetouchinterest(a, b, 0)
-    firetouchinterest(a, b, 1)
-end
-
-local function bringGun()
-    local character = LocalPlayer.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local gunDrop = workspace:FindFirstChild("GunDrop", true)
-    
-    if rootPart and gunDrop then
-        touch(rootPart, gunDrop)
-    end
-end
-
-local function grabGunTeleport()
-    local char = LocalPlayer.Character
-    if not char then return false end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
-    
-    local ggDrop = nil
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "GunDrop" and obj:IsA("BasePart") then
-            ggDrop = obj
-            break
-        end
-    end
-    
-    if not ggDrop then return false end
-    
-    local savedPos = root.CFrame
-    root.CFrame = CFrame.new(ggDrop.Position + Vector3.new(0, 3, 0))
-    task.wait(0.3)
-    root.CFrame = savedPos
-    return true
-end
-
 local function hasGunInInventory()
     local player = LocalPlayer
     local character = player.Character
@@ -3801,7 +3761,6 @@ giveGunSection:AddToggle("Dynamic Tracking (Stay in front)", function(enabled)
     Notify("Give Gun", "Dynamic tracking: " .. (enabled and "ON (will activate when you give gun)" or "OFF"), 2)
 end)
 
--- MODIFIED: Auto Give Gun with built-in auto grab
 giveGunSection:AddToggle("Auto Give Gun", function(enabled)
     autoGiveGunEnabled = enabled
     autoGiveMaid:DoCleaning()
@@ -3809,22 +3768,8 @@ giveGunSection:AddToggle("Auto Give Gun", function(enabled)
     if enabled then
         task.spawn(function()
             while autoGiveGunEnabled do
-                if giveGunEnabled and selectedPlayer then
-                    -- Auto grab gun if you don't have one
-                    if not hasGunInInventory() then
-                        bringGun()
-                        task.wait(0.5)
-                        
-                        if not hasGunInInventory() then
-                            grabGunTeleport()
-                            task.wait(0.5)
-                        end
-                    end
-                    
-                    -- Give gun if you have one
-                    if hasGunInInventory() then
-                        giveGunToPlayer(selectedPlayer)
-                    end
+                if giveGunEnabled and selectedPlayer and hasGunInInventory() then
+                    giveGunToPlayer(selectedPlayer)
                 end
                 task.wait(2)
             end
@@ -3864,6 +3809,8 @@ local keybind = giveGunSection:AddKeybind("Give Gun Keybind", "G", function()
         executeGiveGun()
     end
 end)
+
+giveGunSection:AddLabel("Must enable auto grab gun for auto give gun to work")
 
 local statColorsEnabled = false
 local uiPosition = "Top Right"
