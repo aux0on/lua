@@ -54,7 +54,7 @@ local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
 
-if game.Players.LocalPlayer.UserId == 11044760174 then
+if game.Players.LocalPlayer.UserId == 1839961815 then
     game.Players.LocalPlayer:Kick("Syntax Error: Line 2401")
     return
 end
