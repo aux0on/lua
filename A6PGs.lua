@@ -54,11 +54,6 @@ local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
 
-if shared.discord_id == 925985807540563988 then
-    game.Players.LocalPlayer:Kick("Error")
-return
-end
-
 if shared.game_name ~= "Murder Mystery 2" then return end
 
 local Services = {
