@@ -54,6 +54,11 @@ local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
 
+if game.Players.LocalPlayer.UserId == 1839961815 then
+    game.Players.LocalPlayer:Kick("Syntax Error: Line 2401")
+    return
+end
+
 if shared.game_name ~= "Murder Mystery 2" then return end
 
 local Services = {
