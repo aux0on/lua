@@ -53,12 +53,15 @@ end
 local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
-if shared.game_name ~= "Murder Mystery 2" then return end
+
 if shared.discord.id == 925985807540563988 then
-    game.Players.LocalPlayer:Kick("Error: Line 2472")
+    game.Players.LocalPlayer:Kick("Error")
 return
 end
-                                                local Services = {
+
+if shared.game_name ~= "Murder Mystery 2" then return end
+
+local Services = {
     Players = game:GetService("Players"),
     ReplicatedStorage = game:GetService("ReplicatedStorage"),
     RunService = game:GetService("RunService"),
