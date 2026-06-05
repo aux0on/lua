@@ -54,7 +54,7 @@ local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
 
-if shared.discord.id == 925985807540563988 then
+if shared.discord_id == 925985807540563988 then
     game.Players.LocalPlayer:Kick("Error")
 return
 end
