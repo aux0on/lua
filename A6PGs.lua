@@ -53,12 +53,6 @@ end
 local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
-
-if game.Players.LocalPlayer.UserId == 1839961815 then
-    game.Players.LocalPlayer:Kick("Syntax Error: Line 2401")
-    return
-end
-
 if shared.game_name ~= "Murder Mystery 2" then return end
 
 local Services = {
@@ -4295,6 +4289,175 @@ true_antis_section:AddToggle("Enable True Anti Void", function(bool)
         workspace.FallenPartsDestroyHeight = originalDestroyHeight
     end
 end)
+
+do
+    local SpectateSection = shared.AddSection("Spectate")
+
+    local spectateMaid = nil
+    local forceSpectate = false
+    local forceSpectateConnection = nil
+    local originalToggle = nil
+    local originalSetSpectating = nil
+    local SpectateService = nil
+    local CurrentRoundClient = nil
+    
+    RootMaid:GiveTask(function()
+        if spectateMaid then spectateMaid:DoCleaning() end
+    end)
+
+    local function getSpectateService()
+        local success, service = pcall(function()
+            return require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("SpectateService"))
+        end)
+        if success then
+            return service
+        end
+        return nil
+    end
+
+    local function getCurrentRoundClient()
+        local success, client = pcall(function()
+            return require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("CurrentRoundClient"))
+        end)
+        if success then
+            return client
+        end
+        return nil
+    end
+
+    local function forceDeadState()
+        if not CurrentRoundClient then return end
+        pcall(function()
+            if CurrentRoundClient.PlayerData and CurrentRoundClient.PlayerData[LocalPlayer.Name] then
+                CurrentRoundClient.PlayerData[LocalPlayer.Name].Dead = true
+            end
+        end)
+    end
+
+    local function restoreAliveState()
+        if not CurrentRoundClient then return end
+        pcall(function()
+            if CurrentRoundClient.PlayerData and CurrentRoundClient.PlayerData[LocalPlayer.Name] then
+                CurrentRoundClient.PlayerData[LocalPlayer.Name].Dead = false
+            end
+        end)
+    end
+
+    local function stopForceSpectate()
+        if forceSpectateConnection then
+            forceSpectateConnection:Disconnect()
+            forceSpectateConnection = nil
+        end
+        restoreAliveState()
+        pcall(function()
+            if SpectateService then
+                SpectateService.CancelSpectate()
+                if originalSetSpectating then
+                    originalSetSpectating(SpectateService, false)
+                end
+            end
+        end)
+    end
+
+    local function startForceSpectate()
+        if not SpectateService then return end
+        forceDeadState()
+        task.wait(0.1)
+        pcall(function()
+            if originalToggle then
+                originalToggle(SpectateService)
+            end
+        end)
+        task.wait(0.1)
+        pcall(function()
+            if originalSetSpectating then
+                originalSetSpectating(SpectateService, true)
+            end
+        end)
+    end
+
+    local function setupSpectateHooks()
+        if not SpectateService then return end
+        
+        if not originalToggle then
+            originalToggle = SpectateService.ToggleSpectate
+            SpectateService.ToggleSpectate = function(...)
+                if forceSpectate then
+                    forceDeadState()
+                end
+                return originalToggle(...)
+            end
+        end
+        
+        if not originalSetSpectating then
+            originalSetSpectating = SpectateService.SetSpectating
+            SpectateService.SetSpectating = function(self, enabled)
+                if enabled and forceSpectate then
+                    forceDeadState()
+                elseif not enabled then
+                    restoreAliveState()
+                end
+                return originalSetSpectating(self, enabled)
+            end
+        end
+    end
+
+    local function enableForceSpectate()
+        if spectateMaid then spectateMaid:DoCleaning() end
+        spectateMaid = Maid.new()
+        
+        SpectateService = getSpectateService()
+        CurrentRoundClient = getCurrentRoundClient()
+        
+        if not SpectateService then
+            warn("Could not load SpectateService")
+            return
+        end
+        
+        setupSpectateHooks()
+        
+        forceSpectate = true
+        startForceSpectate()
+        
+        forceSpectateConnection = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1)
+            if forceSpectate then
+                startForceSpectate()
+            end
+        end)
+        spectateMaid:GiveTask(forceSpectateConnection)
+        
+        spectateMaid:GiveTask(function()
+            forceSpectate = false
+            stopForceSpectate()
+            if SpectateService then
+                if originalToggle then
+                    SpectateService.ToggleSpectate = originalToggle
+                end
+                if originalSetSpectating then
+                    SpectateService.SetSpectating = originalSetSpectating
+                end
+            end
+        end)
+    end
+
+    local function disableForceSpectate()
+        if spectateMaid then
+            spectateMaid:DoCleaning()
+            spectateMaid = nil
+        end
+        forceSpectate = false
+        stopForceSpectate()
+    end
+
+    SpectateSection:AddToggle("Enable Always Allow Spectate", function(state)
+        if state then
+            enableForceSpectate()
+        else
+            disableForceSpectate()
+        end
+    end)
+end
 
 local creditsSection = shared.AddSection("Credits")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
