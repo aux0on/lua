@@ -4329,27 +4329,25 @@ do
         end
     end)
     
-    cameraSection:AddLabel("Horizontal Stretch")
-    cameraSection:AddTextbox("0.80", function(value)
-        local num = tonumber(value)
+    cameraSection:AddTextBox("Horizontal Stretch", function(text)
+        local num = tonumber(text)
         if num then
             stretchHorizontal = num
             if cameraStretchEnabled then
                 applyCameraStretch()
             end
         end
-    end)
+    end, "0.80")
     
-    cameraSection:AddLabel("Vertical Stretch")
-    cameraSection:AddTextbox("0.80", function(value)
-        local num = tonumber(value)
+    cameraSection:AddTextBox("Vertical Stretch", function(text)
+        local num = tonumber(text)
         if num then
             stretchVertical = num
             if cameraStretchEnabled then
                 applyCameraStretch()
             end
         end
-    end)
+    end, "0.80")
     
     LocalPlayer.CharacterRemoving:Connect(function()
         stopCameraStretch()
