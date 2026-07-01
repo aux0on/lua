@@ -2520,6 +2520,7 @@ do
     local feAnimEnabled = false
     local animState = {all="Default", idle="Default", walk="Default", run="Default", jump="Default", climb="Default", fall="Default"}
     local originalAnims = {}
+    local currentAnimPreset = "Default"
     
     local animPresets = {
         ["Default"] = nil,
@@ -2787,21 +2788,38 @@ do
         fall  = { folder = "fall",  slots = { { child = "FallAnim",   origKey = "fall"  } } },
     }
     
+    local allAnimOptions = {
+        "Default", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
+        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
+        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed",
+        "Glow Motion", "Bubbly", "Adidas Comm", "KATSEYE", "Wicked Popular"
+    }
+    
+    local runAnimOptions = {
+        "Default", "OG Rthro Run", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
+        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
+        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
+        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed",
+        "Glow Motion", "Bubbly", "Adidas Comm", "KATSEYE", "Wicked Popular"
+    }
+    
     local function saveOriginalAnimations(character)
         local Animate = character:FindFirstChild("Animate")
-        if not Animate then return end
+        if not Animate then return false end
 
         for _, info in pairs(animMap) do
             local folder = Animate:FindFirstChild(info.folder)
             if folder then
                 for _, slot in ipairs(info.slots) do
                     local anim = folder:FindFirstChild(slot.child)
-                    if anim then
+                    if anim and anim.AnimationId and anim.AnimationId ~= "" then
                         originalAnims[slot.origKey] = anim.AnimationId
                     end
                 end
             end
         end
+        return true
     end
 
     local function stopAllAnimations()
@@ -2883,36 +2901,36 @@ do
 
     local feAnimCharConn = nil
 
-local function enableFEAnims()
-    if feAnimCharConn then
-        feAnimCharConn:Disconnect()
-        feAnimCharConn = nil
-    end
-
-    if LocalPlayer.Character then
-        saveOriginalAnimations(LocalPlayer.Character)
-        applyAnimations()
-    end
-
-    feAnimCharConn = LocalPlayer.CharacterAdded:Connect(function(character)
-        if not feAnimEnabled then return end
-        originalAnims = {}
-
-        local Animate = character:WaitForChild("Animate", 10)
-        if not Animate then return end
-        
-        local idle = Animate:WaitForChild("idle", 5)
-        if idle then
-            local anim1 = idle:WaitForChild("Animation1", 3)
-            if anim1 and anim1.AnimationId ~= "" then
-                saveOriginalAnimations(character)
-                applyAnimations()
-            end
+    local function enableFEAnims()
+        if feAnimCharConn then
+            feAnimCharConn:Disconnect()
+            feAnimCharConn = nil
         end
-    end)
 
-    FEAnimMaid:GiveTask(feAnimCharConn)
-end
+        if LocalPlayer.Character then
+            saveOriginalAnimations(LocalPlayer.Character)
+            applyAnimations()
+        end
+
+        feAnimCharConn = LocalPlayer.CharacterAdded:Connect(function(character)
+            local success = character:WaitForChild("Humanoid", 10) ~= nil
+            if not success then return end
+            
+            local Animate = character:WaitForChild("Animate", 10)
+            if not Animate then return end
+            
+            local idle = Animate:WaitForChild("idle", 5)
+            if idle then
+                local anim1 = idle:WaitForChild("Animation1", 3)
+                if anim1 then
+                    saveOriginalAnimations(character)
+                    applyAnimations()
+                end
+            end
+        end)
+
+        FEAnimMaid:GiveTask(feAnimCharConn)
+    end
 
     local function disableFEAnims()
         if feAnimCharConn then
@@ -2932,14 +2950,6 @@ end
         restoreDefaultAnimations()
     end
 
-    local animOptions = {
-        "Default", "OG Rthro Run", "Vampire", "Hero", "Zombie Classic", "Mage", "Ghost",
-        "Elder", "Levitation", "Astronaut", "Ninja", "Werewolf", "Cartoon",
-        "Pirate", "Sneaky", "Toy", "Knight", "Confident", "Popstar",
-        "Princess", "Cowboy", "Patrol", "Zombie FE", "Catwalk Glam", "Amazon Unboxed",
-        "Glow Motion", "Bubbly", "Adidas Comm", "KATSEYE", "Wicked Popular"
-    }
-
     feAnimSection:AddToggle("Enable FE Anims", function(enabled)
         feAnimEnabled = enabled
         if enabled then
@@ -2949,7 +2959,7 @@ end
         end
     end)
 
-    feAnimSection:AddDropdown("All Animations", animOptions, function(selected)
+    feAnimSection:AddDropdown("All Animations", allAnimOptions, function(selected)
         if not feAnimEnabled then return end
         animState.all = selected
         applyAnimations()
@@ -2965,7 +2975,11 @@ end
     }
 
     for _, dd in ipairs(dropdowns) do
-        feAnimSection:AddDropdown(dd.label, animOptions, function(selected)
+        local options = allAnimOptions
+        if dd.key == "run" then
+            options = runAnimOptions
+        end
+        feAnimSection:AddDropdown(dd.label, options, function(selected)
             if not feAnimEnabled then return end
             animState[dd.key] = selected
             applyAnimations()
