@@ -97,176 +97,15 @@ local __UIS  = getfserv("UserInputService")
 local __PLRS = getfserv("Players")
 local __TS   = getfserv("TweenService")
 
-local BBSystem = {Buttons = {}, Connections = {}}
-
-local function bb_safecallback(callback)
-    if not callback then return end
-    local ok, err = xpcall(callback, function(e) return debug.traceback(e) end)
-    if not ok then warn("[BB ERROR] " .. tostring(err)) end
-end
-
-local function BB_GetStorage()
-    local parent = gethui and gethui()
-    if not parent or typeof(parent) ~= "Instance" then
-        parent = getfserv("CoreGui")
-    end
-    if not parent or typeof(parent) ~= "Instance" then
-        parent = __PLRS.LocalPlayer:WaitForChild("PlayerGui", 5)
-    end
-    if typeof(parent) ~= "Instance" then
-        parent = __PLRS.LocalPlayer:WaitForChild("PlayerGui")
-    end
-
-    local sg = parent:FindFirstChild("@BBStorage")
-    if not sg then
-        sg = Instance.new("ScreenGui")
-        sg.Name = "@BBStorage"
-        sg.ResetOnSpawn = false
-        sg.IgnoreGuiInset = true
-        pcall(function() sg.ScreenInsets = Enum.ScreenInsets.None end)
-        sg.Parent = parent
-    end
-    return sg
-end
-
-local __BB_GRAD_SEQ = ColorSequence.new({
-    ColorSequenceKeypoint.new(0,    __PCLR(0.0784314, 0.0784314, 0.0784314)),
-    ColorSequenceKeypoint.new(0.75, __PCLR(0.0784314, 0.0784314, 0.54902)),
-    ColorSequenceKeypoint.new(1,    __PCLR(0.470588,  0.156863,  0.470588))
-})
-
-local function BB_MakeDraggable(gui, func, ripple, sound)
-    local dragging, dragInput, dragStart, startPos
-    local hasMoved = false
-    local tInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local normalSize    = __UD2(0, 200, 0, 75)
-    local normalTxtSize = 24
-    local bigSize       = __UD2(0, 220, 0, 82.5)
-    local bigTxtSize    = 26.4
-
-    gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging  = true
-            hasMoved  = false
-            dragStart = input.Position
-            startPos  = gui.Position
-            __TS:Create(gui, tInfo, {Size = bigSize, TextSize = bigTxtSize}):Play()
-            local absPos = gui.AbsolutePosition
-            ripple.Position = __UD2(0, input.Position.X - absPos.X, 0, input.Position.Y - absPos.Y)
-            ripple.Size = __UD2(0, 0, 0, 0)
-            ripple.BackgroundTransparency = 0.5
-            ripple.Visible = true
-            sound:Play()
-            __TS:Create(ripple, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-                Size = __UD2(0, 300, 0, 300),
-                BackgroundTransparency = 1
-            }):Play()
-            local rel
-            rel = __UIS.InputEnded:Connect(function(endInput)
-                if endInput.UserInputType == input.UserInputType then
-                    dragging = false
-                    __TS:Create(gui, tInfo, {Size = normalSize, TextSize = normalTxtSize}):Play()
-                    if not hasMoved then bb_safecallback(func) end
-                    rel:Disconnect()
-                end
-            end)
-        end
-    end)
-    gui.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    __UIS.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            if delta.Magnitude > 7 then hasMoved = true end
-            gui.Position = __UD2(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
 local muteButtonSounds = false
 
 local function UpdateAllButtonSounds()
     local volume = muteButtonSounds and 0 or 0.5
-    for id, btn in pairs(BBSystem.Buttons) do
-        local sound = btn:FindFirstChild("Sound")
-        if sound then
-            sound.Volume = volume
-        end
-    end
     for id, btn in pairs(BindableButtons.Buttons) do
         local sound = btn:FindFirstChild("Sound")
         if sound then
             sound.Volume = volume
         end
-    end
-end
-
-local function AddBigButton(id, text, func)
-    if BBSystem.Buttons[id] then return end
-    local storage = BB_GetStorage()
-    local bb = Instance.new("TextButton")
-    bb.Name = id
-    bb.Size = __UD2(0, 200, 0, 75)
-    bb.Position = __UD2(0.5, 0, 0.5, 0)
-    bb.AnchorPoint = __V2(0.5, 0.5)
-    bb.BackgroundColor3 = __RGB(255, 255, 255)
-    bb.BackgroundTransparency = 0.9
-    bb.BorderSizePixel = 0
-    bb.Font = Enum.Font.Jura
-    bb.Text = text
-    bb.TextSize = 24
-    bb.TextColor3 = __RGB(255, 255, 255)
-    bb.TextWrapped = true
-    bb.ClipsDescendants = true
-    bb.AutoButtonColor = false
-    bb.ZIndex = 5
-    bb.Parent = storage
-
-    Instance.new("UICorner", bb).CornerRadius = __UD(0, 5)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = __RGB(255, 255, 255)
-    stroke.Thickness = 1.5
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = bb
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = __BB_GRAD_SEQ
-    gradient.Parent = stroke
-
-    local ripple = Instance.new("Frame")
-    ripple.Name = "@ripple"
-    ripple.BackgroundColor3 = __RGB(0, 155, 255)
-    ripple.BackgroundTransparency = 0.5
-    ripple.ZIndex = 4
-    ripple.Size = __UD2(0, 0, 0, 0)
-    ripple.AnchorPoint = __V2(0.5, 0.5)
-    ripple.Visible = false
-    ripple.Parent = bb
-    Instance.new("UICorner", ripple).CornerRadius = __UD(1, 0)
-
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://3868133279"
-    sound.Volume = muteButtonSounds and 0 or 0.5
-    sound.Parent = bb
-
-    BB_MakeDraggable(bb, func, ripple, sound)
-    BBSystem.Connections[id] = __RS.RenderStepped:Connect(function()
-        gradient.Rotation = (gradient.Rotation + 1) % 360
-    end)
-    BBSystem.Buttons[id] = bb
-    return bb
-end
-
-local function DeleteBigButton(id)
-    if BBSystem.Buttons[id] then
-        if BBSystem.Connections[id] then
-            BBSystem.Connections[id]:Disconnect()
-            BBSystem.Connections[id] = nil
-        end
-        BBSystem.Buttons[id]:Destroy()
-        BBSystem.Buttons[id] = nil
     end
 end
 
@@ -3650,11 +3489,6 @@ RootMaid:GiveTasks(
     function() if trueAntiAfkConnection then trueAntiAfkConnection:Disconnect() end end,
     function() if trueAntiVoidConnection then trueAntiVoidConnection:Disconnect() end end,
     function() workspace.FallenPartsDestroyHeight = originalDestroyHeight end,
-    function() 
-        for id, _ in pairs(BBSystem.Buttons) do
-            DeleteBigButton(id)
-        end
-    end,
     function()
         for id, _ in pairs(BindableButtons.Buttons) do
             BindableButtons.DeleteBButton(id)
