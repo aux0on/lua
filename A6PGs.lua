@@ -2381,15 +2381,11 @@ do
     end)
 end
 
-local ggAuraSection = shared.AddSection("Grab Gun Aura")
-local ggAuraEnabled, autoGGEnabled = false, false
-local ggButtonSize = 0.11
+local autoGGSection = shared.AddSection("Auto Grab Gun")
+local autoGGEnabled = false
 local autoGGMaid = Maid.new()
-local gunAuraConnection = nil
-
 RootMaid:GiveTask(autoGGMaid)
 
--- Gun Aura (touch method)
 local function touch(a, b)
     firetouchinterest(a, b, 0)
     firetouchinterest(a, b, 1)
@@ -2399,42 +2395,14 @@ local function bringGun()
     local character = LocalPlayer.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     local gunDrop = workspace:FindFirstChild("GunDrop", true)
-    
     if rootPart and gunDrop then
         touch(rootPart, gunDrop)
     end
 end
 
--- Teleport fallback method (SILENT - no notifications)
-local function grabGunTeleport()
-    local char = LocalPlayer.Character
-    if not char then return false end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
-    
-    local ggDrop = nil
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "GunDrop" and obj:IsA("BasePart") then
-            ggDrop = obj
-            break
-        end
-    end
-    
-    if not ggDrop then return false end
-    
-    local savedPos = root.CFrame
-    root.CFrame = CFrame.new(ggDrop.Position + Vector3.new(0, 3, 0))
-    task.wait(0.3)
-    root.CFrame = savedPos
-    return true
-end
-
--- Check if player has gun in inventory
 local function hasGunInInventory()
     local char = LocalPlayer.Character
     local backpack = LocalPlayer.Backpack
-    
     if char then
         for _, tool in pairs(char:GetChildren()) do
             if tool:IsA("Tool") and tool.Name == "Gun" then
@@ -2442,7 +2410,6 @@ local function hasGunInInventory()
             end
         end
     end
-    
     if backpack then
         for _, tool in pairs(backpack:GetChildren()) do
             if tool:IsA("Tool") and tool.Name == "Gun" then
@@ -2450,11 +2417,9 @@ local function hasGunInInventory()
             end
         end
     end
-    
     return false
 end
 
--- Check if a gun drop exists on the map (SILENT - no notifications)
 local function gunDropExists()
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj.Name == "GunDrop" and obj:IsA("BasePart") then
@@ -2464,111 +2429,28 @@ local function gunDropExists()
     return false
 end
 
--- Main grab function with aura + teleport fallback (SILENT - no notifications)
-local function grabGunWithFallback(silent)
-    -- Don't even try if there's no gun drop on the map
-    if not gunDropExists() then
-        return false
-    end
-    
-    -- Don't try if we already have a gun
-    if hasGunInInventory() then
-        return true
-    end
-    
-    -- First try aura (touch method)
+local function grabGun()
+    if not gunDropExists() then return false end
+    if hasGunInInventory() then return true end
     bringGun()
     task.wait(0.5)
-    
-    -- Check if gun was obtained
-    if not hasGunInInventory() then
-        grabGunTeleport()
-        task.wait(0.5)
-    end
-    
-    -- Only show notification if not silent and we actually got the gun
-    if not silent and hasGunInInventory() then
-        Notify("Grab Gun", "Gun grabbed successfully!", 2)
-    end
-    
     return hasGunInInventory()
 end
 
--- Toggle gun aura
-local function toggleGunAura(state)
-    ggAuraEnabled = state
-    if state then
-        if gunAuraConnection then return end
-        gunAuraConnection = Services.RunService.Heartbeat:Connect(function()
-            if ggAuraEnabled and gunDropExists() and not hasGunInInventory() then
-                bringGun()
-            end
-        end)
-    else
-        if gunAuraConnection then
-            gunAuraConnection:Disconnect()
-            gunAuraConnection = nil
-        end
-    end
-end
-
-ggAuraSection:AddToggle("Enable Gun Aura", function(enabled)
-    toggleGunAura(enabled)
-end)
-
-ggAuraSection:AddToggle("Enable Auto Grab Gun", function(enabled)
+autoGGSection:AddToggle("Enable Auto GG", function(enabled)
     autoGGEnabled = enabled
     autoGGMaid:DoCleaning()
-    
     if enabled then
         task.spawn(function()
             while autoGGEnabled do
-                -- Only attempt if gun drop exists AND we don't have a gun
                 if LocalPlayer.Character and gunDropExists() and not hasGunInInventory() then
-                    grabGunWithFallback(true) -- Silent mode, no notifications
+                    grabGun()
                 end
-                task.wait(3)
+                task.wait(0.5)
             end
         end)
     end
 end)
-
-ggAuraSection:AddToggle("Enable GG Button", function(enabled)
-    if enabled then
-        BindableButtons.AddBButton("ggaura_bind", "GG", function()
-            grabGunWithFallback(false) -- Show notification only when button pressed
-        end)
-        local btn = BindableButtons.Buttons["ggaura_bind"]
-        if btn then
-            local screen = workspace.CurrentCamera.ViewportSize
-            btn.Size = __UD2(ggButtonSize * (screen.Y / screen.X), 0, ggButtonSize, 0)
-        end
-    else
-        BindableButtons.DeleteBButton("ggaura_bind")
-    end
-end)
-
-ggAuraSection:AddSlider("GG Button Size", 5, 25, 11, function(value)
-    ggButtonSize = value / 100
-    local btn = BindableButtons.Buttons["ggaura_bind"]
-    if btn then
-        local screen = workspace.CurrentCamera.ViewportSize
-        btn.Size = __UD2(ggButtonSize * (screen.Y / screen.X), 0, ggButtonSize, 0)
-    end
-end)
-
-ggAuraSection:AddButton("Grab Gun (Aura + Fallback)", function()
-    grabGunWithFallback(false) -- Show notification when button pressed
-end)
-
-local ggKeybind = Services.UserInputService.InputBegan:Connect(function(input, gp)
-    if not gp and input.KeyCode == Enum.KeyCode.G then 
-        grabGunWithFallback(false) -- Show notification when keybind pressed
-    end
-end)
-RootMaid:GiveTask(ggKeybind)
-
-ggAuraSection:AddLabel("Auto Grab runs silently - only shows notifications when you press the button")
 
 local giveGunSection = shared.AddSection("Give Gun")
 
