@@ -664,6 +664,9 @@ local auraStuds = 10
 local whitelist = {}
 local auraMaid = Maid.new()
 
+local fakeMurderEnabled = false
+local selectedFakeMurder = nil
+
 RootMaid:GiveTask(auraMaid)
 
 local function getMurdererKnife()
@@ -734,6 +737,40 @@ local function checkAura()
     end
 end
 
+local function checkFakeMurderAura()
+    if not fakeMurderEnabled then return end
+    if not selectedFakeMurder then return end
+    
+    local fakeMurderChar = selectedFakeMurder.Character
+    if not fakeMurderChar then return end
+    
+    local fakeMurderRoot = fakeMurderChar:FindFirstChild("HumanoidRootPart")
+    if not fakeMurderRoot then return end
+    
+    local handleTouched = getHandleTouchedEvent()
+    if not handleTouched then return end
+    
+    local fakeMurderPos = fakeMurderRoot.Position
+    
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer and player ~= selectedFakeMurder and not table_find(whitelist, player.UserId) then
+            local targetChar = player.Character
+            if targetChar then
+                local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+                if targetRoot then
+                    local dist = (fakeMurderPos - targetRoot.Position).Magnitude
+                    if dist <= auraStuds then
+                        local torso = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso")
+                        if torso then
+                            handleTouched:FireServer(torso)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 blueAuraSection:AddToggle("Enable Blue Aura", function(enabled)
     blueAuraEnabled = enabled
     auraMaid:DoCleaning()
@@ -745,6 +782,43 @@ blueAuraSection:AddToggle("Enable Blue Aura", function(enabled)
                 task.wait(0.5)
             end
         end)
+    end
+end)
+
+blueAuraSection:AddToggle("Enable Fake Murderer", function(enabled)
+    fakeMurderEnabled = enabled
+    auraMaid:DoCleaning()
+    
+    if enabled then
+        task.spawn(function()
+            while fakeMurderEnabled do
+                checkFakeMurderAura()
+                task.wait(0.5)
+            end
+        end)
+    end
+end)
+
+local function getPlayerList()
+    local players = {}
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(players, player.Name)
+        end
+    end
+    table.sort(players)
+    if #players == 0 then
+        players = {"No players"}
+    end
+    return players
+end
+
+local fakeMurderDropdown = blueAuraSection:AddDropdown("Select Fake Murderer", getPlayerList(), function(value)
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player.Name == value then
+            selectedFakeMurder = player
+            break
+        end
     end
 end)
 
@@ -762,6 +836,18 @@ end)
 blueAuraSection:AddButton("Clear Whitelist", function()
     whitelist = {}
     Notify("Whitelist cleared.", 2)
+end)
+
+game.Players.PlayerAdded:Connect(function()
+    if fakeMurderDropdown then
+        fakeMurderDropdown:Refresh(getPlayerList(), selectedFakeMurder and selectedFakeMurder.Name or nil)
+    end
+end)
+
+game.Players.PlayerRemoving:Connect(function()
+    if fakeMurderDropdown then
+        fakeMurderDropdown:Refresh(getPlayerList(), selectedFakeMurder and selectedFakeMurder.Name or nil)
+    end
 end)
 
 do
