@@ -899,6 +899,7 @@ do
         "UFOs2025",
         "Strawberries26",
         "Snowballs2025",
+        "Nightlife26",
         "Leaves2025"
     }, function(s)
         selectedDualEffect = s
