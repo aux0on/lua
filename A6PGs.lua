@@ -3068,76 +3068,25 @@ true_antis_section:AddToggle("Enable True Anti Void", function(bool)
     end
 end)
 
-do
-    local cameraSection = shared.AddSection("Camera Stretch")
-    cameraSection:AddLabel("Default values for horizontal and vertical are 0.80")
-    
-    local stretchHorizontal = 0.80
-    local stretchVertical = 0.80
-    local cameraStretchConnection = nil
-    local cameraStretchEnabled = false
-    
-    local function applyCameraStretch()
-        if cameraStretchConnection then 
-            cameraStretchConnection:Disconnect() 
-            cameraStretchConnection = nil 
-        end
-        
-        if not cameraStretchEnabled then return end
-        
-        cameraStretchConnection = game:GetService("RunService").RenderStepped:Connect(function()
-            local Camera = workspace.CurrentCamera
-            Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, stretchHorizontal, 0, 0, 0, stretchVertical, 0, 0, 0, 1)
-        end)
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+
+local cameraSection = shared.AddSection("Camera Stretch")
+
+local cameraStretchEnabled = false
+local stretchStrength = 0.80
+
+cameraSection:AddToggle("Enable Camera Stretch", function(on)
+    cameraStretchEnabled = on
+end)
+
+RunService.RenderStepped:Connect(function()
+    if cameraStretchEnabled then
+        Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, stretchStrength, 0, 0, 0, 1)
     end
-    
-    local function stopCameraStretch()
-        if cameraStretchConnection then
-            cameraStretchConnection:Disconnect()
-            cameraStretchConnection = nil
-        end
-    end
-    
-    cameraSection:AddToggle("Enable Camera Stretch", function(state)
-        cameraStretchEnabled = state
-        if state then
-            applyCameraStretch()
-        else
-            stopCameraStretch()
-        end
-    end)
-    
-    cameraSection:AddTextBox("Horizontal Stretch", function(text)
-        local num = tonumber(text)
-        if num then
-            stretchHorizontal = num
-            if cameraStretchEnabled then
-                applyCameraStretch()
-            end
-        end
-    end, "0.80")
-    
-    cameraSection:AddTextBox("Vertical Stretch", function(text)
-        local num = tonumber(text)
-        if num then
-            stretchVertical = num
-            if cameraStretchEnabled then
-                applyCameraStretch()
-            end
-        end
-    end, "0.80")
-    
-    LocalPlayer.CharacterRemoving:Connect(function()
-        stopCameraStretch()
-    end)
-    
-    LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        if cameraStretchEnabled then
-            applyCameraStretch()
-        end
-    end)
-end
+end)
 
 local creditsSection = shared.AddSection("Credits")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
