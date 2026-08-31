@@ -2237,6 +2237,291 @@ do
     end)
 end
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlaySong = Services.ReplicatedStorage.Remotes.Inventory.PlaySong
+local sfxSection = shared.AddSection("FE SFX")
+
+sfxSection:AddLabel("Radio Required")
+
+local songSaveFile = "saved_gunshot_audio.json"
+local savedSongs = {}
+
+if isfile and readfile and isfile(songSaveFile) then
+    local ok, data = pcall(function() return Services.HttpService:JSONDecode(readfile(songSaveFile)) end)
+    if ok and type(data) == "table" then savedSongs = data end
+end
+
+local function saveSongs()
+    if writefile then writefile(songSaveFile, Services.HttpService:JSONEncode(savedSongs)) end
+end
+
+local function getSongNames()
+    local names = {}
+    for _, song in ipairs(savedSongs) do
+        table.insert(names, song.name or song.id)
+    end
+    return names
+end
+
+local lastSelectedSong
+local songDropdown = sfxSection:AddDropdown("Saved Gunshot Audio", getSongNames(), function(selectedName)
+    for _, song in ipairs(savedSongs) do
+        if song.name == selectedName then
+            lastSelectedSong = song
+            break
+        end
+    end
+end)
+
+sfxSection:AddTextBox("Add Gunshot Audio ID", function(text)
+    local id = text:match("%d+")
+    if id then
+        local success, info = pcall(function() return Services.MarketplaceService:GetProductInfo(tonumber(id)) end)
+        local name = (success and info and info.Name) or id
+        table.insert(savedSongs, {name = name, id = id})
+        saveSongs()
+        songDropdown.Change(getSongNames())
+        Notify("Added: "..name, 2)
+    else
+        Notify("Invalid audio ID!", 2)
+    end
+end)
+
+sfxSection:AddButton("Delete Selected Gunshot Audio", function()
+    if lastSelectedSong then
+        for i, song in ipairs(savedSongs) do
+            if song.name == lastSelectedSong.name then
+                table.remove(savedSongs, i)
+                saveSongs()
+                songDropdown.Change(getSongNames())
+                Notify("Removed: "..lastSelectedSong.name, 2)
+                lastSelectedSong = nil
+                return
+            end
+        end
+    end
+end)
+
+local delayTime = 0.8
+sfxSection:AddTextBox("Gunshot Delay (Seconds)", function(text)
+    local val = tonumber(text)
+    if val and val >= 0 then
+        delayTime = val
+        Notify("Delay set to: " .. val .. "s", 2)
+    else
+        Notify("Invalid delay value!", 2)
+    end
+end)
+
+local feGunshotEnabled = false
+sfxSection:AddToggle("Enable FE Gunshot", function(state)
+    feGunshotEnabled = state
+    Notify(state and "FE Gunshot Enabled" or "FE Gunshot Disabled", 2)
+end)
+
+local killSaveFile = "saved_killsound_audio.json"
+local savedKillSongs = {}
+
+if isfile and readfile and isfile(killSaveFile) then
+    local ok, data = pcall(function() return Services.HttpService:JSONDecode(readfile(killSaveFile)) end)
+    if ok and type(data) == "table" then savedKillSongs = data end
+end
+
+local function saveKillSongs()
+    if writefile then writefile(killSaveFile, Services.HttpService:JSONEncode(savedKillSongs)) end
+end
+
+local function getKillSongNames()
+    local names = {}
+    for _, song in ipairs(savedKillSongs) do
+        table.insert(names, song.name or song.id)
+    end
+    return names
+end
+
+local lastSelectedKillSong
+local killSongDropdown = sfxSection:AddDropdown("Saved Kill Sound Audio", getKillSongNames(), function(selectedName)
+    for _, song in ipairs(savedKillSongs) do
+        if song.name == selectedName then
+            lastSelectedKillSong = song
+            break
+        end
+    end
+end)
+
+sfxSection:AddTextBox("Add Kill Audio ID", function(text)
+    local id = text:match("%d+")
+    if id then
+        local success, info = pcall(function() return Services.MarketplaceService:GetProductInfo(tonumber(id)) end)
+        local name = (success and info and info.Name) or id
+        table.insert(savedKillSongs, {name = name, id = id})
+        saveKillSongs()
+        killSongDropdown.Change(getKillSongNames())
+        Notify("Added Kill Audio: "..name, 2)
+    else
+        Notify("Invalid audio ID!", 2)
+    end
+end)
+
+sfxSection:AddButton("Delete Selected Kill Audio", function()
+    if lastSelectedKillSong then
+        for i, song in ipairs(savedKillSongs) do
+            if song.name == lastSelectedKillSong.name then
+                table.remove(savedKillSongs, i)
+                saveKillSongs()
+                killSongDropdown.Change(getKillSongNames())
+                Notify("Removed Kill Audio: "..lastSelectedKillSong.name, 2)
+                lastSelectedKillSong = nil
+                return
+            end
+        end
+    end
+end)
+
+local killDelayTime = 0.8
+sfxSection:AddTextBox("Kill Delay (Seconds)", function(text)
+    local val = tonumber(text)
+    if val and val >= 0 then
+        killDelayTime = val
+        Notify("Kill Delay set to: " .. val .. "s", 2)
+    else
+        Notify("Invalid delay value!", 2)
+    end
+end)
+
+local feKillSoundEnabled = false
+sfxSection:AddToggle("Enable FE Kill Sound", function(state)
+    feKillSoundEnabled = state
+    Notify(state and "FE Kill Sound Enabled" or "FE Kill Sound Disabled", 2)
+end)
+
+local shootTargetIds = {
+    ["76834305559381"] = true,
+    ["7808472682"] = true,
+    ["10209803"] = true,
+}
+
+local pendingGunshotThread = nil
+local lastTrigger = 0
+local debounceCooldown = 0.15
+
+local function monitorSound(sound)
+    if sound:IsA("Sound") then
+        sound:GetPropertyChangedSignal("Playing"):Connect(function()
+            if sound.Playing then
+                local soundIdNumber = sound.SoundId:match("%d+")
+                if not soundIdNumber then return end
+                
+                local currentTime = tick()
+                if currentTime - lastTrigger < debounceCooldown then return end
+                
+                if shootTargetIds[soundIdNumber] then
+                    if not feGunshotEnabled or not lastSelectedSong then return end
+                    lastTrigger = currentTime
+                    
+                    local url = "https://www.roblox.com/asset/?id="..lastSelectedSong.id
+                    PlaySong:FireServer(url)
+                    
+                    if pendingGunshotThread then
+                        task.cancel(pendingGunshotThread)
+                        pendingGunshotThread = nil
+                    end
+                    
+                    pendingGunshotThread = task.spawn(function()
+                        task.wait(delayTime)
+                        pendingGunshotThread = nil
+                        if feGunshotEnabled and lastSelectedSong then
+                            PlaySong:FireServer(url)
+                        end
+                    end)
+                end
+            end
+        end)
+    end
+end
+
+local characterConnection
+local function setupCharacter(char)
+    if characterConnection then characterConnection:Disconnect() end
+    characterConnection = char.DescendantAdded:Connect(monitorSound)
+    for _, desc in ipairs(char:GetDescendants()) do
+        monitorSound(desc)
+    end
+end
+
+if LocalPlayer.Character then
+    setupCharacter(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(setupCharacter)
+
+local function hasToolWithTag(player, tag)
+    tag = tag:lower()
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") and item.Name:lower():find(tag) then
+                return true
+            end
+        end
+    end
+    local char = player.Character
+    if char then
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Tool") and item.Name:lower():find(tag) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function onPlayerDied(player)
+    if not feKillSoundEnabled or not lastSelectedKillSong then return end
+    if not hasToolWithTag(player, "knife") then return end
+    if not hasToolWithTag(LocalPlayer, "gun") then return end
+    
+    if pendingGunshotThread then
+        task.cancel(pendingGunshotThread)
+        pendingGunshotThread = nil
+    end
+    
+    local killUrl = "https://www.roblox.com/asset/?id="..lastSelectedKillSong.id
+    PlaySong:FireServer(killUrl)
+    
+    task.spawn(function()
+        task.wait(killDelayTime)
+        if feKillSoundEnabled and lastSelectedKillSong then
+            PlaySong:FireServer(killUrl)
+        end
+    end)
+end
+
+local function setupOtherPlayer(player)
+    if player == LocalPlayer then return end
+    player.CharacterAdded:Connect(function(char)
+        local humanoid = char:WaitForChild("Humanoid", 5)
+        if humanoid then
+            humanoid.Died:Connect(function()
+                onPlayerDied(player)
+            end)
+        end
+    end)
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.Died:Connect(function()
+                onPlayerDied(player)
+            end)
+        end
+    end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    setupOtherPlayer(p)
+end
+Players.PlayerAdded:Connect(setupOtherPlayer)
+
 local autoGGSection = shared.AddSection("Auto Grab Gun")
 local autoGGEnabled = false
 local autoGGMaid = Maid.new()
