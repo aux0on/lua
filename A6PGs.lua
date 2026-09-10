@@ -799,27 +799,8 @@ blueAuraSection:AddToggle("Enable Fake Murderer", function(enabled)
     end
 end)
 
-local function getPlayerList()
-    local players = {}
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            table.insert(players, player.Name)
-        end
-    end
-    table.sort(players)
-    if #players == 0 then
-        players = {"No players"}
-    end
-    return players
-end
-
-local fakeMurderDropdown = blueAuraSection:AddDropdown("Select Fake Murderer", getPlayerList(), function(value)
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player.Name == value then
-            selectedFakeMurder = player
-            break
-        end
-    end
+blueAuraSection:AddPlayerDropdown("Select Fake Murderer", function(player)
+    selectedFakeMurder = player
 end)
 
 blueAuraSection:AddSlider("Aura Studs", 5, 50, 10, function(value)
@@ -836,18 +817,6 @@ end)
 blueAuraSection:AddButton("Clear Whitelist", function()
     whitelist = {}
     Notify("Whitelist cleared.", 2)
-end)
-
-game.Players.PlayerAdded:Connect(function()
-    if fakeMurderDropdown then
-        fakeMurderDropdown:Refresh(getPlayerList(), selectedFakeMurder and selectedFakeMurder.Name or nil)
-    end
-end)
-
-game.Players.PlayerRemoving:Connect(function()
-    if fakeMurderDropdown then
-        fakeMurderDropdown:Refresh(getPlayerList(), selectedFakeMurder and selectedFakeMurder.Name or nil)
-    end
 end)
 
 do
