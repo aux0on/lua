@@ -53,6 +53,10 @@ end
 local RootMaid = Maid.new()
 
 local shared = odh_shared_plugins
+task.spawn(function()
+    shared.load_from_github_url("/aux0on/CrashHandler/refs/heads/main/Prevention.lua")
+end)
+
 if shared.game_name ~= "Murder Mystery 2" then return end
 
 local Services = {
@@ -1787,63 +1791,6 @@ do
 end
 
 do
-    local skySection = shared.AddSection("FE Blind All")
-    skySection:AddLabel("Requires The Glitch Walker Bundle")
-    local skyId = "70883871260184"
-    local SkyboxMaid
-    
-    RootMaid:GiveTask(function() if SkyboxMaid then SkyboxMaid:Destroy() end end)
-    
-    local function playSky(hum, maid)
-        if not hum or not hum.Parent then return end
-        local ani = hum:FindFirstChildOfClass("Animator")
-        if not ani then return end
-        
-        local a = Instance.new("Animation")
-        a.AnimationId = "rbxassetid://"..skyId
-        local skyTrack = ani:LoadAnimation(a)
-        skyTrack.Priority = Enum.AnimationPriority.Action
-        skyTrack.Looped = true
-        skyTrack:Play()
-        maid:GiveTask(function() skyTrack:Stop() skyTrack:Destroy() end)
-        
-        maid:GiveTask(skyTrack.Stopped:Connect(function()
-            if maid._destroyed then return end
-            if hum.Parent then task.wait(0.1) playSky(hum, maid) end
-        end))
-    end
-    
-    skySection:AddToggle("Enable FE Skybox", function(s)
-        if SkyboxMaid then SkyboxMaid:Destroy() end
-        
-        if s then
-            SkyboxMaid = Maid.new()
-            local function enableSky()
-                local c = LocalPlayer.Character
-                if not c then return end
-                local h = c:FindFirstChild("Humanoid")
-                if not h then return end
-                
-                SkyboxMaid:GiveTask(h.StateChanged:Connect(function()
-                    if SkyboxMaid._destroyed then return end
-                    if h.Parent then
-                        task.wait(0.05)
-                        if not SkyboxMaid._destroyed and h.Parent then playSky(h, SkyboxMaid) end
-                    end
-                end))
-                playSky(h, SkyboxMaid)
-            end
-            
-            enableSky()
-            SkyboxMaid:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
-                task.wait(0.5)
-                enableSky()
-            end))
-        end
-    end)
-end
-
-do
     local wallhopSection = shared.AddSection("Wallhop")
     local wallhopToggle, flickEnabled, InfiniteJumpEnabled = false, false, true
     local WallhopMaid
@@ -1891,26 +1838,6 @@ do
     
     wallhopSection:AddToggle("Enable Wallhop Flick", function(enabled) 
         flickEnabled = enabled 
-    end)
-end
-
-do
-    local lagVCSection = shared.AddSection("FE Lag VC")
-    local LagVCMaid
-    
-    RootMaid:GiveTask(function() if LagVCMaid then LagVCMaid:Destroy() end end)
-    
-    lagVCSection:AddToggle("Enable Lag VC", function(state)
-        if LagVCMaid then LagVCMaid:Destroy() end
-        
-        if state then
-            LagVCMaid = Maid.new()
-            PlaySong:FireServer("https://www.roblox.com/asset/?id=6691278175")
-            LagVCMaid:GiveTask(LocalPlayer.CharacterAdded:Connect(function()
-                task.wait(1)
-                PlaySong:FireServer("https://www.roblox.com/asset/?id=6691278175")
-            end))
-        end
     end)
 end
 
