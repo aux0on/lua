@@ -664,7 +664,7 @@ local blueAuraSection = shared.AddSection("Blue Aura")
 blueAuraSection:AddLabel("kill them with your absolute crushing aura")
 
 local blueAuraEnabled = false
-local auraStuds = 10
+local blueAuraStuds = 10
 local whitelist = {}
 local auraMaid = Maid.new()
 
@@ -729,7 +729,7 @@ local function checkAura()
                 local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
                 if targetRoot then
                     local dist = (rootPos - targetRoot.Position).Magnitude
-                    if dist <= auraStuds then
+                    if dist <= blueAuraStuds then
                         local torso = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso")
                         if torso then
                             handleTouched:FireServer(torso)
@@ -763,7 +763,7 @@ local function checkFakeMurderAura()
                 local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
                 if targetRoot then
                     local dist = (fakeMurderPos - targetRoot.Position).Magnitude
-                    if dist <= auraStuds then
+                    if dist <= blueAuraStuds then
                         local torso = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso")
                         if torso then
                             handleTouched:FireServer(torso)
@@ -807,8 +807,8 @@ blueAuraSection:AddPlayerDropdown("Select Fake Murderer", function(player)
     selectedFakeMurder = player
 end)
 
-blueAuraSection:AddSlider("Aura Studs", 5, 50, 10, function(value)
-    auraStuds = value
+blueAuraSection:AddSlider("Blue Aura Studs", 5, 50, 10, function(value)
+    blueAuraStuds = value
 end)
 
 blueAuraSection:AddPlayerDropdown("Whitelist Player", function(player)
@@ -1266,7 +1266,7 @@ do
     local flingButtonSize = 0.11
     local clickFlingEnabled = false
     local flingAuraEnabled = false
-    local auraStuds = 15
+    local flingAuraStuds = 15
     local maids = {autoSheriff=nil, autoMurderer=nil, loopPlr=nil, loopAll=nil, clickFling=nil, flingAura=nil}
     local buttonToggles = {Sheriff=false, Murderer=false, Player=false}
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1722,7 +1722,7 @@ do
                                 
                                 if targetRoot and rootPart then
                                     local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                                    if distance <= auraStuds then
+                                    if distance <= flingAuraStuds then
                                         OdhSkid(player, 1)
                                     end
                                 end
@@ -1735,8 +1735,8 @@ do
         end
     end)
     
-    flingSection:AddSlider("Aura Studs", 5, 50, 15, function(value)
-        auraStuds = value
+    flingSection:AddSlider("Fling Aura Studs", 5, 50, 15, function(value)
+        flingAuraStuds = value
     end)
 end
 
@@ -1865,7 +1865,6 @@ do
     local bindableButtonEnabled = false
     local bindableButtonSize = 0.11
 
-    -- NEW: Adjustable noclip duration
     local noclipDuration = 2
 
     local function NoclipLoop()
@@ -1939,7 +1938,6 @@ do
 
         enableNoclip()
 
-        -- UPDATED: Uses slider value
         disableTimer = noclipDuration
 
         spawn(function()
@@ -2003,7 +2001,6 @@ do
         updateBindableButtonSize()
     end)
 
-    -- NEW: Noclip duration slider
     enSection:AddSlider("Noclip Duration", 1, 15, 2, function(value)
         noclipDuration = value
     end)
