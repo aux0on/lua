@@ -3271,7 +3271,7 @@ end)
 local creditsSection = ataos:AddSection("Credits")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
-shared.Notify("ATAOs ON TOP NIGGA", 5)
+shared.Notify("ATAOs Successfully Loaded!", 1)
 
 RootMaid:GiveTasks(
     function() if trueAntiFlingConnection then trueAntiFlingConnection:Disconnect() end end,
