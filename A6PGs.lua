@@ -308,7 +308,9 @@ hiddenGui.IgnoreGuiInset = true
 hiddenGui.Parent = GetSafeGuiRoot()
 RootMaid:GiveTask(hiddenGui)
 
-local aboutSection = shared.AddSection("About")
+local ataos = shared.CreateTab("ATAOs", "/aux0on/AllTheAdd-OnsIcon/refs/heads/main/Untitled163_20260918192358")
+
+local aboutSection = ataos:AddSection("About")
 aboutSection:AddParagraph("ATAOs MM2", "is the version you are using.")
 
 aboutSection:AddToggle("Mute Button SFX", function(bool)
@@ -316,7 +318,7 @@ aboutSection:AddToggle("Mute Button SFX", function(bool)
     UpdateAllButtonSounds()
 end)
 
-local serverSection = shared.AddSection("Server Options")
+local serverSection = ataos:AddSection("Server Options")
 serverSection:AddLabel("Might Take a Few Tries")
 
 serverSection:AddButton("Rejoin", function()
@@ -410,7 +412,7 @@ serverSection:AddButton("Join Dead Server", function()
 end)
 
 local PlaySong = Services.ReplicatedStorage.Remotes.Inventory.PlaySong
-local radioSection = shared.AddSection("Radio Abuse")
+local radioSection = ataos:AddSection("Radio Abuse")
 local songSaveFile = "saved_songs.json"
 local savedSongs = {}
 
@@ -502,7 +504,7 @@ end)
 
 RootMaid:GiveTask(function() if RadioMaid then RadioMaid:Destroy() end end)
 
-local speedGlitchSection = shared.AddSection("Auto Speedglitch")
+local speedGlitchSection = ataos:AddSection("Auto Speedglitch")
 local asgEnabled, asgHorizontal, asgValue = false, false, 0
 local defaultSpeed = 16
 local asgChar, asgHum, asgRoot, isInAir
@@ -547,7 +549,7 @@ speedGlitchSection:AddToggle("Sideways Only", function(e) asgHorizontal = e end)
 speedGlitchSection:AddSlider("Speed (0-255)", 0, 255, 0, function(v) asgValue = v end)
 
 do
-    local mapVoterSection = shared.AddSection("Map Voter")
+    local mapVoterSection = ataos:AddSection("Map Voter")
     local voterRespawnAmount = 12
     local savedPos, isRespawning, vmButtonEnabled
     local vmButtonSize = 0.11
@@ -614,7 +616,7 @@ do
     end)
 end
 
-local whitelistSection = shared.AddSection("Kill All")
+local whitelistSection = ataos:AddSection("Kill All")
 local whitelist = {}
 
 whitelistSection:AddLabel("Ignores Whitelisted Players")
@@ -659,7 +661,7 @@ whitelistSection:AddButton("Kill All", function()
     end
 end)
 
-local blueAuraSection = shared.AddSection("Blue Aura")
+local blueAuraSection = ataos:AddSection("Blue Aura")
 
 blueAuraSection:AddLabel("kill them with your absolute crushing aura")
 
@@ -824,7 +826,7 @@ blueAuraSection:AddButton("Clear Whitelist", function()
 end)
 
 do
-    local duelSection = shared.AddSection("Dual Effect")
+    local duelSection = ataos:AddSection("Dual Effect")
     duelSection:AddLabel("Must Own Dual Effect + Selected Effect")
 
     local dualEnabled, selectedDualEffect = false, "Electric"
@@ -910,7 +912,7 @@ do
 end
 
 do
-    local tradeSection = shared.AddSection("Disable Trading")
+    local tradeSection = ataos:AddSection("Disable Trading")
     tradeSection:AddLabel("Turn Off & Rejoin To Trade Again")
     local TradeMaid
     
@@ -932,7 +934,7 @@ do
 end
 
 do
-    local trollSection = shared.AddSection("Troll (FE)")
+    local trollSection = ataos:AddSection("Troll (FE)")
     trollSection:AddLabel("Play Troll Emotes")
     local trollButtonSize = 0.11
     
@@ -1006,7 +1008,7 @@ do
 end
 
 do
-    local rtxSection = shared.AddSection("RTX")
+    local rtxSection = ataos:AddSection("RTX")
     local rtx = {Sky=nil, Blur=nil, CC=nil, Bloom=nil, Sun=nil}
     local RTXMaid
     
@@ -1066,7 +1068,7 @@ do
 end
 
 do
-    local lsSection = shared.AddSection("Legit Speedglitch")
+    local lsSection = ataos:AddSection("Legit Speedglitch")
     local sideSpd, lsHori = 0, false
     local lsButtonSize = 0.11
     local emOn, selEmote = false, nil
@@ -1180,7 +1182,7 @@ do
 end
 
 do
-    local hlSection = shared.AddSection("FE Headless")
+    local hlSection = ataos:AddSection("FE Headless")
     hlSection:AddLabel("V2 & Higher Require a Very Small Head")
     
     local hlConfigs = {
@@ -1259,7 +1261,7 @@ do
 end
 
 do
-    local flingSection = shared.AddSection("Fling")
+    local flingSection = ataos:AddSection("Fling")
     local flingSelPlr, flingActive = nil, true
     local selectedPlayers = {}
     local whitelist = {}
@@ -1741,7 +1743,7 @@ do
 end
 
 do
-    local perkSection = shared.AddSection("Perks")
+    local perkSection = ataos:AddSection("Perks")
     local hasteOn, blatantMode, hasteSpd = false, false, 18
     local PerkMaid
     
@@ -1791,7 +1793,7 @@ do
 end
 
 do
-    local wallhopSection = shared.AddSection("Wallhop")
+    local wallhopSection = ataos:AddSection("Wallhop")
     local wallhopToggle, flickEnabled, InfiniteJumpEnabled = false, false, true
     local WallhopMaid
     local raycastParams = RaycastParams.new()
@@ -1842,7 +1844,7 @@ do
 end
 
 do
-    local enSection = shared.AddSection("Emote Noclip")
+    local enSection = ataos:AddSection("Emote Noclip")
 
     local selEmote = nil
     local emotes = {
@@ -2013,7 +2015,7 @@ do
 end
 
 do
-    local ssSection = shared.AddSection("Sign Spam")
+    local ssSection = ataos:AddSection("Sign Spam")
     local spamming, ssButtonEnabled, autoGetGG = false, false, false
     local ssButtonSize = 0.11
     local SignSpamMaid, SignSpamAutoMaid
@@ -2133,7 +2135,7 @@ end
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlaySong = Services.ReplicatedStorage.Remotes.Inventory.PlaySong
-local sfxSection = shared.AddSection("FE SFX")
+local sfxSection = ataos:AddSection("FE SFX")
 
 sfxSection:AddLabel("Radio Required")
 
@@ -2415,7 +2417,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(setupOtherPlayer)
 
-local autoGGSection = shared.AddSection("Auto Grab Gun")
+local autoGGSection = ataos:AddSection("Auto Grab Gun")
 local autoGGEnabled = false
 local autoGGMaid = Maid.new()
 RootMaid:GiveTask(autoGGMaid)
@@ -2486,7 +2488,7 @@ autoGGSection:AddToggle("Enable Auto GG", function(enabled)
     end
 end)
 
-local giveGunSection = shared.AddSection("Give Gun")
+local giveGunSection = ataos:AddSection("Give Gun")
 
 local giveGunEnabled, autoGiveGunEnabled = false, false
 local selectedPlayer = nil
@@ -2869,7 +2871,7 @@ local function createFpsPingGui()
     end)
 end
 
-local fps_ping_section = shared.AddSection("FPS & PING MONITOR")
+local fps_ping_section = ataos:AddSection("FPS & PING MONITOR")
 fps_ping_section:AddToggle("Enable Monitor UI", function(bool)
     if bool then createFpsPingGui()
     elseif _G.FpsPingGui then
@@ -2894,7 +2896,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 
-local perf_section = shared.AddSection("Performance Optimization")
+local perf_section = ataos:AddSection("Performance Optimization")
 
 local original_materials = {}
 local original_particle_states = {}
@@ -3189,7 +3191,7 @@ perf_section:AddToggle("Gray Skybox", setGraySky)
 perf_section:AddButton("Remove Weapon Displays", removeWeaponDisplays)
 perf_section:AddToggle("Enable Frame Enhancement", setFrameEnhancement)
 
-local true_antis_section = shared.AddSection("True Anti's")
+local true_antis_section = ataos:AddSection("True Anti's")
 local trueAntiFlingConnection, trueAntiAfkConnection, trueAntiVoidConnection
 local originalDestroyHeight = workspace.FallenPartsDestroyHeight
 
@@ -3251,7 +3253,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 
-local cameraSection = shared.AddSection("Camera Stretch")
+local cameraSection = ataos:AddSection("Camera Stretch")
 
 local cameraStretchEnabled = false
 local stretchStrength = 0.80
@@ -3266,7 +3268,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local creditsSection = shared.AddSection("Credits")
+local creditsSection = ataos:AddSection("Credits")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
 shared.Notify("ATAOs ON TOP NIGGA", 5)
