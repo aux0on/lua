@@ -618,38 +618,91 @@ do
     
     local function voteMap()
         if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then 
-            Notify("Error", "Character not found", 3)
+            shared.notify("Error", "Character not found", 3)
             return 
         end
         
         local playerCount = #game:GetService("Players"):GetPlayers()
-        local voterRespawnAmount = math.floor(playerCount / 2) + 1
+        local voterRespawnAmount = playerCount
         
         savedPos = LocalPlayer.Character.HumanoidRootPart.Position
         isRespawning = true
         local count = 0
         
-        Notify("Vote Map", "Starting "..voterRespawnAmount.." respawns...", 3)
+        shared.notify("Vote Map", "Starting "..voterRespawnAmount.." respawns...", 3)
+        
+        local otherRespawnConnections = {}
+        for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+            if p ~= LocalPlayer then
+                local conn = p.CharacterAdded:Connect(function()
+                    if isRespawning then
+                        local currentPlayers = #game:GetService("Players"):GetPlayers()
+                        voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
+                        shared.notify("Vote Map", "Respawn detected! Increasing target to " .. voterRespawnAmount, 2)
+                    end
+                end)
+                table.insert(otherRespawnConnections, conn)
+            end
+        end
+        
+        local playerAddedCon = game:GetService("Players").PlayerAdded:Connect(function(p)
+            if isRespawning then
+                local currentPlayers = #game:GetService("Players"):GetPlayers()
+                voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
+            end
+            local conn = p.CharacterAdded:Connect(function()
+                if isRespawning then
+                    local currentPlayers = #game:GetService("Players"):GetPlayers()
+                    voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
+                    shared.notify("Vote Map", "Respawn detected! Increasing target to " .. voterRespawnAmount, 2)
+                end
+            end)
+            table.insert(otherRespawnConnections, conn)
+        end)
+        
+        local respawnCon
+        respawnCon = LocalPlayer.CharacterAdded:Connect(function(char)
+            if savedPos then
+                task.defer(function()
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.CFrame = CFrame.new(savedPos)
+                    end
+                end)
+            else
+                respawnCon:Disconnect()
+            end
+        end)
         
         task.spawn(function()
             while count < voterRespawnAmount and isRespawning do
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                    LocalPlayer.Character.Humanoid.Health = 0
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+                    char.Humanoid.Health = 0
                     count += 1
+                    
+                    local startTime = tick()
+                    while isRespawning and tick() - startTime < 5 do
+                        task.wait(0.1)
+                        local newChar = LocalPlayer.Character
+                        if newChar and newChar ~= char and newChar:FindFirstChild("Humanoid") and newChar.Humanoid.Health > 0 then
+                            break
+                        end
+                    end
                 end
                 task.wait(getPingDelay())
             end
             isRespawning = false
             savedPos = nil
-            Notify("Vote Map", "Completed "..count.." votes!", 3)
-        end)
-        
-        local respawnCon = LocalPlayer.CharacterAdded:Connect(function(char)
-            if savedPos then
-                char:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(savedPos)
-            else
+            if respawnCon then
                 respawnCon:Disconnect()
             end
+            if playerAddedCon then
+                playerAddedCon:Disconnect()
+            end
+            for _, conn in ipairs(otherRespawnConnections) do
+                conn:Disconnect()
+            end
+            shared.notify("Vote Map", "Completed "..count.." votes!", 3)
         end)
     end
     
