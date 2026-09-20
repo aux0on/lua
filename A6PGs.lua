@@ -102,6 +102,33 @@ local __PLRS = getfserv("Players")
 local __TS   = getfserv("TweenService")
 
 local muteButtonSounds = false
+local lockBindableButtons = false
+
+-- Bindable Buttons Position Saving Setup
+local bpSaveFile = "ATAOs_BP.json"
+local savedButtonPositions = {}
+
+if isfile and readfile and isfile(bpSaveFile) then
+    local ok, data = pcall(function() return Services.HttpService:JSONDecode(readfile(bpSaveFile)) end)
+    if ok and type(data) == "table" then savedButtonPositions = data end
+end
+
+local function saveButtonPositions()
+    if writefile then
+        local dataToSave = {}
+        for id, btn in pairs(BindableButtons and BindableButtons.Buttons or {}) do
+            if btn and btn.Parent then
+                dataToSave[id] = {
+                    xs = btn.Position.X.Scale,
+                    xo = btn.Position.X.Offset,
+                    ys = btn.Position.Y.Scale,
+                    yo = btn.Position.Y.Offset
+                }
+            end
+        end
+        writefile(bpSaveFile, Services.HttpService:JSONEncode(dataToSave))
+    end
+end
 
 local function UpdateAllButtonSounds()
     local volume = muteButtonSounds and 0 or 0.5
@@ -113,7 +140,7 @@ local function UpdateAllButtonSounds()
     end
 end
 
-local BindableButtons = {Buttons = {}, Maids = {}, Count = 0}
+BindableButtons = {Buttons = {}, Maids = {}, Count = 0}
 
 local __SHAPES = {
     [0] = "rbxassetid://86221076925479",
@@ -165,8 +192,6 @@ local function Bind_MakeDraggable(gui, maid, ripple, sound, clickFunc)
     
     maid:GiveTask(gui.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging, dragStart, startPos = true, input.Position, gui.Position
-            hasMoved = false
             sound:Play()
             local absPos = gui.AbsolutePosition
             ripple.Position = __UD2(0, input.Position.X - absPos.X, 0, input.Position.Y - absPos.Y)
@@ -178,10 +203,20 @@ local function Bind_MakeDraggable(gui, maid, ripple, sound, clickFunc)
                 BackgroundTransparency = 1
             }):Play()
 
+            if not lockBindableButtons then
+                dragging, dragStart, startPos = true, input.Position, gui.Position
+                hasMoved = false
+            end
+
             local rel
             rel = __UIS.InputEnded:Connect(function(endInput)
                 if endInput.UserInputType == input.UserInputType then
-                    dragging = false
+                    if not lockBindableButtons then
+                        dragging = false
+                        if hasMoved then
+                            saveButtonPositions()
+                        end
+                    end
                     if not hasMoved then
                         bind_safecallback(clickFunc)
                     end
@@ -192,12 +227,14 @@ local function Bind_MakeDraggable(gui, maid, ripple, sound, clickFunc)
     end))
     
     maid:GiveTask(gui.InputChanged:Connect(function(input)
+        if lockBindableButtons then return end
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end))
     
     maid:GiveTask(__UIS.InputChanged:Connect(function(input)
+        if lockBindableButtons then return end
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
             if delta.Magnitude > 7 then hasMoved = true end
@@ -215,13 +252,20 @@ function BindableButtons.AddBButton(id, text, clickFunc)
     local screen = camera.ViewportSize
     local buttonSizeY = 0.11
     local widthScale = buttonSizeY * (screen.Y / screen.X)
-    local xPos = 0.1 + ((BindableButtons.Count % 8) * (widthScale + 0.005))
-    local yPos = 0.9 - (math.floor(BindableButtons.Count / 8) * (buttonSizeY + 0.015))
 
     local ImageButton = Instance.new("ImageButton")
     ImageButton.Name = id
     ImageButton.Size = __UD2(widthScale, 0, buttonSizeY, 0)
-    ImageButton.Position = __UD2(xPos, 0, yPos, 0)
+    
+    local savedPos = savedButtonPositions[id]
+    if savedPos then
+        ImageButton.Position = __UD2(savedPos.xs or 0.1, savedPos.xo or 0, savedPos.ys or 0.9, savedPos.yo or 0)
+    else
+        local xPos = 0.1 + ((BindableButtons.Count % 8) * (widthScale + 0.005))
+        local yPos = 0.9 - (math.floor(BindableButtons.Count / 8) * (buttonSizeY + 0.015))
+        ImageButton.Position = __UD2(xPos, 0, yPos, 0)
+    end
+
     ImageButton.AnchorPoint = __V2(0.5, 0.5)
     ImageButton.Image = __SHAPES[0]
     ImageButton.BackgroundTransparency = 1
@@ -310,7 +354,7 @@ RootMaid:GiveTask(hiddenGui)
 
 local ataos = shared.CreateTab("ATAOs", "/aux0on/AllTheAdd-OnsIcon/refs/heads/main/Untitled163_20260918192358")
 
-local aboutSection = ataos:AddSection("About")
+local aboutSection = ataos:AddSection("About", "Info")
 aboutSection:AddParagraph("ATAOs MM2", "is the version you are using.")
 
 aboutSection:AddToggle("Mute Button SFX", function(bool)
@@ -318,7 +362,11 @@ aboutSection:AddToggle("Mute Button SFX", function(bool)
     UpdateAllButtonSounds()
 end)
 
-local serverSection = ataos:AddSection("Server Options")
+aboutSection:AddToggle("Lock Bindable Buttons", function(bool)
+    lockBindableButtons = bool
+end)
+
+local serverSection = ataos:AddSection("Server Options", "MM2")
 serverSection:AddLabel("Might Take a Few Tries")
 
 serverSection:AddButton("Rejoin", function()
@@ -412,7 +460,7 @@ serverSection:AddButton("Join Dead Server", function()
 end)
 
 local PlaySong = Services.ReplicatedStorage.Remotes.Inventory.PlaySong
-local radioSection = ataos:AddSection("Radio Abuse")
+local radioSection = ataos:AddSection("Radio Abuse", "MM2")
 local songSaveFile = "saved_songs.json"
 local savedSongs = {}
 
@@ -504,7 +552,7 @@ end)
 
 RootMaid:GiveTask(function() if RadioMaid then RadioMaid:Destroy() end end)
 
-local speedGlitchSection = ataos:AddSection("Auto Speedglitch")
+local speedGlitchSection = ataos:AddSection("Auto Speedglitch", "MM2")
 local asgEnabled, asgHorizontal, asgValue = false, false, 0
 local defaultSpeed = 16
 local asgChar, asgHum, asgRoot, isInAir
@@ -549,7 +597,7 @@ speedGlitchSection:AddToggle("Sideways Only", function(e) asgHorizontal = e end)
 speedGlitchSection:AddSlider("Speed (0-255)", 0, 255, 0, function(v) asgValue = v end)
 
 do
-    local mapVoterSection = ataos:AddSection("Map Voter")
+    local mapVoterSection = ataos:AddSection("Map Voter", "MM2")
     local voterRespawnAmount = 12
     local savedPos, isRespawning, vmButtonEnabled
     local vmButtonSize = 0.11
@@ -616,7 +664,7 @@ do
     end)
 end
 
-local whitelistSection = ataos:AddSection("Kill All")
+local whitelistSection = ataos:AddSection("Kill All", "MM2")
 local whitelist = {}
 
 whitelistSection:AddLabel("Ignores Whitelisted Players")
@@ -661,7 +709,7 @@ whitelistSection:AddButton("Kill All", function()
     end
 end)
 
-local blueAuraSection = ataos:AddSection("Blue Aura")
+local blueAuraSection = ataos:AddSection("Blue Aura", "MM2")
 
 blueAuraSection:AddLabel("kill them with your absolute crushing aura")
 
@@ -826,7 +874,7 @@ blueAuraSection:AddButton("Clear Whitelist", function()
 end)
 
 do
-    local duelSection = ataos:AddSection("Dual Effect")
+    local duelSection = ataos:AddSection("Dual Effect", "MM2")
     duelSection:AddLabel("Must Own Dual Effect + Selected Effect")
 
     local dualEnabled, selectedDualEffect = false, "Electric"
@@ -912,7 +960,7 @@ do
 end
 
 do
-    local tradeSection = ataos:AddSection("Disable Trading")
+    local tradeSection = ataos:AddSection("Disable Trading", "MM2")
     tradeSection:AddLabel("Turn Off & Rejoin To Trade Again")
     local TradeMaid
     
@@ -934,7 +982,7 @@ do
 end
 
 do
-    local trollSection = ataos:AddSection("Troll (FE)")
+    local trollSection = ataos:AddSection("Troll (FE)", "MM2")
     trollSection:AddLabel("Play Troll Emotes")
     local trollButtonSize = 0.11
     
@@ -1008,7 +1056,7 @@ do
 end
 
 do
-    local rtxSection = ataos:AddSection("RTX")
+    local rtxSection = ataos:AddSection("RTX", "MM2")
     local rtx = {Sky=nil, Blur=nil, CC=nil, Bloom=nil, Sun=nil}
     local RTXMaid
     
@@ -1068,7 +1116,7 @@ do
 end
 
 do
-    local lsSection = ataos:AddSection("Legit Speedglitch")
+    local lsSection = ataos:AddSection("Legit Speedglitch", "MM2")
     local sideSpd, lsHori = 0, false
     local lsButtonSize = 0.11
     local emOn, selEmote = false, nil
@@ -1182,7 +1230,7 @@ do
 end
 
 do
-    local hlSection = ataos:AddSection("FE Headless")
+    local hlSection = ataos:AddSection("FE Headless", "MM2")
     hlSection:AddLabel("V2 & Higher Require a Very Small Head")
     
     local hlConfigs = {
@@ -1261,7 +1309,7 @@ do
 end
 
 do
-    local flingSection = ataos:AddSection("Fling")
+    local flingSection = ataos:AddSection("Fling", "MM2")
     local flingSelPlr, flingActive = nil, true
     local selectedPlayers = {}
     local whitelist = {}
@@ -1743,7 +1791,7 @@ do
 end
 
 do
-    local perkSection = ataos:AddSection("Perks")
+    local perkSection = ataos:AddSection("Perks", "MM2")
     local hasteOn, blatantMode, hasteSpd = false, false, 18
     local PerkMaid
     
@@ -1793,7 +1841,7 @@ do
 end
 
 do
-    local wallhopSection = ataos:AddSection("Wallhop")
+    local wallhopSection = ataos:AddSection("Wallhop", "MM2")
     local wallhopToggle, flickEnabled, InfiniteJumpEnabled = false, false, true
     local WallhopMaid
     local raycastParams = RaycastParams.new()
@@ -1844,7 +1892,7 @@ do
 end
 
 do
-    local enSection = ataos:AddSection("Emote Noclip")
+    local enSection = ataos:AddSection("Emote Noclip", "MM2")
 
     local selEmote = nil
     local emotes = {
@@ -2015,7 +2063,7 @@ do
 end
 
 do
-    local ssSection = ataos:AddSection("Sign Spam")
+    local ssSection = ataos:AddSection("Sign Spam", "MM2")
     local spamming, ssButtonEnabled, autoGetGG = false, false, false
     local ssButtonSize = 0.11
     local SignSpamMaid, SignSpamAutoMaid
@@ -2135,7 +2183,7 @@ end
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlaySong = Services.ReplicatedStorage.Remotes.Inventory.PlaySong
-local sfxSection = ataos:AddSection("FE SFX")
+local sfxSection = ataos:AddSection("FE SFX", "MM2")
 
 sfxSection:AddLabel("Radio Required")
 
@@ -2417,7 +2465,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(setupOtherPlayer)
 
-local autoGGSection = ataos:AddSection("Auto Grab Gun")
+local autoGGSection = ataos:AddSection("Auto Grab Gun", "MM2")
 local autoGGEnabled = false
 local autoGGMaid = Maid.new()
 RootMaid:GiveTask(autoGGMaid)
@@ -2488,7 +2536,7 @@ autoGGSection:AddToggle("Enable Auto GG", function(enabled)
     end
 end)
 
-local giveGunSection = ataos:AddSection("Give Gun")
+local giveGunSection = ataos:AddSection("Give Gun", "MM2")
 
 local giveGunEnabled, autoGiveGunEnabled = false, false
 local selectedPlayer = nil
@@ -2755,8 +2803,7 @@ giveGunSection:AddToggle("Enable Give Gun Button", function(enabled)
     if enabled then
         BindableButtons.AddBButton("givegun_bind", "Give Gun", executeGiveGun)
         local btn = BindableButtons.Buttons["givegun_bind"]
-        if btn then
-            local screen = workspace.CurrentCamera.ViewportSize
+        if btn then            local screen = workspace.CurrentCamera.ViewportSize
             btn.Size = __UD2(giveGunButtonSize * (screen.Y / screen.X), 0, giveGunButtonSize, 0)
         end
     else
@@ -2871,7 +2918,7 @@ local function createFpsPingGui()
     end)
 end
 
-local fps_ping_section = ataos:AddSection("FPS & PING MONITOR")
+local fps_ping_section = ataos:AddSection("FPS & PING MONITOR", "MM2")
 fps_ping_section:AddToggle("Enable Monitor UI", function(bool)
     if bool then createFpsPingGui()
     elseif _G.FpsPingGui then
@@ -2896,7 +2943,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 
-local perf_section = ataos:AddSection("Performance Optimization")
+local perf_section = ataos:AddSection("Performance Optimization", "MM2")
 
 local original_materials = {}
 local original_particle_states = {}
@@ -3191,7 +3238,7 @@ perf_section:AddToggle("Gray Skybox", setGraySky)
 perf_section:AddButton("Remove Weapon Displays", removeWeaponDisplays)
 perf_section:AddToggle("Enable Frame Enhancement", setFrameEnhancement)
 
-local true_antis_section = ataos:AddSection("True Anti's")
+local true_antis_section = ataos:AddSection("True Anti's", "MM2")
 local trueAntiFlingConnection, trueAntiAfkConnection, trueAntiVoidConnection
 local originalDestroyHeight = workspace.FallenPartsDestroyHeight
 
@@ -3253,7 +3300,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 
-local cameraSection = ataos:AddSection("Camera Stretch")
+local cameraSection = ataos:AddSection("Camera Stretch", "MM2")
 
 local cameraStretchEnabled = false
 local stretchStrength = 0.80
@@ -3268,7 +3315,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local creditsSection = ataos:AddSection("Credits")
+local creditsSection = ataos:AddSection("Credits", "Info")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
 shared.Notify("ATAOs Successfully Loaded!", 1)
