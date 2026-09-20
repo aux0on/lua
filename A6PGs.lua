@@ -3314,7 +3314,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local creditsSection = ataos:AddSection("Credits", "MM2")
+local creditsSection = ataos:AddSection("Credits", "Info")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
 shared.Notify("ATAOs Successfully Loaded!", 1)
