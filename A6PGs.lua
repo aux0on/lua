@@ -330,6 +330,51 @@ function BindableButtons.DeleteBButton(id)
     end
 end
 
+function BindableButtons.ResetBButtonPosition(id)
+    local btn = BindableButtons.Buttons[id]
+    if not btn then return end
+
+    savedButtonPositions[id] = nil
+    saveButtonPositions()
+
+    local index = 0
+    for otherId in pairs(BindableButtons.Buttons) do
+        if otherId == id then break end
+        index = index + 1
+    end
+
+    local camera = workspace.CurrentCamera
+    local screen = camera.ViewportSize
+    local buttonSizeY = 0.11
+    local widthScale = buttonSizeY * (screen.Y / screen.X)
+
+    local xPos = 0.1 + ((index % 8) * (widthScale + 0.005))
+    local yPos = 0.9 - (math.floor(index / 8) * (buttonSizeY + 0.015))
+
+    btn.Position = __UD2(xPos, 0, yPos, 0)
+end
+
+BindableButtons.ResetAllBButtonPositions()
+    savedButtonPositions = {}
+    saveButtonPositions()
+
+    local index = 0
+    for id, btn in pairs(BindableButtons.Buttons) do
+        if btn and btn.Parent then
+            local camera = workspace.CurrentCamera
+            local screen = camera.ViewportSize
+            local buttonSizeY = 0.11
+            local widthScale = buttonSizeY * (screen.Y / screen.X)
+
+            local xPos = 0.1 + ((index % 8) * (widthScale + 0.005))
+            local yPos = 0.9 - (math.floor(index / 8) * (buttonSizeY + 0.015))
+
+            btn.Position = __UD2(xPos, 0, yPos, 0)
+            index = index + 1
+        end
+    end
+end
+
 local function GetSafeGuiRoot()
     local success, result = pcall(function() 
         return gethui() 
@@ -363,6 +408,11 @@ end)
 
 aboutSection:AddToggle("Lock Bindable Buttons", function(bool)
     lockBindableButtons = bool
+end)
+
+aboutSection:AddButton("Reset All Bindable Button Positions", function()
+    BindableButtons.ResetAllBButtonPositions()
+    Notify("Reset", "All bindable button positions reset.", 1)
 end)
 
 local serverSection = ataos:AddSection("Server Options", "MM2")
@@ -661,6 +711,11 @@ do
             btn.Size = __UD2(vmButtonSize * (screen.Y / screen.X), 0, vmButtonSize, 0)
         end
     end)
+
+    mapVoterSection:AddButton("Reset VM Button Position", function()
+        BindableButtons.ResetBButtonPosition("vm_bind")
+        Notify("Reset", "VM button position reset.", 2)
+    end)
 end
 
 local whitelistSection = ataos:AddSection("Kill All", "MM2")
@@ -844,8 +899,7 @@ blueAuraSection:AddToggle("Enable Fake Murderer", function(enabled)
     
     if enabled then
         task.spawn(function()
-            while fakeMurderEnabled do
-                checkFakeMurderAura()
+            while fakeMurderEnabled do                checkFakeMurderAura()
                 task.wait(0.5)
             end
         end)
@@ -1047,6 +1101,10 @@ do
             end
         end)
         trollSection:AddButton("Play "..txt.." Emote", play)
+        trollSection:AddButton("Reset "..txt.." Button Position", function()
+            BindableButtons.ResetBButtonPosition(gn)
+            Notify("Reset", txt.." button position reset.", 2)
+        end)
     end
     
     makeEmote("84112287597268", "FD", "EmoteGUI_FakeDead")
@@ -1214,6 +1272,11 @@ do
         end
     end)
     lsSection:AddToggle("Sideways Only", function(e) lsHori = e end)
+
+    lsSection:AddButton("Reset SG Button Position", function()
+        BindableButtons.ResetBButtonPosition("sg_bind")
+        Notify("Reset", "SG button position reset.", 2)
+    end)
     
     lsSection:AddDropdown("SG Select Emote", {"Moonwalk", "Yungblud", "Bouncy Twirl", "Flex Walk", "Custom"}, function(s)
         lsDropdownTouched = true
@@ -1653,6 +1716,11 @@ do
                 btn.Size = __UD2(flingButtonSize * (screen.Y / screen.X), 0, flingButtonSize, 0)
             end
         end)
+
+        flingSection:AddButton("Reset "..cfg.text.." Button Position", function()
+            BindableButtons.ResetBButtonPosition(cfg.id)
+            Notify("Reset", cfg.text.." button position reset.", 2)
+        end)
     end
     
     flingSection:AddPlayerDropdown("Add to Whitelist", function(p)
@@ -2059,6 +2127,11 @@ do
             selEmote = t
         end
     end)
+
+    enSection:AddButton("Reset EN Button Position", function()
+        BindableButtons.ResetBButtonPosition("en_bind")
+        Notify("Reset", "EN button position reset.", 2)
+    end)
 end
 
 do
@@ -2176,6 +2249,11 @@ do
             local screen = workspace.CurrentCamera.ViewportSize
             btn.Size = __UD2(ssButtonSize * (screen.Y / screen.X), 0, ssButtonSize, 0)
         end
+    end)
+
+    ssSection:AddButton("Reset SS Button Position", function()
+        BindableButtons.ResetBButtonPosition("ss_bind")
+        Notify("Reset", "SS button position reset.", 2)
     end)
 end
 
@@ -2820,6 +2898,11 @@ giveGunSection:AddSlider("Give Gun Button Size", 5, 25, 11, function(value)
     end
 end)
 
+giveGunSection:AddButton("Reset Give Gun Button Position", function()
+    BindableButtons.ResetBButtonPosition("givegun_bind")
+    Notify("Reset", "Give Gun button position reset.", 2)
+end)
+
 local keybind = giveGunSection:AddKeybind("Give Gun Keybind", "G", function()
     if giveGunEnabled and selectedPlayer then
         executeGiveGun()
@@ -2917,8 +3000,8 @@ local function createFpsPingGui()
     end)
 end
 
-local fps_ping_section = ataos:AddSection("FPS & PING MONITOR", "MM2")
-fps_ping_section:AddToggle("Enable Monitor UI", function(bool)
+local fps_ping_section = ataos:AddSection("FPS & Ping Display", "MM2")
+fps_ping_section:AddToggle("Enable Display UI", function(bool)
     if bool then createFpsPingGui()
     elseif _G.FpsPingGui then
         _G.FpsPingGui:Destroy()
