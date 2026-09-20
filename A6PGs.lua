@@ -597,15 +597,33 @@ speedGlitchSection:AddSlider("Speed (0-255)", 0, 255, 0, function(v) asgValue = 
 
 do
     local mapVoterSection = ataos:AddSection("Map Voter", "MM2")
-    local voterRespawnAmount = 12
     local savedPos, isRespawning, vmButtonEnabled
     local vmButtonSize = 0.11
+    
+    local function getPingDelay()
+        local success, pingSec = pcall(function()
+            return LocalPlayer:GetNetworkPing()
+        end)
+        
+        local pingMs = (success and pingSec) and (pingSec * 1000) or 50 
+        
+        if pingMs <= 60 then
+            return 0.3
+        elseif pingMs <= 100 then
+            return 0.5
+        else
+            return 0.75
+        end
+    end
     
     local function voteMap()
         if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then 
             Notify("Error", "Character not found", 3)
             return 
         end
+        
+        local playerCount = #game:GetService("Players"):GetPlayers()
+        local voterRespawnAmount = math.floor(playerCount / 2) + 1
         
         savedPos = LocalPlayer.Character.HumanoidRootPart.Position
         isRespawning = true
@@ -619,7 +637,7 @@ do
                     LocalPlayer.Character.Humanoid.Health = 0
                     count += 1
                 end
-                task.wait(0.3)
+                task.wait(getPingDelay())
             end
             isRespawning = false
             savedPos = nil
@@ -635,7 +653,6 @@ do
         end)
     end
     
-    mapVoterSection:AddSlider("Votes Amount", 1, 20, voterRespawnAmount, function(v) voterRespawnAmount = v end)
     mapVoterSection:AddButton("Vote Map", voteMap)
     
     mapVoterSection:AddToggle("Enable VM Button", function(enabled)
