@@ -596,120 +596,46 @@ speedGlitchSection:AddToggle("Sideways Only", function(e) asgHorizontal = e end)
 speedGlitchSection:AddSlider("Speed (0-255)", 0, 255, 0, function(v) asgValue = v end)
 
 do
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
     local mapVoterSection = ataos:AddSection("Map Voter", "MM2")
+    local voterRespawnAmount = 12
     local savedPos, isRespawning, vmButtonEnabled
     local vmButtonSize = 0.11
     
-    local function getPingDelay()
-        local success, pingSec = pcall(function()
-            return LocalPlayer:GetNetworkPing()
-        end)
-        
-        local pingMs = (success and pingSec) and (pingSec * 1000) or 50 
-        
-        if pingMs <= 60 then
-            return 0.3
-        elseif pingMs <= 100 then
-            return 0.5
-        else
-            return 0.75
-        end
-    end
-    
     local function voteMap()
-        if isRespawning then return end
-        
         if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then 
-            shared.notify("Error", "Character not found", 3)
+            Notify("Error", "Character not found", 3)
             return 
         end
-        
-        local playerCount = #Players:GetPlayers()
-        local voterRespawnAmount = playerCount
         
         savedPos = LocalPlayer.Character.HumanoidRootPart.Position
         isRespawning = true
         local count = 0
         
-        shared.notify("Vote Map", "Starting "..voterRespawnAmount.." respawns...", 3)
+        Notify("Vote Map", "Starting "..voterRespawnAmount.." respawns...", 3)
         
-        local otherRespawnConnections = {}
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
-                local conn = p.CharacterAdded:Connect(function()
-                    if isRespawning then
-                        local currentPlayers = #Players:GetPlayers()
-                        voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
-                        shared.notify("Vote Map", "Respawn detected! Increasing target to " .. voterRespawnAmount, 2)
-                    end
-                end)
-                table.insert(otherRespawnConnections, conn)
-            end
-        end
-        
-        local playerAddedCon = Players.PlayerAdded:Connect(function(p)
-            if isRespawning then
-                local currentPlayers = #Players:GetPlayers()
-                voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
-            end
-            local conn = p.CharacterAdded:Connect(function()
-                if isRespawning then
-                    local currentPlayers = #Players:GetPlayers()
-                    voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
-                    shared.notify("Vote Map", "Respawn detected! Increasing target to " .. voterRespawnAmount, 2)
+        task.spawn(function()
+            while count < voterRespawnAmount and isRespawning do
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                    LocalPlayer.Character.Humanoid.Health = 0
+                    count += 1
                 end
-            end)
-            table.insert(otherRespawnConnections, conn)
+                task.wait(0.3)
+            end
+            isRespawning = false
+            savedPos = nil
+            Notify("Vote Map", "Completed "..count.." votes!", 3)
         end)
         
-        local respawnCon
-        respawnCon = LocalPlayer.CharacterAdded:Connect(function(char)
+        local respawnCon = LocalPlayer.CharacterAdded:Connect(function(char)
             if savedPos then
-                task.defer(function()
-                    if char and char:FindFirstChild("HumanoidRootPart") then
-                        char.HumanoidRootPart.CFrame = CFrame.new(savedPos)
-                    end
-                end)
+                char:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(savedPos)
             else
                 respawnCon:Disconnect()
             end
         end)
-        
-        task.spawn(function()
-            while count < voterRespawnAmount and isRespawning do
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
-                    char.Humanoid.Health = 0
-                    count += 1
-                    
-                    local startTime = tick()
-                    while isRespawning and tick() - startTime < 5 do
-                        task.wait(0.1)
-                        local newChar = LocalPlayer.Character
-                        if newChar and newChar ~= char and newChar:FindFirstChild("Humanoid") and newChar.Humanoid.Health > 0 then
-                            break
-                        end
-                    end
-                end
-                task.wait(getPingDelay())
-            end
-            isRespawning = false
-            savedPos = nil
-            if respawnCon then
-                respawnCon:Disconnect()
-            end
-            if playerAddedCon then
-                playerAddedCon:Disconnect()
-            end
-            for _, conn in ipairs(otherRespawnConnections) do
-                conn:Disconnect()
-            end
-            shared.notify("Vote Map", "Completed "..count.." votes!", 3)
-        end)
     end
     
+    mapVoterSection:AddSlider("Votes Amount", 1, 20, voterRespawnAmount, function(v) voterRespawnAmount = v end)
     mapVoterSection:AddButton("Vote Map", voteMap)
     
     mapVoterSection:AddToggle("Enable VM Button", function(enabled)
@@ -736,6 +662,17 @@ do
         end
     end)
 end
+
+local whitelistSection = ataos:AddSection("Kill All", "MM2")
+local whitelist = {}
+
+whitelistSection:AddLabel("Ignores Whitelisted Players")
+whitelistSection:AddPlayerDropdown("Whitelist Player", function(p)
+    if not table_find(whitelist, p.UserId) then
+        table_insert(whitelist, p.UserId)
+        Notify(p.Name.." whitelisted.", 2)
+    end
+end)
 
 whitelistSection:AddButton("Clear Whitelist", function()
     whitelist = {}
