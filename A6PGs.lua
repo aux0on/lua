@@ -104,7 +104,6 @@ local __TS   = getfserv("TweenService")
 local muteButtonSounds = false
 local lockBindableButtons = false
 
--- Bindable Buttons Position Saving Setup
 local bpSaveFile = "ATAOs_BP.json"
 local savedButtonPositions = {}
 
@@ -3315,7 +3314,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local creditsSection = ataos:AddSection("Credits", "Info")
+local creditsSection = ataos:AddSection("Credits", "MM2")
 creditsSection:AddParagraph("@lzzzx", "Made this plugin, if you have requests feel free to ask.")
 
 shared.Notify("ATAOs Successfully Loaded!", 1)
