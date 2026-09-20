@@ -596,6 +596,8 @@ speedGlitchSection:AddToggle("Sideways Only", function(e) asgHorizontal = e end)
 speedGlitchSection:AddSlider("Speed (0-255)", 0, 255, 0, function(v) asgValue = v end)
 
 do
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
     local mapVoterSection = ataos:AddSection("Map Voter", "MM2")
     local savedPos, isRespawning, vmButtonEnabled
     local vmButtonSize = 0.11
@@ -617,12 +619,14 @@ do
     end
     
     local function voteMap()
+        if isRespawning then return end
+        
         if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then 
             shared.notify("Error", "Character not found", 3)
             return 
         end
         
-        local playerCount = #game:GetService("Players"):GetPlayers()
+        local playerCount = #Players:GetPlayers()
         local voterRespawnAmount = playerCount
         
         savedPos = LocalPlayer.Character.HumanoidRootPart.Position
@@ -632,11 +636,11 @@ do
         shared.notify("Vote Map", "Starting "..voterRespawnAmount.." respawns...", 3)
         
         local otherRespawnConnections = {}
-        for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+        for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer then
                 local conn = p.CharacterAdded:Connect(function()
                     if isRespawning then
-                        local currentPlayers = #game:GetService("Players"):GetPlayers()
+                        local currentPlayers = #Players:GetPlayers()
                         voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
                         shared.notify("Vote Map", "Respawn detected! Increasing target to " .. voterRespawnAmount, 2)
                     end
@@ -645,14 +649,14 @@ do
             end
         end
         
-        local playerAddedCon = game:GetService("Players").PlayerAdded:Connect(function(p)
+        local playerAddedCon = Players.PlayerAdded:Connect(function(p)
             if isRespawning then
-                local currentPlayers = #game:GetService("Players"):GetPlayers()
+                local currentPlayers = #Players:GetPlayers()
                 voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
             end
             local conn = p.CharacterAdded:Connect(function()
                 if isRespawning then
-                    local currentPlayers = #game:GetService("Players"):GetPlayers()
+                    local currentPlayers = #Players:GetPlayers()
                     voterRespawnAmount = math.max(voterRespawnAmount, currentPlayers + 3)
                     shared.notify("Vote Map", "Respawn detected! Increasing target to " .. voterRespawnAmount, 2)
                 end
@@ -732,17 +736,6 @@ do
         end
     end)
 end
-
-local whitelistSection = ataos:AddSection("Kill All", "MM2")
-local whitelist = {}
-
-whitelistSection:AddLabel("Ignores Whitelisted Players")
-whitelistSection:AddPlayerDropdown("Whitelist Player", function(p)
-    if not table_find(whitelist, p.UserId) then
-        table_insert(whitelist, p.UserId)
-        Notify(p.Name.." whitelisted.", 2)
-    end
-end)
 
 whitelistSection:AddButton("Clear Whitelist", function()
     whitelist = {}
