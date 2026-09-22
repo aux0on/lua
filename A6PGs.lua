@@ -3238,7 +3238,7 @@ perf_section:AddButton("Remove Weapon Displays", removeWeaponDisplays)
 perf_section:AddToggle("Enable Frame Enhancement", setFrameEnhancement)
 
 local true_antis_section = ataos:AddSection("True Anti's", "MM2")
-local trueAntiFlingConnection, trueAntiAfkConnection, trueAntiVoidConnection
+local trueAntiFlingConnection, lowEndAntiFlingConnection, trueAntiAfkConnection, trueAntiVoidConnection
 local originalDestroyHeight = workspace.FallenPartsDestroyHeight
 
 true_antis_section:AddToggle("Enable IY Anti Fling", function(bool)
@@ -3259,6 +3259,51 @@ true_antis_section:AddToggle("Enable IY Anti Fling", function(bool)
                 end
             end
         end)
+    end
+end)
+
+true_antis_section:AddToggle("Enable Low-End Device Anti-Fling", function(bool)
+    if lowEndAntiFlingConnection then
+        if typeof(lowEndAntiFlingConnection) == "table" then
+            for _, conn in ipairs(lowEndAntiFlingConnection) do
+                conn:Disconnect()
+            end
+        else
+            lowEndAntiFlingConnection:Disconnect()
+        end
+        lowEndAntiFlingConnection = nil
+    end
+    
+    if bool then
+        local connections = {}
+        
+        local function setupCharacter(char)
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+            table.insert(connections, char.DescendantAdded:Connect(function(part)
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end))
+        end
+
+        for _, player in ipairs(Services.Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                if player.Character then
+                    setupCharacter(player.Character)
+                end
+                table.insert(connections, player.CharacterAdded:Connect(setupCharacter))
+            end
+        end
+
+        table.insert(connections, Services.Players.PlayerAdded:Connect(function(player)
+            table.insert(connections, player.CharacterAdded:Connect(setupCharacter))
+        end))
+        
+        lowEndAntiFlingConnection = connections
     end
 end)
 
