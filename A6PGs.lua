@@ -1308,42 +1308,42 @@ do
 end
 
 do
-    local flingSection = ataos:AddSection("Fling", "MM2")
-    local flingSelPlr, flingActive = nil, true
-    local selectedPlayers = {}
-    local whitelist = {}
-    local flingButtonSize = 0.11
-    local clickFlingEnabled = false
-    local flingAuraEnabled = false
-    local flingAuraStuds = 15
-    local maids = {autoSheriff=nil, autoMurderer=nil, loopPlr=nil, loopAll=nil, clickFling=nil, flingAura=nil}
-    local buttonToggles = {Sheriff=false, Murderer=false, Player=false}
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-    
-    RootMaid:GiveTask(function() 
-        for _, m in pairs(maids) do if m then m:Destroy() end end
+    local ataosFlingSection = ataos:AddSection("ATAOS Fling", "MM2")
+    local ataosFlingSelPlr, ataosFlingActive = nil, true
+    local ataosFlingSelectedPlayers = {}
+    local ataosFlingWhitelist = {}
+    local ataosFlingButtonSize = 0.11
+    local ataosFlingClickFlingEnabled = false
+    local ataosFlingAuraEnabled = false
+    local ataosFlingAuraStuds = 15
+    local ataosFlingMaids = {autoSheriff=nil, autoMurderer=nil, loopPlr=nil, loopAll=nil, clickFling=nil, flingAura=nil}
+    local ataosFlingButtonToggles = {Sheriff=false, Murderer=false, Player=false}
+    local ataosFlingReplicatedStorage = game:GetService("ReplicatedStorage")
+    local ataosFlingPlayers = game:GetService("Players")
+    local ataosFlingLocalPlayer = ataosFlingPlayers.LocalPlayer
+    local ataosFlingUserInputService = game:GetService("UserInputService")
+    local ataosFlingRunService = game:GetService("RunService")
+
+    RootMaid:GiveTask(function()
+        for _, m in pairs(ataosFlingMaids) do if m then m:Destroy() end end
     end)
-    
-    local function isWhitelisted(player)
-        return whitelist[player.UserId] == true
+
+    local function ataosFlingIsWhitelisted(player)
+        return ataosFlingWhitelist[player.UserId] == true
     end
-    
-    local function isPlayerSelected(player)
-        for _, selected in ipairs(selectedPlayers) do
+
+    local function ataosFlingIsPlayerSelected(player)
+        for _, selected in ipairs(ataosFlingSelectedPlayers) do
             if selected.UserId == player.UserId then
                 return true
             end
         end
         return false
     end
-    
-    local function findSheriff()
+
+    local function ataosFlingFindSheriff()
         local success, roleData = pcall(function()
-            local remote = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
+            local remote = ataosFlingReplicatedStorage:FindFirstChild("GetPlayerData", true)
             if remote and remote:IsA("RemoteFunction") then
                 return remote:InvokeServer()
             end
@@ -1351,17 +1351,17 @@ do
         if success and roleData then
             for playerName, data in pairs(roleData) do
                 if data.Role == "Sheriff" and not data.Killed and not data.Dead then
-                    local p = Players:FindFirstChild(playerName)
-                    if p and not isWhitelisted(p) then return p end
+                    local p = ataosFlingPlayers:FindFirstChild(playerName)
+                    if p and not ataosFlingIsWhitelisted(p) then return p end
                 end
             end
         end
         return nil
     end
-    
-    local function findMurderer()
+
+    local function ataosFlingFindMurderer()
         local success, roleData = pcall(function()
-            local remote = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
+            local remote = ataosFlingReplicatedStorage:FindFirstChild("GetPlayerData", true)
             if remote and remote:IsA("RemoteFunction") then
                 return remote:InvokeServer()
             end
@@ -1369,75 +1369,75 @@ do
         if success and roleData then
             for playerName, data in pairs(roleData) do
                 if data.Role == "Murderer" and not data.Killed and not data.Dead then
-                    local p = Players:FindFirstChild(playerName)
-                    if p and not isWhitelisted(p) then return p end
+                    local p = ataosFlingPlayers:FindFirstChild(playerName)
+                    if p and not ataosFlingIsWhitelisted(p) then return p end
                 end
             end
         end
         return nil
     end
-    
-    local function hasGun(player)
+
+    local function ataosFlingHasGun(player)
         local character = player.Character
         if not character then return false end
-        
+
         local tools = player.Backpack:GetChildren()
         for _, tool in ipairs(tools) do
-            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or 
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or
                tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun") or
                tool.Name:lower():find("rifle") or tool.Name:lower():find("weapon")) then
                 return true
             end
         end
-        
+
         local characterTools = character:GetChildren()
         for _, tool in ipairs(characterTools) do
-            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or 
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or
                tool.Name:lower():find("revolver") or tool.Name:lower():find("shotgun") or
                tool.Name:lower():find("rifle") or tool.Name:lower():find("weapon")) then
                 return true
             end
         end
-        
+
         return false
     end
-    
-    local function findSheriffWithFallback()
-        local sheriff = findSheriff()
+
+    local function ataosFlingFindSheriffWithFallback()
+        local sheriff = ataosFlingFindSheriff()
         if sheriff then return sheriff end
-        
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and not isWhitelisted(player) and hasGun(player) then
+
+        for _, player in ipairs(ataosFlingPlayers:GetPlayers()) do
+            if player ~= ataosFlingLocalPlayer and not ataosFlingIsWhitelisted(player) and ataosFlingHasGun(player) then
                 return player
             end
         end
-        
+
         return nil
     end
-    
-    local function OdhSkid(TargetPlayer, duration)
-        if isWhitelisted(TargetPlayer) then
+
+    local function ataosFlingOdhSkid(TargetPlayer, duration)
+        if ataosFlingIsWhitelisted(TargetPlayer) then
             Notify("Whitelist", TargetPlayer.Name.." is whitelisted!", 3)
             return
         end
-        
-        local Character = LocalPlayer.Character
+
+        local Character = ataosFlingLocalPlayer.Character
         local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
         local RootPart = Humanoid and Humanoid.RootPart
         local TCharacter = TargetPlayer.Character
-        
+
         if not (Character and Humanoid and RootPart and TCharacter) then return end
-        
+
         local THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
         local TRootPart = THumanoid and THumanoid.RootPart
         local THead = TCharacter:FindFirstChild("Head")
         local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
         local Handle = Accessory and Accessory:FindFirstChild("Handle")
-        
+
         if RootPart.Velocity.Magnitude < 50 then
-            getgenv().OldPos = RootPart.CFrame
+            getgenv().ATAOS_Fling_OldPos = RootPart.CFrame
         end
-        
+
         if THead then
             workspace.CurrentCamera.CameraSubject = THead
         elseif not THead and Handle then
@@ -1445,28 +1445,28 @@ do
         elseif THumanoid and TRootPart then
             workspace.CurrentCamera.CameraSubject = THumanoid
         end
-        
+
         if not TCharacter:FindFirstChildWhichIsA("BasePart") then
             return
         end
-        
+
         local FPos = function(BasePart, Pos, Ang)
             RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
             Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
             RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
             RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
         end
-        
+
         local SFBasePart = function(BasePart)
             local TimeToWait = duration or 2
             local Time = tick()
             local Angle = 0
-            
+
             repeat
                 if RootPart and THumanoid then
                     if BasePart.Velocity.Magnitude < 50 then
                         Angle = Angle + 100
-                        
+
                         FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
                         task.wait()
                         FPos(BasePart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
@@ -1504,20 +1504,20 @@ do
                 else
                     break
                 end
-            until not flingActive or BasePart.Velocity.Magnitude > 500 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= Players or not TargetPlayer.Character == TCharacter or THumanoid.Sit or tick() > Time + TimeToWait
+            until not ataosFlingActive or BasePart.Velocity.Magnitude > 500 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= ataosFlingPlayers or not TargetPlayer.Character == TCharacter or THumanoid.Sit or tick() > Time + TimeToWait
         end
-        
+
         local previousDestroyHeight = workspace.FallenPartsDestroyHeight
         workspace.FallenPartsDestroyHeight = 0/0
-        
+
         local BV = Instance.new("BodyVelocity")
-        BV.Name = "EpixVel"
+        BV.Name = "ATAOS_Fling_Vel"
         BV.Parent = RootPart
         BV.Velocity = Vector3.new(9e8, 9e8, 9e8)
         BV.MaxForce = Vector3.new(1/0, 1/0, 1/0)
-        
+
         Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-        
+
         if TRootPart and THead then
             if (TRootPart.CFrame.p - THead.CFrame.p).Magnitude > 5 then
                 SFBasePart(THead)
@@ -1531,15 +1531,15 @@ do
         elseif not TRootPart and not THead and Accessory and Handle then
             SFBasePart(Handle)
         end
-        
+
         BV:Destroy()
         Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
         workspace.CurrentCamera.CameraSubject = Humanoid
-        
+
         repeat
-            if Character and Humanoid and RootPart and getgenv().OldPos then
-                RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
-                Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+            if Character and Humanoid and RootPart and getgenv().ATAOS_Fling_OldPos then
+                RootPart.CFrame = getgenv().ATAOS_Fling_OldPos * CFrame.new(0, .5, 0)
+                Character:SetPrimaryPartCFrame(getgenv().ATAOS_Fling_OldPos * CFrame.new(0, .5, 0))
                 Humanoid:ChangeState("GettingUp")
                 for _, x in ipairs(Character:GetChildren()) do
                     if x:IsA("BasePart") then
@@ -1548,88 +1548,88 @@ do
                 end
             end
             task.wait()
-        until not flingActive or (RootPart and getgenv().OldPos and (RootPart.Position - getgenv().OldPos.p).Magnitude < 25)
-        
+        until not ataosFlingActive or (RootPart and getgenv().ATAOS_Fling_OldPos and (RootPart.Position - getgenv().ATAOS_Fling_OldPos.p).Magnitude < 25)
+
         workspace.FallenPartsDestroyHeight = previousDestroyHeight
     end
-    
-    flingSection:AddButton("Fling Sheriff", function()
-        local target = findSheriffWithFallback()
-        if target then OdhSkid(target, 2) else Notify("Error", "No Sheriff or Gun Holder Found", 3) end
+
+    ataosFlingSection:AddButton("ATAOS Fling Sheriff", function()
+        local target = ataosFlingFindSheriffWithFallback()
+        if target then ataosFlingOdhSkid(target, 2) else Notify("Error", "No Sheriff or Gun Holder Found", 3) end
     end)
-    
-    flingSection:AddButton("Fling Murderer", function()
-        local murderer = findMurderer()
-        if murderer then OdhSkid(murderer, 2) else Notify("Error", "No Murderer Found", 3) end
+
+    ataosFlingSection:AddButton("ATAOS Fling Murderer", function()
+        local murderer = ataosFlingFindMurderer()
+        if murderer then ataosFlingOdhSkid(murderer, 2) else Notify("Error", "No Murderer Found", 3) end
     end)
-    
-    flingSection:AddButton("Fling All", function()
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and not isWhitelisted(p) then
-                OdhSkid(p, 2)
+
+    ataosFlingSection:AddButton("ATAOS Fling All", function()
+        for _, p in ipairs(ataosFlingPlayers:GetPlayers()) do
+            if p ~= ataosFlingLocalPlayer and not ataosFlingIsWhitelisted(p) then
+                ataosFlingOdhSkid(p, 2)
                 task.wait(0.5)
             end
         end
     end)
-    
-    flingSection:AddPlayerDropdown("Fling Player", function(p)
-        flingSelPlr = p
-        if p ~= LocalPlayer and not isWhitelisted(p) then OdhSkid(p, 2) end
+
+    ataosFlingSection:AddPlayerDropdown("ATAOS Fling Player", function(p)
+        ataosFlingSelPlr = p
+        if p ~= ataosFlingLocalPlayer and not ataosFlingIsWhitelisted(p) then ataosFlingOdhSkid(p, 2) end
     end)
-    
-    flingSection:AddPlayerDropdown("Select Players", function(p)
-        if p and p ~= LocalPlayer and not isPlayerSelected(p) then
-            table.insert(selectedPlayers, p)
+
+    ataosFlingSection:AddPlayerDropdown("ATAOS Select Players", function(p)
+        if p and p ~= ataosFlingLocalPlayer and not ataosFlingIsPlayerSelected(p) then
+            table.insert(ataosFlingSelectedPlayers, p)
             Notify("Selected", p.Name.." added to fling list", 3)
-        elseif p and isPlayerSelected(p) then
+        elseif p and ataosFlingIsPlayerSelected(p) then
             Notify("Error", p.Name.." is already selected", 3)
         end
     end)
-    
-    flingSection:AddButton("Clear Selected Players", function()
-        selectedPlayers = {}
+
+    ataosFlingSection:AddButton("ATAOS Clear Selected Players", function()
+        ataosFlingSelectedPlayers = {}
         Notify("Cleared", "All selected players removed", 3)
     end)
-    
-    local function createAutoFling(name, findFunc)
-        flingSection:AddToggle("Auto Fling "..name, function(enabled)
-            if maids["auto"..name] then maids["auto"..name]:Destroy() end
-            
+
+    local function ataosFlingCreateAutoFling(name, findFunc)
+        ataosFlingSection:AddToggle("ATAOS Auto Fling "..name, function(enabled)
+            if ataosFlingMaids["auto"..name] then ataosFlingMaids["auto"..name]:Destroy() end
+
             if enabled then
-                maids["auto"..name] = Maid.new()
+                ataosFlingMaids["auto"..name] = Maid.new()
                 local thread = task.spawn(function()
                     while true do
                         task.wait(1)
                         local target = findFunc()
                         if target then
-                            OdhSkid(target, 2)
+                            ataosFlingOdhSkid(target, 2)
                             task.wait(3)
                         end
                     end
                 end)
-                maids["auto"..name]:GiveTask(function() task.cancel(thread) end)
+                ataosFlingMaids["auto"..name]:GiveTask(function() task.cancel(thread) end)
             end
         end)
     end
-    
-    createAutoFling("Sheriff", findSheriffWithFallback)
-    createAutoFling("Murderer", findMurderer)
-    
-    local buttonConfigs = {
-        {name="Sheriff", text="FS", findFunc=findSheriffWithFallback, id="fling_sheriff"},
-        {name="Murderer", text="FM", findFunc=findMurderer, id="fling_murderer"},
-        {name="Player", text="FP", findFunc=function() return flingSelPlr end, id="fling_player"}
+
+    ataosFlingCreateAutoFling("Sheriff", ataosFlingFindSheriffWithFallback)
+    ataosFlingCreateAutoFling("Murderer", ataosFlingFindMurderer)
+
+    local ataosFlingButtonConfigs = {
+        {name="Sheriff", text="FS", findFunc=ataosFlingFindSheriffWithFallback, id="ataos_fling_sheriff"},
+        {name="Murderer", text="FM", findFunc=ataosFlingFindMurderer, id="ataos_fling_murderer"},
+        {name="Player", text="FP", findFunc=function() return ataosFlingSelPlr end, id="ataos_fling_player"}
     }
-    
-    for _, cfg in ipairs(buttonConfigs) do
-        flingSection:AddToggle("Enable "..cfg.text.." Button", function(enabled)
-            buttonToggles[cfg.name] = enabled
-            
+
+    for _, cfg in ipairs(ataosFlingButtonConfigs) do
+        ataosFlingSection:AddToggle("ATAOS Enable "..cfg.text.." Button", function(enabled)
+            ataosFlingButtonToggles[cfg.name] = enabled
+
             if enabled then
                 BindableButtons.AddBButton(cfg.id, cfg.text, function()
                     local target = cfg.findFunc()
                     if target then
-                        OdhSkid(target, 2)
+                        ataosFlingOdhSkid(target, 2)
                         Notify("Success", "Flinging "..cfg.name..": "..target.Name, 2)
                     else
                         Notify("Error", "No "..cfg.name.." Found", 3)
@@ -1638,141 +1638,141 @@ do
                 local btn = BindableButtons.Buttons[cfg.id]
                 if btn then
                     local screen = workspace.CurrentCamera.ViewportSize
-                    btn.Size = __UD2(flingButtonSize * (screen.Y / screen.X), 0, flingButtonSize, 0)
+                    btn.Size = __UD2(ataosFlingButtonSize * (screen.Y / screen.X), 0, ataosFlingButtonSize, 0)
                 end
             else
                 BindableButtons.DeleteBButton(cfg.id)
             end
         end)
-        
-        flingSection:AddSlider(cfg.name.." Button Size", 5, 25, 11, function(value)
-            flingButtonSize = value / 100
+
+        ataosFlingSection:AddSlider("ATAOS "..cfg.name.." Button Size", 5, 25, 11, function(value)
+            ataosFlingButtonSize = value / 100
             local btn = BindableButtons.Buttons[cfg.id]
             if btn then
                 local screen = workspace.CurrentCamera.ViewportSize
-                btn.Size = __UD2(flingButtonSize * (screen.Y / screen.X), 0, flingButtonSize, 0)
+                btn.Size = __UD2(ataosFlingButtonSize * (screen.Y / screen.X), 0, ataosFlingButtonSize, 0)
             end
         end)
     end
-    
-    flingSection:AddPlayerDropdown("Add to Whitelist", function(p)
-        if p and p ~= LocalPlayer then
-            whitelist[p.UserId] = true
+
+    ataosFlingSection:AddPlayerDropdown("ATAOS Add to Whitelist", function(p)
+        if p and p ~= ataosFlingLocalPlayer then
+            ataosFlingWhitelist[p.UserId] = true
             Notify("Whitelist", p.Name.." added to whitelist", 3)
         end
     end)
-    
-    flingSection:AddButton("Clear Whitelist", function()
-        whitelist = {}
+
+    ataosFlingSection:AddButton("ATAOS Clear Whitelist", function()
+        ataosFlingWhitelist = {}
         Notify("Whitelist", "Whitelist cleared!", 3)
     end)
-    
-    flingSection:AddToggle("Loop Fling Player(s)", function(s)
-        if maids.loopPlr then maids.loopPlr:Destroy() end
-        
+
+    ataosFlingSection:AddToggle("ATAOS Loop Fling Player(s)", function(s)
+        if ataosFlingMaids.loopPlr then ataosFlingMaids.loopPlr:Destroy() end
+
         if s then
-            maids.loopPlr = Maid.new()
+            ataosFlingMaids.loopPlr = Maid.new()
             local thread = task.spawn(function()
                 while true do
-                    if flingSelPlr and flingSelPlr.Parent and not isWhitelisted(flingSelPlr) then
-                        OdhSkid(flingSelPlr, 2)
+                    if ataosFlingSelPlr and ataosFlingSelPlr.Parent and not ataosFlingIsWhitelisted(ataosFlingSelPlr) then
+                        ataosFlingOdhSkid(ataosFlingSelPlr, 2)
                         task.wait(3)
                     end
-                    
-                    for _, player in ipairs(selectedPlayers) do
-                        if player and player.Parent and not isWhitelisted(player) then
-                            OdhSkid(player, 2)
+
+                    for _, player in ipairs(ataosFlingSelectedPlayers) do
+                        if player and player.Parent and not ataosFlingIsWhitelisted(player) then
+                            ataosFlingOdhSkid(player, 2)
                             task.wait(0.5)
                         end
                     end
                     task.wait(1)
                 end
             end)
-            maids.loopPlr:GiveTask(function() task.cancel(thread) end)
+            ataosFlingMaids.loopPlr:GiveTask(function() task.cancel(thread) end)
         end
     end)
-    
-    flingSection:AddToggle("Loop Fling All", function(s)
-        if maids.loopAll then maids.loopAll:Destroy() end
-        
+
+    ataosFlingSection:AddToggle("ATAOS Loop Fling All", function(s)
+        if ataosFlingMaids.loopAll then ataosFlingMaids.loopAll:Destroy() end
+
         if s then
-            maids.loopAll = Maid.new()
+            ataosFlingMaids.loopAll = Maid.new()
             local thread = task.spawn(function()
                 while true do
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Parent and not isWhitelisted(p) then
-                            OdhSkid(p, 2)
+                    for _, p in ipairs(ataosFlingPlayers:GetPlayers()) do
+                        if p ~= ataosFlingLocalPlayer and p.Parent and not ataosFlingIsWhitelisted(p) then
+                            ataosFlingOdhSkid(p, 2)
                             task.wait(0.5)
                         end
                     end
                     task.wait(3)
                 end
             end)
-            maids.loopAll:GiveTask(function() task.cancel(thread) end)
+            ataosFlingMaids.loopAll:GiveTask(function() task.cancel(thread) end)
         end
     end)
-    
-    flingSection:AddToggle("Click Fling", function(enabled)
-        clickFlingEnabled = enabled
-        
-        if maids.clickFling then maids.clickFling:Destroy() end
-        
+
+    ataosFlingSection:AddToggle("ATAOS Click Fling", function(enabled)
+        ataosFlingClickFlingEnabled = enabled
+
+        if ataosFlingMaids.clickFling then ataosFlingMaids.clickFling:Destroy() end
+
         if enabled then
-            maids.clickFling = Maid.new()
-            
+            ataosFlingMaids.clickFling = Maid.new()
+
             local function onMouseClick(input, processed)
                 if processed then return end
-                
+
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    local mouse = LocalPlayer:GetMouse()
+                    local mouse = ataosFlingLocalPlayer:GetMouse()
                     local target = mouse.Target
-                    
+
                     if target then
                         local character = target:FindFirstAncestorWhichIsA("Model")
                         if character then
-                            local player = Players:GetPlayerFromCharacter(character)
-                            if player and player ~= LocalPlayer and not isWhitelisted(player) then
-                                OdhSkid(player, 2)
+                            local player = ataosFlingPlayers:GetPlayerFromCharacter(character)
+                            if player and player ~= ataosFlingLocalPlayer and not ataosFlingIsWhitelisted(player) then
+                                ataosFlingOdhSkid(player, 2)
                                 Notify("Click Fling", "Flinging "..player.Name, 2)
-                            elseif player and isWhitelisted(player) then
+                            elseif player and ataosFlingIsWhitelisted(player) then
                                 Notify("Click Fling", player.Name.." is whitelisted!", 3)
                             end
                         end
                     end
                 end
             end
-            
-            if UserInputService.TouchEnabled then
-                maids.clickFling:GiveTask(UserInputService.TouchTap:Connect(onMouseClick))
+
+            if ataosFlingUserInputService.TouchEnabled then
+                ataosFlingMaids.clickFling:GiveTask(ataosFlingUserInputService.TouchTap:Connect(onMouseClick))
             end
-            
-            maids.clickFling:GiveTask(UserInputService.InputBegan:Connect(onMouseClick))
+
+            ataosFlingMaids.clickFling:GiveTask(ataosFlingUserInputService.InputBegan:Connect(onMouseClick))
         end
     end)
-    
-    flingSection:AddToggle("Fling Aura", function(enabled)
-        flingAuraEnabled = enabled
-        
-        if maids.flingAura then maids.flingAura:Destroy() end
-        
+
+    ataosFlingSection:AddToggle("ATAOS Fling Aura", function(enabled)
+        ataosFlingAuraEnabled = enabled
+
+        if ataosFlingMaids.flingAura then ataosFlingMaids.flingAura:Destroy() end
+
         if enabled then
-            maids.flingAura = Maid.new()
+            ataosFlingMaids.flingAura = Maid.new()
             local thread = task.spawn(function()
-                while flingAuraEnabled do
+                while ataosFlingAuraEnabled do
                     task.wait(0.5)
-                    local character = LocalPlayer.Character
+                    local character = ataosFlingLocalPlayer.Character
                     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-                    
+
                     if rootPart then
-                        for _, player in ipairs(Players:GetPlayers()) do
-                            if player ~= LocalPlayer and not isWhitelisted(player) then
+                        for _, player in ipairs(ataosFlingPlayers:GetPlayers()) do
+                            if player ~= ataosFlingLocalPlayer and not ataosFlingIsWhitelisted(player) then
                                 local targetChar = player.Character
                                 local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-                                
+
                                 if targetRoot and rootPart then
                                     local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                                    if distance <= flingAuraStuds then
-                                        OdhSkid(player, 1)
+                                    if distance <= ataosFlingAuraStuds then
+                                        ataosFlingOdhSkid(player, 1)
                                     end
                                 end
                             end
@@ -1780,12 +1780,12 @@ do
                     end
                 end
             end)
-            maids.flingAura:GiveTask(function() task.cancel(thread) end)
+            ataosFlingMaids.flingAura:GiveTask(function() task.cancel(thread) end)
         end
     end)
-    
-    flingSection:AddSlider("Fling Aura Studs", 5, 50, 15, function(value)
-        flingAuraStuds = value
+
+    ataosFlingSection:AddSlider("ATAOS Fling Aura Studs", 5, 50, 15, function(value)
+        ataosFlingAuraStuds = value
     end)
 end
 
